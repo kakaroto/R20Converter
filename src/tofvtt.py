@@ -47,13 +47,15 @@ class R20Converter(object):
         return None
 
     def getZipFile(self, filename):
-        return self.zip.open(filename)
+        # On japanese systems, path separator is actually '¥' which won't work
+        # when opening the files in the zip.
+        return self.zip.open(filename.replace(os.path.sep, "/"))
 
     def getArgument(self, name, default=None):
         return vars(self.args).get(name, default)
 
     def convert(self):
-        print "*** Converting Campaign '%s' ***" % self.campaign["campaign_title"]
+        print "*** Converting Campaign '%s' ***" % self.campaign["campaign_title"].encode('utf-8')
         os.makedirs(self.path)
         os.makedirs(os.path.join(self.path, "data"))
         os.makedirs(os.path.join(self.path, "scenes"))
@@ -156,7 +158,8 @@ class Entity(object):
 
     @staticmethod
     def urlsafe(filename):
-        url = urllib.pathname2url(filename.replace(" ", "_").encode('utf-8'))
+        url = urllib.quote(filename.replace(os.path.sep, "/").replace(" ", "_").encode('utf-8'))
+        url.replace("/", os.path.sep)
         # Url encoded characters won't resolve, since the URL would become invalid, so we replace them
         return re.sub("%([0-9A-F]{2})", "_\\1", url)
 
@@ -168,8 +171,8 @@ class Entity(object):
             # Check for conflicts
             if os.path.exists(dest_filename):
                 splitext = os.path.splitext(destination)
-                new_destination = "".join(splitext[0], "_%d_" % index, splitext[1])
-                destination_safe = self.urlsafe(destination)
+                new_destination = "".join([splitext[0], "_%d_" % index, splitext[1]])
+                destination_safe = self.urlsafe(new_destination)
                 index += 1
             else:
                 break
@@ -197,7 +200,7 @@ class Entity(object):
             zipfile = self._database._converter.getZipFile(filename)
             return self.copyFile(zipfile, destination)
         except Exception as e:
-            print "Error copying file '%s' from Zip: %s" % (filename, e)
+            print "Error copying file '%s' from Zip: %s" % (filename.encode('utf-8'), e)
             return (None, "")
 
     def __str__(self):
@@ -281,7 +284,7 @@ class Folders(DatabaseFile):
                 elif self.findID(item, "handout") != None:
                     has_handouts = True
                 else:
-                    print "Unknown ID in Journal folder: %s"  % item
+                    print "Unknown ID in Journal folder: %s"  % item.encode('utf-8')
 
         # By default, an empty folder would appear in the journal
         if has_handouts or not has_characters:
@@ -360,8 +363,8 @@ class Handout(Entity):
     PERMISSION_OWNER = 3
     def __init__(self, database, handout, index, parent, path):
         Entity.__init__(self, database, handout["id"])
-        print "Creating Handout : %s" % handout["name"]
-        # TODO: Replace cross-link journals with @Journ
+        print "Creating Handout : %s" % handout["name"].encode('utf-8')
+        # TODO: Replace cross-link journals with @Journal...
         content = handout["notes"]
         gmnotes = handout["gmnotes"]
         if gmnotes != "":
@@ -565,7 +568,7 @@ class Actor(Entity):
         Entity.__init__(self, database, character["id"])
         self._character = character
 
-        print "Creating Character : %s" % character["name"]
+        print "Creating Character : %s" % character["name"].encode('utf-8')
         permissions = {"default": Handout.PERMISSION_NONE}
         for player in character.get("inplayerjournals", []):
             if player == "all":
@@ -1108,7 +1111,7 @@ class Scene(Entity):
         self._page = page
 
         name = page["name"] if page["name"] != "" else "Untitled"
-        print "Creating Scene : %s" % name
+        print "Creating Scene : %s" % name.encode('utf-8')
         # Snapping increment gets set to 0 if grid is disabled
         orig_grid_size = 70 * (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
         # Page grid size is hardcoded to 70px in Roll20
@@ -1126,7 +1129,7 @@ class Scene(Entity):
         if grid_multiplier * width > 10000 or grid_multiplier * height > 10000:
             print "******** WARNING ***********"
             print "Your scene has a size of over 10k pixels in one dimension"
-            print "It will most probably not work properly in FVTT"
+            print "It will most probably not work properly in FVTT until 0.3.1 is released"
             print ""
 
         margin_left = math.ceil(width * grid_multiplier / grid_size * 0.25) * grid_size
@@ -1152,10 +1155,10 @@ class Scene(Entity):
                     dest = os.path.join("scenes", "backgrounds", name + ".png")
                     (_, bg_image) = self.copyZipFile(filename, dest)
                     if bg_image == "":
-                        print "Couldn't copy background image for page '%s' : %s" % (name, e)
+                        print "Couldn't copy background image for page '%s'" % (name.encode('utf-8'))
                         bg = None
         if not bg:
-            print "Page '%s' doesn't have a recognizable map background" % name
+            print "Page '%s' doesn't have a recognizable map background" % name.encode('utf-8')
 
         if self.getArgument("use_original_image_urls", False):
             thumb_image = page["thumbnail"]
@@ -1228,7 +1231,7 @@ class Scene(Entity):
                     print "Door color automatically chosen as : %s" % door_color
                 elif self.getArgument("interactive", False):
                     choice = -1
-                    while choice < 0 and choice > len(wall_colors):
+                    while choice < 0 or choice > len(wall_colors):
                         choice = raw_input("Select which color is a door (0 for none) : ")
                         try:
                             choice = int(choice)
@@ -1470,11 +1473,11 @@ class Scene(Entity):
             except:
                 font = ImageFont.load_default()                
 
-        size = font.getsize(text)
+        size = font.getsize(text.encode('utf-8'))
         size = (size[0] + self.PAD_X*2, size[1] + self.PAD_Y*2)
         img = Image.new("RGBA", size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        draw.text((self.PAD_X, self.PAD_Y), text, rgb, font=font)
+        draw.text((self.PAD_X, self.PAD_Y), text.encode('utf-8'), rgb, font=font)
         img.save(filename)
         return img.size
 
@@ -1555,7 +1558,7 @@ class Combat(DatabaseFile):
         encounters = []
         per_page = {}
         for order in self._campaign["turnorder"]:
-            per_page.setdefault(order["_pageid"], []).append(order)
+            per_page.setdefault(order.get("_pageid", self._campaign["playerpageid"]), []).append(order)
         for page in per_page:
             active = (page == self._campaign["playerpageid"])
             encounters.append(Encounter(self, "roll20-initiative-" + page, per_page[page], page, active))
@@ -1647,7 +1650,7 @@ class Playlist(Entity):
                  }
         sounds = []
         sound_id = 1
-        print "creating playlist %s" % (playlist["n"])
+        print "creating playlist %s" % playlist["n"].encode('utf-8')
         for index, track_id in enumerate(playlist["i"]):
             track = self.findID(track_id, "track")
             if track:
