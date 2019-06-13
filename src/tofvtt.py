@@ -120,17 +120,22 @@ class Entity(object):
         return self._database.getArgument(name, default)
 
     @staticmethod
+    def strToID(id_str):
+        new_str = "0"*12 + hex(hash(id_str))
+        return base64.b64encode(new_str[-12:])
+
+    @staticmethod
     def normalizeID(id):
         if id is None:
             return None
         if id in Entity.id_database:
             return Entity.id_database[id]
-        normalized_id = base64.b64encode(hex(hash(id))[-12:])
+        normalized_id = Entity.strToID(id)
         index = 0
         while normalized_id in Entity.id_database.values():
             print("Found an ID conflict for %s=%s\n%s" % (id, normalized_id, str(Entity.id_database)))
             new_id = "%s%d" % (id, index)
-            normalized_id = base64.b64encode(hex(hash(new_id))[-12:])
+            normalized_id = Entity.strToID(new_id)
             index += 1
         Entity.id_database[id] = normalized_id
         return normalized_id
