@@ -69,8 +69,8 @@ class R20Converter(object):
 
         EmptyDB(self, "sessions").save()
         EmptyDB(self, "settings").save()
-        EmptyDB(self, "chat").save()
         EmptyDB(self, "items").save()
+        EmptyDB(self, "chat").save()
 
 
 class DatabaseFile(object):
@@ -156,7 +156,7 @@ class Entity(object):
 
     @staticmethod
     def urlsafe(filename):
-        url = urllib.pathname2url(filename.replace(" ", "_").replace(u"’", "_"))
+        url = urllib.pathname2url(filename.replace(" ", "_").encode('utf-8'))
         # Url encoded characters won't resolve, since the URL would become invalid, so we replace them
         return re.sub("%([0-9A-F]{2})", "_\\1", url)
 
@@ -1111,16 +1111,24 @@ class Scene(Entity):
         print "Creating Scene : %s" % name
         # Snapping increment gets set to 0 if grid is disabled
         orig_grid_size = 70 * (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
+        # Page grid size is hardcoded to 70px in Roll20
+        width = 70 * page["width"]
+        height = 70 * page["height"]
+
         # FVTT doesn't allow grid sizes < 50, so we need to double (or triple) everything
         # if that's the case, and adjust our width/height, margins, and tile positions accordingly
         grid_size = orig_grid_size
         grid_multiplier = 1
-        while grid_size < 50:
-            grid_multiplier += 1
-            grid_size = orig_grid_size * grid_multiplier
-        # Page grid size is hardcoded to 70px in Roll20
-        width = 70 * page["width"]
-        height = 70 * page["height"]
+        if grid_size < 50:
+            grid_multiplier = 50.0 / orig_grid_size
+            grid_size = 50
+
+        if grid_multiplier * width > 10000 or grid_multiplier * height > 10000:
+            print "******** WARNING ***********"
+            print "Your scene has a size of over 10k pixels in one dimension"
+            print "It will most probably not work properly in FVTT"
+            print ""
+
         margin_left = math.ceil(width * grid_multiplier / grid_size * 0.25) * grid_size
         margin_top = math.ceil(height * grid_multiplier / grid_size * 0.25) * grid_size
         grid_type = self.GRID_TYPES[page["grid_type"]]
@@ -1301,8 +1309,9 @@ class Scene(Entity):
                     y = (top - (tile_height / 2))
                     token["x"] = margin_left + x * grid_multiplier
                     token["y"] = margin_top + y * grid_multiplier
-                    token["width"] *= grid_multiplier
-                    token["height"] *= grid_multiplier
+                    # Token size is in grid units, so we use snapping_increment instead of grid_multiplier
+                    token["width"] /= (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
+                    token["height"] /= (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
                     # Store the token id mapping for the Combat database
                     page_tokens = self.token_ids.setdefault(page["id"], {})
                     page_tokens[graphic["id"]] = token_id
