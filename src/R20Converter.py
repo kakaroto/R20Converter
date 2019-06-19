@@ -60,19 +60,19 @@ class R20Converter(object):
         os.makedirs(os.path.join(self.path, "data"))
         os.makedirs(os.path.join(self.path, "scenes"))
 
-        World(self).save()
-        Users(self).save()
-        Folders(self).save()
-        Journal(self).save()
-        Actors(self).save()
-        Scenes(self).save()
-        Combat(self).save()
-        Playlists(self).save()
+        self.world = World(self).save()
+        self.users = Users(self).save()
+        self.folders = Folders(self).save()
+        self.journal = Journal(self).save()
+        self.actors = Actors(self).save()
+        self.scenes = Scenes(self).save()
+        self.combat = Combat(self).save()
+        self.playlists = Playlists(self).save()
 
-        EmptyDB(self, "sessions").save()
-        EmptyDB(self, "settings").save()
-        EmptyDB(self, "items").save()
-        EmptyDB(self, "chat").save()
+        self.sessions = EmptyDB(self, "sessions").save()
+        self.settings = EmptyDB(self, "settings").save()
+        self.items = EmptyDB(self, "items").save()
+        self.chat = EmptyDB(self, "chat").save()
 
 
 class DatabaseFile(object):
@@ -81,6 +81,7 @@ class DatabaseFile(object):
         self._path = converter.path
         self._filename = filename
         self._campaign = converter.campaign
+        self.entities = []
 
     def findID(self, id, where=None):
         return self._converter.findID(id, where)
@@ -88,22 +89,14 @@ class DatabaseFile(object):
     def getArgument(self, name, default=None):
         return self._converter.getArgument(name, default)
 
-    def getEntries(self):
-        raise NotImplemented
-
     def __str__(self):
-        entries = self.getEntries()
-        lines = ""
-        for entry in entries:
-            lines += str(entry) + "\n"
-        return lines
+        return "\n".join(map(str, self.entities))
 
     def save(self):
         filename = os.path.join(self._path, "data", self._filename)
         with open(filename, "w") as f:
             f.write(str(self))
-        
-        return None
+        return self
 
 class Entity(object):
     # Ensures ids are unique accross all entities
@@ -111,7 +104,11 @@ class Entity(object):
 
     def __init__(self, database, id):
         self._database = database
+        self._original_id = id
         self._id = self.normalizeID(id)
+
+    def getID(self, normalized=True):
+        return self._id if normalized else self._original_id
 
     def findID(self, id, where=None):
         return self._database.findID(id, where)
@@ -215,9 +212,6 @@ class EmptyDB(DatabaseFile):
     def __init__(self, converter, name):
         DatabaseFile.__init__(self, converter, name + ".db")
 
-    def getEntries(self):
-        return []
-
 class World(object):
     def __init__(self, converter):
         self._path = converter.path
@@ -243,34 +237,39 @@ class World(object):
         filename = os.path.join(self._path, "world.json")
         with open(filename, "w") as f:
             f.write(str(self))
+        return self
 
 class Users(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "users.db")
         self._players = self._campaign["players"]
+        self._known_gm = self._campaign.get("account_id", self._players[0]["d20userid"])
+        self.entities = self.genEntities()
 
-    def getEntries(self):
-        users = [User(self, player) for player in self._players]
-        users[0].setGM(True)
+    def genEntities(self):
+        users = [User(self, player, player["d20userid"] == self._known_gm) for player in self._players]
         return users
 
 class User(Entity):
-    def __init__(self, database, player):
+    def __init__(self, database, player, is_gm=False):
         Entity.__init__(self, database, player["id"])
         self.entity = {"_id": self._id,
                        "name": player["displayname"],
-                       "permission":1,
                        "flags":{},
-                       "password":"",
                        "color": self.color(player["color"])
                        }
+        print("Creating User : %s (%s)" % (self.entity["name"], "GM" if is_gm else "Player"))
+        self.setGM(is_gm)
+
     def setGM(self, gm):
         self.entity["permission"] = 4 if gm else 1
+        self.entity["password"] = self.getArgument("gm_password" if gm else "player_password", "")
 
 class Folders(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "folders.db")
         self._preserve_order = self.getArgument("preserve_folder_order", False)
+        self.entities = self.genEntities()
         
     def addFolder(self, folder, parent):
         folders = []
@@ -299,7 +298,7 @@ class Folders(DatabaseFile):
             folders.append(Folder(self, "character" + folder["id"], folder["n"], "Actor", ("character" + parent) if parent else None))
         return (folders, has_handouts, has_characters)
 
-    def getEntries(self):
+    def genEntities(self):
         parent = None
         folders = []
         create_root_folder = False
@@ -311,10 +310,19 @@ class Folders(DatabaseFile):
                 if self.findID(item, "handout") != None:
                     create_root_folder = True
 
-        for page in self._campaign["pages"]:
-            if page["archived"]:
-                folders.append(Folder(self, "archived-scenes-folder-id", "Archived Scenes", "Scene", None))
-                break
+        if not self.getArgument("disable_archived", False):
+            for page in self._campaign["pages"]:
+                if page["archived"]:
+                    folders.append(Folder(self, "archived-scenes-folder-id", "Archived Scenes", "Scene", None))
+                    break
+            for handout in self._campaign["handouts"]:
+                if handout["archived"]:
+                    folders.append(Folder(self, "archived-handouts-folder-id", "Archived Handouts", "JournalEntry", None))
+                    break
+            for character in self._campaign["characters"]:
+                if character["archived"]:
+                    folders.append(Folder(self, "archived-characters-folder-id", "Archived Actors", "Actor", None))
+                    break
         if create_root_folder:
             #name = "%sRoot Folder" % (("%03d - " % index) if self._preserve_order else "")
             folders.append(Folder(self, "root-handouts-folder-id", "Root folder", "JournalEntry", None))
@@ -337,6 +345,7 @@ class Journal(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "journal.db")
         self._handouts = self._campaign["handouts"]
+        self.entities = self.genEntities()
 
     def addToFolder(self, folder_id, folder, folder_path):
         handouts = []
@@ -356,7 +365,7 @@ class Journal(DatabaseFile):
                     
         return handouts
 
-    def getEntries(self):
+    def genEntities(self):
         return self.addToFolder("root-handouts-folder-id", self._campaign["journalfolder"], "journal")
 
 # TODO: handle Archived handouts differently?
@@ -394,11 +403,13 @@ class Handout(Entity):
             else:
                 filename = os.path.join(path, "%03d - %s" % (index, handout["name"]), "avatar.png")
                 (_, avatar_filename) = self.copyZipFile(filename, filename)
+        if handout["archived"] and not self.getArgument("disable_archived", False):
+            parent = "archived-handouts-folder-id"
         self.entity = {"_id": self._id,
                        "name": handout["name"],
                        "permission": permissions,
                        "folder": Entity.normalizeID(parent),
-                       "flags":{"r20-handout-order" : index, "r20-handout-archived": handout["archived"]},
+                       "flags":{"R20Converter": {"handout-order" : index, "handout-archived": handout["archived"]}},
                        "entryTime": 0,
                        "content": content,
                        "img": avatar_filename
@@ -409,8 +420,9 @@ class Actors(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "actors.db")
         self._characters = self._campaign["characters"]
+        self.entities = self.genEntities()
 
-    def getEntries(self):
+    def genEntities(self):
         return [Actor(self, character, index) for index, character in enumerate(self._characters)]
 
 class Token(Entity):
@@ -558,11 +570,11 @@ class Token(Entity):
                 "actorLink": False,
                 "disposition": -1,
                 "displayBars": self.display_bars,
-                "bar1": {"attribute": "attributes.bar1" if self.bar1_max > 0 else "",
+                "bar1": {"attribute": "attributes.bar1" if self.bar1_max != "" or self.bar1_val != "" else "",
                          "value": self.bar1_val,
                          "max": self.bar1_max
                          },
-                "bar2": {"attribute": "attributes.bar2" if self.bar2_max > 0 else "",
+                "bar2": {"attribute": "attributes.bar2" if self.bar2_max != "" or self.bar2_val != "" else "",
                          "value": self.bar2_val,
                          "max": self.bar2_max
                          }
@@ -600,25 +612,31 @@ class Actor(Entity):
         folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
 
         default_token = character["defaulttoken"] if character["defaulttoken"] != "" else None
-        token = Token(self._id, character["name"], default_token).getDict()
+        token = Token(self._id, character["name"], default_token)
+        token_filename = ""
         if default_token and default_token.get("imgsrc", "") != "":
             if self.getArgument("use_original_image_urls", False):
                 token_filename = default_token["imgsrc"]
             else:
                 filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "token.png")
                 (_, token_filename) = self.copyZipFile(filename, filename)
-            token["img"] = token_filename
             if avatar_filename == "":
                 avatar_filename = token_filename
-            bar1_link = token.get("bar1_link", "")
-            bar2_link = token.get("bar2_link", "")
-            (_, _, hp_id) = self.getAttribute("hp")
-            if bar1_link == hp_id:
-                token["bar1"]["attribute"] = "attributes.hp"
-            if bar2_link == hp_id:
-                token["bar2"]["attribute"] = "attributes.hp"
+        if token_filename == "":
+            token_filename = avatar_filename
+        token.token_filename = token_filename
+        token = token.getDict()
+        bar1_link = token.get("bar1_link", "")
+        bar2_link = token.get("bar2_link", "")
+        (_, _, hp_id) = self.getAttribute("hp")
+        if bar1_link == hp_id:
+            token["bar1"]["attribute"] = "attributes.hp"
+        if bar2_link == hp_id:
+            token["bar2"]["attribute"] = "attributes.hp"
         token["actorLink"] = not npc
 
+        if character["archived"] and not self.getArgument("disable_archived", False):
+            folder = "archived-characters-folder-id"
         self.entity = {"_id": self._id,
                        "name": character["name"],
                        "img": avatar_filename,
@@ -729,6 +747,20 @@ class Actor(Entity):
             "spelldc": {
                 "type": "String",
                 "label": "Spell DC"
+                },
+            "bar1": {
+                "type": "Number",
+                "label": "Arbitrary Token Bar #1",
+                "value": 0,
+                "min": 0,
+                "max": 0,
+                },
+            "bar2": {
+                "type": "Number",
+                "label": "Arbitrary Token Bar #2",
+                "value": 0,
+                "min": 0,
+                "max": 0,
                 }
             }
         if not self.isNPC():
@@ -1100,8 +1132,9 @@ class Scenes(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "scenes.db")
         self._pages = self._campaign["pages"]
+        self.entities = self.genEntities()
 
-    def getEntries(self):
+    def genEntities(self):
         return [Scene(self, scene, index, self._campaign["playerpageid"]) for index, scene in enumerate(self._pages)]
 
 class Scene(Entity):
@@ -1300,7 +1333,7 @@ class Scene(Entity):
                     char = self.findID(char_id, "character")
                     if char:
                         hp_id = "unknown"
-                        npc = True
+                        npc = False
                         for attr in char["attributes"]:
                             if attr["name"] == "hp":
                                 hp_id = attr["id"]
@@ -1354,8 +1387,7 @@ class Scene(Entity):
                 dest = os.path.join("scenes", "tiles", name, "text_" + str(tile_id) + ".png")
                 (dest_filename, tile_image) = self.getDestinationPaths(dest)
                 color = self.color(text["color"], "#ffffff", True)
-                (tile_width, tile_height) = self.createTextImage(text["text"], text["font_family"],
-                                                       text["font_size"], color, dest_filename)
+                self.createTextImage(text["text"], text["font_family"], text["font_size"], color, dest_filename)
             elif path and layer != "walls":
                 dest = os.path.join("scenes", "tiles", name, "path_" + str(tile_id) + ".png")
                 (dest_filename, tile_image) = self.getDestinationPaths(dest)
@@ -1398,6 +1430,8 @@ class Scene(Entity):
                             "t": "w",
                             "s": 0
                             }
+                    if door_type != 0:
+                        wall["ds"] = 0
                     wall_id += 1
                     walls.append(wall)
                     previous_point = point
@@ -1425,11 +1459,14 @@ class Scene(Entity):
                     
         tiles = map_tiles + objects_tiles
 
+        folder = None
+        if page["archived"] and not self.getArgument("disable_archived", False):
+            folder = "archived-scenes-folder-id"
         self.entity = {"_id": self._id,
                        "name": name,
                        "permission": {"default": 0},
-                       "folder": Entity.normalizeID("archived-scenes-folder-id") if page["archived"] else None,
-                       "flags": {"r20-page-position": page["placement"]},
+                       "folder": Entity.normalizeID(folder),
+                       "flags": {"R20Converter": {"page-position": page.get("placement", 0)}},
                        "description": "",
                        "navigation": not page["archived"],
                        "active": active_page == page["id"],
@@ -1470,19 +1507,27 @@ class Scene(Entity):
 
     def createTextImage(self, text, font_family, font_size, color, filename):
         rgb = tuple(int(color[i:i+2], 16) for i in (1, 3, 5))
+        # Don't know why they added a quote around the font family name for shadows into light
+        font_family = font_family.replace("\"", "")
         try:
-            font = ImageFont.truetype(font_family + ".ttf", font_size)
+            font = ImageFont.truetype("fonts/" + font_family + ".ttf", font_size)
+            #print("Loaded font ", font_family)
         except:
+            #print("Error loading font ", font_family)
             try:
-                font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size)
+                font = ImageFont.truetype("fonts/LiberationSans-Regular.ttf", font_size)
             except:
                 font = ImageFont.load_default()                
 
         size = font.getsize(text.encode('utf-8'))
-        size = (size[0] + self.PAD_X*2, size[1] + self.PAD_Y*2)
         img = Image.new("RGBA", size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        draw.text((self.PAD_X, self.PAD_Y), text.encode('utf-8'), rgb, font=font)
+        draw_size = draw.textsize(text.encode('utf-8'), font=font)
+        if draw_size != size:
+            img = Image.new("RGBA", draw_size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+        draw.text((0, 0), text.encode('utf-8'), rgb, font=font)
         img.save(filename)
         return img.size
 
@@ -1558,8 +1603,9 @@ class Scene(Entity):
 class Combat(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "combat.db")
+        self.entities = self.genEntities()
 
-    def getEntries(self):
+    def genEntities(self):
         encounters = []
         per_page = {}
         for order in self._campaign["turnorder"]:
@@ -1605,6 +1651,7 @@ class Encounter(Entity):
 class Playlists(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "playlists.db")
+        self.entities = self.genEntities()
 
     def addToFolder(self, folder_id, folder, folder_path):
         handouts = []
@@ -1624,7 +1671,7 @@ class Playlists(DatabaseFile):
                     
         return handouts
 
-    def getEntries(self):
+    def genEntities(self):
         playlists = []
         root_playlist = {"id": "root-playlist",
                          "n": "Root Playlist",
@@ -1640,8 +1687,11 @@ class Playlists(DatabaseFile):
                 root_playlist["i"].append("")
             else:
                 root_playlist["i"].append(item)
-        if len(root_playlist["i"]) > 0:
-            playlists.append(Playlist(self, root_playlist))
+
+        for i in root_playlist["i"]:
+            if i != "":
+                playlists.append(Playlist(self, root_playlist))
+                break
 
         return playlists
 
@@ -1690,21 +1740,24 @@ if __name__ == "__main__":
     parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/")
     parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
     parser.add_argument("--description", default="Imported from Roll20 using R20Converter", help="World Desription")
-    parser.add_argument("--preserve-folder-order", action="store_true", help="Prefix folder names with numbers to preserve their order")
     parser.add_argument("-r", "--restrict-movement", action="store_true", help="Force all walls to restrict movement")
     parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
     parser.add_argument("--disable-fog", action="store_true", help="Disable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
     parser.add_argument("--interactive", action="store_true", help="Ask questions about decisions to be made during the conversion process.")
     parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
     parser.add_argument("--auto-doors", action="store_true", help="Automatically detect doors and set them as such.")
+    parser.add_argument("--player-password", default="", help="Default player password")
+    parser.add_argument("--gm-password", default="", help="Default GM password")
+    parser.add_argument("--disable-archived", action="store_true", help="Disable the automatic move of archived scenes/handouts/characters to an Archived folder.")
+    parser.add_argument("--minimum-wall-distance", default=0, help="Minimum distance for walls.\n"
+                        "If wall is smaller and part of a longer chain of walls, it will get merged with the adjacent wall.\n"
+                        "This is useful if there are a lot of small/jagged walls or freehand-drawn walls (0 to disable)")
+    parser.add_argument("--maximum-wall-angle", default=30, help="Maximum angle between walls before they are merged (when using --minimum-wall-distance option).\n"
+                        "This is to prevent small walls at high angles (a small triangle or U shape) from being merged and becoming a line that cuts through the map.")
     args = parser.parse_args()
 
     if os.path.exists(args.path):
         print "Destination directory must not exist"
-        sys.exit(-1)
-
-    if args.preserve_folder_order:
-        print "This option is not yet supported"
         sys.exit(-1)
 
     if args.use_original_image_urls:

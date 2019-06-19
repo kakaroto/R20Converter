@@ -7,4 +7,4 @@ setup(
             "dll_excludes": ["MSVCP90.dll", "HID.DLL", "w9xpopen.exe"],
         }
     },
-    console=['src/tofvtt.py'])
+    console=['src/R20Converter.py'])
