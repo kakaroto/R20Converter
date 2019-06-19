@@ -215,7 +215,9 @@ class EmptyDB(DatabaseFile):
 class World(object):
     def __init__(self, converter):
         self._path = converter.path
-        self._title = converter.campaign["campaign_title"]
+        self._title = converter.getArgument("campaign_title")
+        if self._title is None:
+            self._title = converter.campaign["campaign_title"]
         self._description = converter.getArgument("description")
 
     def toDict(self):
@@ -1135,7 +1137,15 @@ class Scenes(DatabaseFile):
         self.entities = self.genEntities()
 
     def genEntities(self):
-        return [Scene(self, scene, index, self._campaign["playerpageid"]) for index, scene in enumerate(self._pages)]
+        debug_page = self.getArgument("debug_page", None)
+        if debug_page:
+            debug_scene = None
+            for index, page in enumerate(self._pages):
+                if page["name"] == debug_page:
+                    debug_scene = Scene(self, page, index, page["id"])
+                    break
+            return [debug_scene]
+        return [Scene(self, page, index, self._campaign["playerpageid"]) for index, page in enumerate(self._pages)]
 
 class Scene(Entity):
     GRID_TYPES = {"square": 1, "hex": 2, "hexr": 4}
@@ -1289,7 +1299,7 @@ class Scene(Entity):
                             secret_door_color = wall_colors.keys()[choice-1]
                         
                 
-
+        total_walls = 0
         for zid in ids_to_display:
             graphic = self.findItemByID(page, zid, "graphics")
             text = self.findItemByID(page, zid, "texts")
@@ -1409,12 +1419,31 @@ class Scene(Entity):
                     print "Circle in the dynamic layer! Not supported!"
                     continue
                 previous_point = None
-                for point in polygon:
+                previous_point_idx = 0
+                total_walls += len(polygon) - 1
+                for point_idx, point in enumerate(polygon):
                     # Convert x/y positions according to the scaling factor
                     point = (point[0] * path["scaleX"], point[1] * path["scaleY"])
                     if previous_point is None:
                         previous_point = point
+                        previous_point_idx = point_idx
                         continue
+                    # Finally, the Pythagore theorem from school is useful in real life
+                    wall_length = math.sqrt(math.pow(point[0] - previous_point[0], 2) + math.pow(point[1] - previous_point[1], 2))
+                    min_angle = 180.0 - self.getArgument("maximum_wall_angle")
+                    #print("Wall length : %.2f" % wall_length)
+                    if wall_length < self.getArgument("minimum_wall_length", 0):
+                        #print("Wall is too small, skipping.")
+                        next_idx = point_idx + 1
+                        # Don't skip if it's the last point of the polygon
+                        if next_idx != len(polygon):
+                            next_point = polygon[next_idx]
+                            angles = []
+                            for idx in xrange(previous_point_idx + 1, point_idx+1):
+                                old_point = (polygon[idx][0] * path["scaleX"], polygon[idx][1] * path["scaleY"])
+                                angles.append(self.getPointsAngle(previous_point, old_point, next_point))
+                            if min(angles) >= min_angle:
+                                continue
                     door_type = 1 if path["stroke"] == door_color else (2 if path["stroke"] == secret_door_color else 0)
                     wall = {"id": wall_id,
                             "flags": {},
@@ -1435,6 +1464,7 @@ class Scene(Entity):
                     wall_id += 1
                     walls.append(wall)
                     previous_point = point
+                    previous_point_idx = point_idx
                 
 
             if tile_image:
@@ -1457,6 +1487,8 @@ class Scene(Entity):
                 (map_tiles if layer == "map" else objects_tiles).append(tile)
                 
                     
+        if len(walls) != total_walls:
+            print("With a minimum wall length of %d pixels and a maximum angle between continuous walls of %d degrees, the total number of walls was decreased from %d to %d walls." % (self.getArgument("minimum_wall_length", 0), self.getArgument("maximum_wall_angle", 0), total_walls, len(walls)))
         tiles = map_tiles + objects_tiles
 
         folder = None
@@ -1578,6 +1610,26 @@ class Scene(Entity):
             else:
                 print "Unknown path type: %s" % str(point)
         return (polygon, circle, w, h)
+
+    # Get angle between points P1, P2, P3 with the angle at P2 being returned in degrees
+    def getPointsAngle(self, p1, p2, p3):
+        # Let's do some trigonometry! the law of cosinus: c^2 = a^2 + b^2 - 2ab*cos(C)
+        a = math.sqrt(math.pow(p1[0] - p2[0], 2) + math.pow(p1[1] - p2[1], 2))
+        b = math.sqrt(math.pow(p2[0] - p3[0], 2) + math.pow(p2[1] - p3[1], 2))
+        c = math.sqrt(math.pow(p1[0] - p3[0], 2) + math.pow(p1[1] - p3[1], 2))
+    	#print("Points : (%.2f, %.2f) - (%.2f, %.2f) - (%.2f, %.2f)" % (p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]))
+        #print("Lengths : %.2f - %.2f - %2.f" % (a, b, c))
+        # Now to get the angle : C = acos((a^2 + b^2 - c^2) / 2ab)
+        if a == 0 or b == 0:
+            # Avoid a division by 0
+            angle = 180
+        else:
+            # Looks like we need to clamp it to [-1, 1] because of floating point rounding, I got a -1.00000000004 once which gave "math domain error" exception
+            cos_c = (math.pow(a, 2) + math.pow(b, 2) - math.pow(c, 2)) / (2 * a * b)
+            clamped = min(max(cos_c, -1), 1)
+            angle = math.degrees(math.acos(clamped))
+        #print("Angle is : %.2f" % angle )
+        return angle
 
     def createPathImage(self, width, height, line_width, outline, fill, path, filename):
         (polygon, circle, w, h) = self.pathToPolygonList(path, width, height)
@@ -1739,6 +1791,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="R20Converter", epilog="Convert Roll20 campaigns into Foundry VTT worlds.")
     parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/")
     parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
+    parser.add_argument("--campaign-title", default=None, help="Override the Campaign title")
     parser.add_argument("--description", default="Imported from Roll20 using R20Converter", help="World Desription")
     parser.add_argument("-r", "--restrict-movement", action="store_true", help="Force all walls to restrict movement")
     parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
@@ -1749,11 +1802,15 @@ if __name__ == "__main__":
     parser.add_argument("--player-password", default="", help="Default player password")
     parser.add_argument("--gm-password", default="", help="Default GM password")
     parser.add_argument("--disable-archived", action="store_true", help="Disable the automatic move of archived scenes/handouts/characters to an Archived folder.")
-    parser.add_argument("--minimum-wall-distance", default=0, help="Minimum distance for walls.\n"
-                        "If wall is smaller and part of a longer chain of walls, it will get merged with the adjacent wall.\n"
-                        "This is useful if there are a lot of small/jagged walls or freehand-drawn walls (0 to disable)")
-    parser.add_argument("--maximum-wall-angle", default=30, help="Maximum angle between walls before they are merged (when using --minimum-wall-distance option).\n"
-                        "This is to prevent small walls at high angles (a small triangle or U shape) from being merged and becoming a line that cuts through the map.")
+    parser.add_argument("--minimum-wall-length", default=0, type=float, help="Minimum distance for walls (in pixels).\n"
+                        "If a wall is smaller and part of a longer chain of walls, it will get merged with the adjacent wall.\n"
+                        "This is useful if there are a lot of small/jagged walls or freehand-drawn walls (Default: 0 (disabled))")
+    parser.add_argument("--maximum-wall-angle", default=30, type=float, help="Maximum angle (in degrees) between walls before they are merged (when using --minimum-wall-distance option).\n"
+                        "This is to prevent small walls at high angles (a small triangle or U shape) from being merged and becoming a line that cuts through the map.\n"
+                        "The angle is calculated with every point in the wall that is skipped, so a circle drawn with small lines and small angles will not be removed.\n"
+                        "Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points (Default: 30)")
+    parser.add_argument("--debug-page", default=None, help="Only convert a specific page. Useful for debugging")
+
     args = parser.parse_args()
 
     if os.path.exists(args.path):
