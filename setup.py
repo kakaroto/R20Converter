@@ -3,8 +3,9 @@ import py2exe
 
 setup(
     options = {
-            "py2exe":{
+        "py2exe":{
             "dll_excludes": ["MSVCP90.dll", "HID.DLL", "w9xpopen.exe"],
-        }
+            "dist_dir": "windows"
+            }
     },
     console=['src/R20Converter.py'])

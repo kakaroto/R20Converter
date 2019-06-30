@@ -22,7 +22,19 @@ class R20Converter(object):
         self.path = args.path
         self.zip = zipfile.ZipFile(args.zip_file, "r")
         self.campaign = json.load(self.getZipFile("campaign.json"))
-
+        self.packs = {}
+        self.fvtt_path = self.getArgument("fvtt_public_path", None)
+        if self.fvtt_path == None:
+            potential_path = os.path.dirname(os.path.dirname(self.path))
+            if os.path.exists(os.path.join(potential_path, "systems", "dnd5e", "system.json")):
+                self.fvtt_path = potential_path
+        if self.fvtt_path is not None:
+            self.loadDnD5ePacks()
+        else:
+            print("Warning: Could not find the path to the FVTT public directory, either specify a destination directory in the public/worlds/ path\n"
+                  "or use the --fvtt-public-path argument to specify the path to the public directory.\n"
+                  "If you do not, then Item and Spell Compendium links in journal entries will not be replaced with links to SRD data from the D&D 5e packs.")
+        
     def findID(self, id, where=None):
         if where == "handout" or where is None:
             matches = [item for item in self.campaign["handouts"] if item["id"] == id]
@@ -54,6 +66,17 @@ class R20Converter(object):
     def getArgument(self, name, default=None):
         return vars(self.args).get(name, default)
 
+    def loadDnD5ePacks(self):
+        self.packs = {}
+        for file in ["items", "spells"]:
+            db  = DatabaseFile(self, "%s.db" % file)
+            path = os.path.join(self.fvtt_path, "systems", "dnd5e", "packs", "%s.db" % file)
+            db.load(path)
+            self.packs[file] = db
+
+    def hasSystemPacks(self):
+        return len(self.packs) > 0
+
     def convert(self):
         print "*** Converting Campaign '%s' ***" % self.campaign["campaign_title"].encode('utf-8')
         os.makedirs(self.path)
@@ -62,7 +85,8 @@ class R20Converter(object):
 
         self.world = World(self).save()
         self.users = Users(self).save()
-        self.folders = Folders(self).save()
+        self.folders = Folders(self)
+        self.items = EmptyDB(self, "items")
         self.journal = Journal(self).save()
         self.actors = Actors(self).save()
         self.scenes = Scenes(self).save()
@@ -71,9 +95,10 @@ class R20Converter(object):
 
         self.sessions = EmptyDB(self, "sessions").save()
         self.settings = EmptyDB(self, "settings").save()
-        self.items = EmptyDB(self, "items").save()
         self.chat = EmptyDB(self, "chat").save()
-
+        # Could get modified by the journal
+        self.folders.save()
+        self.items.save()
 
 class DatabaseFile(object):
     def __init__(self, converter, filename):
@@ -92,11 +117,22 @@ class DatabaseFile(object):
     def __str__(self):
         return "\n".join(map(str, self.entities))
 
-    def save(self):
-        filename = os.path.join(self._path, "data", self._filename)
-        with open(filename, "w") as f:
+    def save(self, full_path=None):
+        if full_path is None:
+            full_path = os.path.join(self._path, "data", self._filename)
+        with open(full_path, "w") as f:
             f.write(str(self))
         return self
+
+    def load(self, full_path=None):
+        if full_path is None:
+            full_path = os.path.join(self._path, "data", self._filename)
+        self.entities = []
+        with open(full_path, "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                self.entities.append(json.loads(line))
+
 
 class Entity(object):
     # Ensures ids are unique accross all entities
@@ -115,6 +151,66 @@ class Entity(object):
 
     def getArgument(self, name, default=None):
         return self._database.getArgument(name, default)
+
+    def replaceEntityLinks(self, content):
+        return re.sub('<a ([^>]*)href=[\'"]http://journal.roll20.net/([^/]+)/([^\'"]+)[\'"]([^>]*)>(.*?)</a>', self._foundJournal, content)
+
+    def replaceCompendiumLinks(self, content):
+        return re.sub('<a ([^>]*)href=[\'"]https?://roll20.net/compendium/dnd5e/([^\'"]+)(?:(?:%3[aA])|\:)([^\'"]+)[\'"]([^>]*)>(.*?)</a>', self._foundCompendium, content)
+
+    def _foundCompendium(self, match):
+        converter = self._database._converter
+        item_id = None
+        if converter.hasSystemPacks():
+            before_href = match.group(1)
+            compendium = match.group(2)
+            name = urllib.unquote(match.group(3))
+            name = name.split("#")[0].split("?")[0]
+            after_href = match.group(4)
+            text = match.group(5)
+            items = []
+            if compendium == "Spells":
+                db = converter.packs.get("spells", None)
+                if db:
+                    items = db.entities
+                folder = "D&D 5e Spells (SRD)"
+                folder_id = "r20converter-dnd5e-spells"
+            elif compendium == "Items":
+                db = converter.packs.get("items", None)
+                if db:
+                    items = db.entities
+                folder = "D&D 5e Items (SRD)"
+                folder_id = "r20converter-dnd5e-items"
+            for item in items:
+                if item["name"] == name:
+                    print "Found item '%s' in '%s'" % (name, folder)
+                    item_id = name
+                    converter.folders.ensureFolder(folder_id, folder, "Item")
+                    entity = Entity(converter.items, item_id)
+                    entity.entity = item
+                    entity.entity["_id"] = entity.getID()
+                    entity.entity["folder"] = Entity.normalizeID(folder_id)
+                    converter.items.entities.append(entity)
+                    break
+        if item_id:
+            return self.replaceEntityLinks('<a %shref="http://journal.roll20.net/item/%s"%s>%s</a>' % (before_href, item_id, after_href, text))
+        else:
+            print "Could not find compendium item of type '%s' and name '%s'" % (match.group(2), match.group(3))
+            return match.group(0)
+        
+
+    def _foundJournal(self, match):
+        before_href = match.group(1)
+        journal = match.group(2)
+        id = match.group(3)
+        after_href = match.group(4)
+        text = match.group(5)
+        if journal in ["handout", "character", "item"]:
+            icon = {"handout": "fa-book-open", "character": "fa-user", "item": "fa-suitcase"}[journal]
+            entity = {"handout": "JournalEntry", "character": "Actor", "item": "Item"}[journal]
+            return '<a class="entity-link" data-entity=%s data-id=%s %s%s><i class="fas %s"></i>%s</a>' % (entity, self.normalizeID(id), before_href, after_href, icon, text)
+        else:
+            return match.group(0)
 
     @staticmethod
     def strToID(id_str):
@@ -187,9 +283,9 @@ class Entity(object):
             else:
                 raise
 
-        world_dir_name = os.path.dirname(os.path.join(self._database._path, "."))
+        world_dir_name = os.path.basename(os.path.dirname(os.path.join(self._database._path, ".")))
         config_path = os.path.join("worlds", world_dir_name, destination_safe)
-        return (dest_filename, config_path)
+        return (dest_filename, config_path.replace(os.path.sep, "/"))
     
     def copyFile(self, file, destination):
         (dest_filename, config_path) = self.getDestinationPaths(destination)
@@ -260,7 +356,7 @@ class User(Entity):
                        "flags":{},
                        "color": self.color(player["color"])
                        }
-        print("Creating User : %s (%s)" % (self.entity["name"], "GM" if is_gm else "Player"))
+        print("Creating User : %s (%s)" % (self.entity["name"].encode("utf-8"), "GM" if is_gm else "Player"))
         self.setGM(is_gm)
 
     def setGM(self, gm):
@@ -273,14 +369,18 @@ class Folders(DatabaseFile):
         self._preserve_order = self.getArgument("preserve_folder_order", False)
         self.entities = self.genEntities()
         
-    def addFolder(self, folder, parent):
+    def addJournalFolder(self, folder, parent, index, depth=0):
         folders = []
         has_characters = False
         has_handouts = False
         for item in folder["i"]:
             if type(item) == dict:
                 # Found a folder
-                (children, child_handouts, child_characters) = self.addFolder(item, folder["id"])
+                folder_id = folder["id"]
+                if depth >= 2:
+                    print "Folder '%s' has a depth of %d. Dropping it to parent" % (item["n"], depth)
+                    folder_id = parent
+                (children, child_handouts, child_characters) = self.addJournalFolder(item, folder_id, index + 1 + len(folders), depth+1)
                 folders.extend(children)
                 has_characters |= child_characters
                 has_handouts |= child_handouts
@@ -295,10 +395,21 @@ class Folders(DatabaseFile):
         # By default, an empty folder would appear in the journal
         if has_handouts or not has_characters:
             has_handouts = True
-            folders.append(Folder(self, "handout" + folder["id"], folder["n"], "JournalEntry", ("handout" + parent) if parent else None ))
+            folders.append(Folder(self, "handout" + folder["id"], folder["n"], "JournalEntry", ("handout" + parent) if parent else None, index))
         if has_characters:
-            folders.append(Folder(self, "character" + folder["id"], folder["n"], "Actor", ("character" + parent) if parent else None))
+            folders.append(Folder(self, "character" + folder["id"], folder["n"], "Actor", ("character" + parent) if parent else None, index))
         return (folders, has_handouts, has_characters)
+
+    def ensureFolder(self, id, name, folder_type, parent=None):
+        for folder in self.entities:
+            if folder.getID(False) == id:
+                return folder
+        return self.addFolder(id, name, folder_type, parent)
+
+    def addFolder(self, id, name, folder_type, parent=None):
+        folder = Folder(self, id, name, folder_type, parent)
+        self.entities.append(folder)
+        return folder
 
     def genEntities(self):
         parent = None
@@ -306,37 +417,39 @@ class Folders(DatabaseFile):
         create_root_folder = False
         for item in self._campaign["journalfolder"]:
             if type(item) == dict:
-                (children, _, _) = self.addFolder(item, None)
+                (children, _, _) = self.addJournalFolder(item, None, len(folders))
                 folders.extend(children)
             else:
                 if self.findID(item, "handout") != None:
                     create_root_folder = True
 
+        if create_root_folder:
+            folders.append(Folder(self, "root-handouts-folder-id", "Root folder", "JournalEntry", None, len(folders)))
         if not self.getArgument("disable_archived", False):
             for page in self._campaign["pages"]:
                 if page["archived"]:
-                    folders.append(Folder(self, "archived-scenes-folder-id", "Archived Scenes", "Scene", None))
+                    folders.append(Folder(self, "archived-scenes-folder-id", "Archived Scenes", "Scene", None, len(folders)))
                     break
             for handout in self._campaign["handouts"]:
                 if handout["archived"]:
-                    folders.append(Folder(self, "archived-handouts-folder-id", "Archived Handouts", "JournalEntry", None))
+                    folders.append(Folder(self, "archived-handouts-folder-id", "Archived Handouts", "JournalEntry", None, len(folders)))
                     break
             for character in self._campaign["characters"]:
                 if character["archived"]:
-                    folders.append(Folder(self, "archived-characters-folder-id", "Archived Actors", "Actor", None))
+                    folders.append(Folder(self, "archived-characters-folder-id", "Archived Actors", "Actor", None, len(folders)))
                     break
-        if create_root_folder:
-            #name = "%sRoot Folder" % (("%03d - " % index) if self._preserve_order else "")
-            folders.append(Folder(self, "root-handouts-folder-id", "Root folder", "JournalEntry", None))
         return folders
     
 
 class Folder(Entity):
-    def __init__(self, database, id, name, folder_type, parent):
+    def __init__(self, database, id, name, folder_type, parent, index=None):
         Entity.__init__(self, database, id)
         # TODO: add hierarchy for journal
-        if folder_type == "JournalEntry":
-            parent = None
+        #if folder_type == "JournalEntry" and parent is not None:
+        #    name = "|_ " + name
+        #    parent = None
+        if index is not None and not self.getArgument("original_folder_names", False):
+            name = u"•%03d•%s" % (index, name)
         self.entity = {"_id": self._id,
                        "name": name, 
                        "type": folder_type,
@@ -385,6 +498,7 @@ class Handout(Entity):
         gmnotes = handout["gmnotes"]
         if gmnotes != "":
             content += "\n<section class=\"secret\"><p>GM Notes : </p>" + gmnotes + "</section>"
+        content = self.replaceCompendiumLinks(self.replaceEntityLinks(content))
         permissions = {"default": Handout.PERMISSION_NONE}
         for player in handout.get("inplayerjournals", []):
             if player == "all":
@@ -411,7 +525,11 @@ class Handout(Entity):
                        "name": handout["name"],
                        "permission": permissions,
                        "folder": Entity.normalizeID(parent),
-                       "flags":{"R20Converter": {"handout-order" : index, "handout-archived": handout["archived"]}},
+                       "flags": {"R20Converter": 
+                                 {"handout-order" : index, 
+                                  "handout-archived": handout["archived"]},
+                                 "entityorder": {"order": index}
+                                 },
                        "entryTime": 0,
                        "content": content,
                        "img": avatar_filename
@@ -439,7 +557,7 @@ class Token(Entity):
         self.actor_id = actor_id
         # Create default token
         self.token_name = name
-        self.token_filename = "icons/svg/mystery-man.svg"
+        self.token_filename = ""
         # Grid size in Roll20 is hardcoded to 70x70
         self.width = 70
         self.height = 70
@@ -556,7 +674,7 @@ class Token(Entity):
         return {"flags": {},
                 "name": self.token_name,
                 "displayName": self.display_name,
-                "img": self.token_filename,
+                "img": self.token_filename if self.token_filename != "" else "icons/svg/mystery-man.svg",
                 "width": self.width / 70.0,
                 "height": self.height / 70.0,
                 "scale": 1,
@@ -604,6 +722,12 @@ class Actor(Entity):
 
         npc = self.isNPC()
         bio = character["bio"]
+        gmnotes = character["gmnotes"]
+        if gmnotes != "":
+            bio += "\n<section class=\"secret\"><p>GM Notes : </p>" + gmnotes + "</section>"
+
+        bio = self.replaceCompendiumLinks(self.replaceEntityLinks(bio))
+
         avatar_filename = ""
         if character["avatar"] != "":
             if self.getArgument("use_original_image_urls", False):
@@ -653,7 +777,7 @@ class Actor(Entity):
                                 "resources" : self.createActorResources(),
                                 },
                        "folder": Entity.normalizeID(folder),
-                       "flags": {},
+                       "flags": {"entityorder": {"order": index}},
                        "type": "npc" if npc else "character",
                        "token": token,
                        "items": []
@@ -696,7 +820,9 @@ class Actor(Entity):
                 "label": name,
                 "value": ability[0],
                 "min": 3,
-                "proficient": 1 if proficient else 0
+                "proficient": 1 if proficient else 0,
+                "mod": mod,
+                "save": save
                 }
 
     def createActorAbilities(self):
@@ -1246,8 +1372,8 @@ class Scene(Entity):
         ids_to_display.extend([i["id"] for i in self.filterItems("paths", "walls", ids_to_display)])
 
         # Try to figure out wh
-        door_color = None
-        secret_door_color = None
+        door_color =  self.getArgument("door_color", None)
+        secret_door_color = self.getArgument("secret_door_color", None)
         if self.getArgument("auto_doors", False) or self.getArgument("interactive", False):
             wall_colors = {}
             for zid in ids_to_display:
@@ -1498,7 +1624,9 @@ class Scene(Entity):
                        "name": name,
                        "permission": {"default": 0},
                        "folder": Entity.normalizeID(folder),
-                       "flags": {"R20Converter": {"page-position": page.get("placement", 0)}},
+                       "flags": {"R20Converter":
+                                     {"page-position": page.get("placement", 0)},
+                                 "entityorder": {"order": page.get("placement", 0)}},
                        "description": "",
                        "navigation": not page["archived"],
                        "active": active_page == page["id"],
@@ -1513,8 +1641,8 @@ class Scene(Entity):
                        "shiftY": 0,
                        "gridColor": self.color(page["gridcolor"]),
                        "gridAlpha": page["grid_opacity"],
-                       "gridDistance": page["scale_number"],
-                       "gridUnits": page["scale_units"],
+                       "gridDistance": page["scale_number"] if float(page["scale_number"]) >= 1 else 1,
+                       "gridUnits": page["scale_units"] if float(page["scale_number"]) >= 1 else ("(" + str(page["scale_number"]) + " " + page["scale_units"] + ")"),
                        "tokenVision": page["showlighting"] and page["lightenforcelos"],
                        "fogExploration": not self.getArgument("disable_fog", False) and (self.getArgument("enable_fog", False) or page["adv_fow_enabled"]),
                        "globalLight": page["lightglobalillum"],
@@ -1551,15 +1679,15 @@ class Scene(Entity):
             except:
                 font = ImageFont.load_default()                
 
-        size = font.getsize(text.encode('utf-8'))
+        size = font.getsize(text)
         img = Image.new("RGBA", size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        draw_size = draw.textsize(text.encode('utf-8'), font=font)
+        draw_size = draw.textsize(text, font=font)
         if draw_size != size:
             img = Image.new("RGBA", draw_size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
 
-        draw.text((0, 0), text.encode('utf-8'), rgb, font=font)
+        draw.text((0, 0), text, rgb, font=font)
         img.save(filename)
         return img.size
 
@@ -1793,12 +1921,15 @@ if __name__ == "__main__":
     parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
     parser.add_argument("--campaign-title", default=None, help="Override the Campaign title")
     parser.add_argument("--description", default="Imported from Roll20 using R20Converter", help="World Desription")
+    parser.add_argument("--original-folder-names", action="store_true", help="Keep the original folder names instead of prefix-ing them with their position.")
     parser.add_argument("-r", "--restrict-movement", action="store_true", help="Force all walls to restrict movement")
     parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
     parser.add_argument("--disable-fog", action="store_true", help="Disable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
     parser.add_argument("--interactive", action="store_true", help="Ask questions about decisions to be made during the conversion process.")
     parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
     parser.add_argument("--auto-doors", action="store_true", help="Automatically detect doors and set them as such.")
+    parser.add_argument("--door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into doors. For example, set it to '#ff0000' for Red walls.")
+    parser.add_argument("--secret-door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into secret doors")
     parser.add_argument("--player-password", default="", help="Default player password")
     parser.add_argument("--gm-password", default="", help="Default GM password")
     parser.add_argument("--disable-archived", action="store_true", help="Disable the automatic move of archived scenes/handouts/characters to an Archived folder.")
@@ -1810,6 +1941,7 @@ if __name__ == "__main__":
                         "The angle is calculated with every point in the wall that is skipped, so a circle drawn with small lines and small angles will not be removed.\n"
                         "Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points (Default: 30)")
     parser.add_argument("--debug-page", default=None, help="Only convert a specific page. Useful for debugging")
+    parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT public directory (used for importing items and spells from dnd5e system")
 
     args = parser.parse_args()
 
