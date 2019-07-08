@@ -34,30 +34,7 @@ class R20Converter(object):
             print("Warning: Could not find the path to the FVTT public directory, either specify a destination directory in the public/worlds/ path\n"
                   "or use the --fvtt-public-path argument to specify the path to the public directory.\n"
                   "If you do not, then Item and Spell Compendium links in journal entries will not be replaced with links to SRD data from the D&D 5e packs.")
-        
-    def findID(self, id, where=None):
-        if where == "handout" or where is None:
-            matches = [item for item in self.campaign["handouts"] if item["id"] == id]
-            if len(matches) > 0:
-                return matches[0]
-        if where == "page" or where is None:
-            matches = [item for item in self.campaign["pages"] if item["id"] == id]
-            if len(matches) > 0:
-                return matches[0]
-        if where == "character" or where is None:
-            matches = [item for item in self.campaign["characters"] if item["id"] == id]
-            if len(matches) > 0:
-                return matches[0]
-        if where == "player" or where is None:
-            matches = [item for item in self.campaign["players"] if item["id"] == id]
-            if len(matches) > 0:
-                return matches[0]
-        if where == "track" or where is None:
-            matches = [item for item in self.campaign["jukebox"] if item["id"] == id]
-            if len(matches) > 0:
-                return matches[0]
-        return None
-
+ 
     def getZipFile(self, filename):
         # On japanese systems, path separator is actually '¥' which won't work
         # when opening the files in the zip.
@@ -84,6 +61,7 @@ class R20Converter(object):
         os.makedirs(os.path.join(self.path, "scenes"))
 
         self.world = World(self).save()
+        self.settings = SettingsDB(self).save()
         self.users = Users(self).save()
         self.folders = Folders(self)
         self.items = EmptyDB(self, "items")
@@ -94,11 +72,11 @@ class R20Converter(object):
         self.playlists = Playlists(self).save()
 
         self.sessions = EmptyDB(self, "sessions").save()
-        self.settings = EmptyDB(self, "settings").save()
         self.chat = EmptyDB(self, "chat").save()
         # Could get modified by the journal
         self.folders.save()
         self.items.save()
+        print "\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\nThank you for your support!"
 
 class DatabaseFile(object):
     def __init__(self, converter, filename):
@@ -107,9 +85,30 @@ class DatabaseFile(object):
         self._filename = filename
         self._campaign = converter.campaign
         self.entities = []
-
+  
     def findID(self, id, where=None):
-        return self._converter.findID(id, where)
+        if where == "handout" or where is None:
+            matches = [item for item in self._campaign["handouts"] if item["id"] == id]
+            if len(matches) > 0:
+                return matches[0]
+        if where == "page" or where is None:
+            matches = [item for item in self._campaign["pages"] if item["id"] == id]
+            if len(matches) > 0:
+                return matches[0]
+        if where == "character" or where is None:
+            matches = [item for item in self._campaign["characters"] if item["id"] == id]
+            if len(matches) > 0:
+                return matches[0]
+        if where == "player" or where is None:
+            matches = [item for item in self._campaign["players"] if item["id"] == id]
+            if len(matches) > 0:
+                return matches[0]
+        if where == "track" or where is None:
+            matches = [item for item in self._campaign["jukebox"] if item["id"] == id]
+            if len(matches) > 0:
+                return matches[0]
+        return None
+
 
     def getArgument(self, name, default=None):
         return self._converter.getArgument(name, default)
@@ -161,13 +160,13 @@ class Entity(object):
     def _foundCompendium(self, match):
         converter = self._database._converter
         item_id = None
+        before_href = match.group(1)
+        compendium = match.group(2)
+        name = urllib.unquote(match.group(3))
+        name = name.split("#")[0].split("?")[0]
+        after_href = match.group(4)
+        text = match.group(5)
         if converter.hasSystemPacks():
-            before_href = match.group(1)
-            compendium = match.group(2)
-            name = urllib.unquote(match.group(3))
-            name = name.split("#")[0].split("?")[0]
-            after_href = match.group(4)
-            text = match.group(5)
             items = []
             if compendium == "Spells":
                 db = converter.packs.get("spells", None)
@@ -182,8 +181,8 @@ class Entity(object):
                 folder = "D&D 5e Items (SRD)"
                 folder_id = "r20converter-dnd5e-items"
             for item in items:
-                if item["name"] == name:
-                    print "Found item '%s' in '%s'" % (name, folder)
+                if "name" in item and item["name"] == name:
+                    #print "Found item '%s' in '%s'" % (name, folder)
                     item_id = name
                     converter.folders.ensureFolder(folder_id, folder, "Item")
                     entity = Entity(converter.items, item_id)
@@ -195,7 +194,7 @@ class Entity(object):
         if item_id:
             return self.replaceEntityLinks('<a %shref="http://journal.roll20.net/item/%s"%s>%s</a>' % (before_href, item_id, after_href, text))
         else:
-            print "Could not find compendium item of type '%s' and name '%s'" % (match.group(2), match.group(3))
+            print "Could not find compendium item of type '%s' and name '%s'" % (compendium, name)
             return match.group(0)
         
 
@@ -320,8 +319,8 @@ class World(object):
         return {"name": self._title,
                 "description": self._description,
                 "system": "dnd5e",
-                "coreVersion": "0.3.0",
-                "systemVersion": 0.5,
+                "coreVersion": "0.3.2",
+                "systemVersion": 0.6,
                 "packs": [],
                 "scripts": [],
                 "styles": []
@@ -337,6 +336,18 @@ class World(object):
             f.write(str(self))
         return self
 
+class SettingsDB(DatabaseFile):
+    def __init__(self, converter):
+        DatabaseFile.__init__(self, converter, "settings.db")
+        self.entities = [Setting(self, "core.moduleConfiguration", {"entityorder": True, "permission_viewer": True})]
+
+class Setting(Entity):
+    def __init__(self, database, key, value):
+        Entity.__init__(self, database, key)
+        self.entity = {"_id": self._id,
+                       "key": key,
+                       "value": json.dumps(value)}
+
 class Users(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "users.db")
@@ -345,18 +356,27 @@ class Users(DatabaseFile):
         self.entities = self.genEntities()
 
     def genEntities(self):
-        users = [User(self, player, player["d20userid"] == self._known_gm) for player in self._players]
+        users = []
+        for player in self._players:
+            if self._campaign["playerspecificpages"] and player["id"] in self._campaign["playerspecificpages"]:
+                scene = self._campaign["playerspecificpages"][player["id"]]
+            else:
+                scene = self._campaign["playerpageid"]
+            is_gm = player["d20userid"] == self._known_gm
+            users.append(User(self, player, is_gm, scene))
         return users
 
 class User(Entity):
-    def __init__(self, database, player, is_gm=False):
+    def __init__(self, database, player, is_gm=False, scene=None):
         Entity.__init__(self, database, player["id"])
         self.entity = {"_id": self._id,
                        "name": player["displayname"],
                        "flags":{},
-                       "color": self.color(player["color"])
+                       "color": self.color(player["color"]),
+                       "scene": Entity.normalizeID(scene),
                        }
         print("Creating User : %s (%s)" % (self.entity["name"].encode("utf-8"), "GM" if is_gm else "Player"))
+        
         self.setGM(is_gm)
 
     def setGM(self, gm):
@@ -380,7 +400,7 @@ class Folders(DatabaseFile):
                 if depth >= 2:
                     print "Folder '%s' has a depth of %d. Dropping it to parent" % (item["n"], depth)
                     folder_id = parent
-                (children, child_handouts, child_characters) = self.addJournalFolder(item, folder_id, index + 1 + len(folders), depth+1)
+                (children, child_handouts, child_characters) = self.addJournalFolder(item, folder_id, index + 1 + len(folders), depth + 1)
                 folders.extend(children)
                 has_characters |= child_characters
                 has_handouts |= child_handouts
@@ -414,17 +434,11 @@ class Folders(DatabaseFile):
     def genEntities(self):
         parent = None
         folders = []
-        create_root_folder = False
         for item in self._campaign["journalfolder"]:
             if type(item) == dict:
                 (children, _, _) = self.addJournalFolder(item, None, len(folders))
                 folders.extend(children)
-            else:
-                if self.findID(item, "handout") != None:
-                    create_root_folder = True
 
-        if create_root_folder:
-            folders.append(Folder(self, "root-handouts-folder-id", "Root folder", "JournalEntry", None, len(folders)))
         if not self.getArgument("disable_archived", False):
             for page in self._campaign["pages"]:
                 if page["archived"]:
@@ -448,12 +462,11 @@ class Folder(Entity):
         #if folder_type == "JournalEntry" and parent is not None:
         #    name = "|_ " + name
         #    parent = None
-        if index is not None and not self.getArgument("original_folder_names", False):
-            name = u"•%03d•%s" % (index, name)
         self.entity = {"_id": self._id,
                        "name": name, 
                        "type": folder_type,
-                       "parent": Entity.normalizeID(parent)
+                       "parent": Entity.normalizeID(parent),
+                       "sort": 100000 * (index if index else 1)
                        }
 
 class Journal(DatabaseFile):
@@ -481,7 +494,7 @@ class Journal(DatabaseFile):
         return handouts
 
     def genEntities(self):
-        return self.addToFolder("root-handouts-folder-id", self._campaign["journalfolder"], "journal")
+        return self.addToFolder(None, self._campaign["journalfolder"], "journal")
 
 # TODO: handle Archived handouts differently?
 class Handout(Entity):
@@ -579,6 +592,7 @@ class Token(Entity):
         self.emits_dim_light = 0
         self.emits_bright_light = 0
         self.emits_light = False
+        self.has_vision = False
 
         if token:
             self.token_name = token.get("name", self.token_name)
@@ -604,6 +618,7 @@ class Token(Entity):
             all_see_bar2 = token.get("showplayers_bar2", all_see_bar2)
             lradius = token.get("light_radius", 0)
             ldimradius = token.get("light_dimradius", 0)
+            self.has_vision = self._token.get("light_hassight", False)
             self.setupLighting(lradius, ldimradius)
 
         if self.bar1_max > 0 or self.bar2_max > 0:
@@ -680,12 +695,14 @@ class Token(Entity):
                 "scale": 1,
                 "elevation": 0,
                 "rotation": self.rotation,
+                "lockRotation": False,
                 "effects": [], #TODO : support effects. Format is : ["icons/svg/frozen.svg", "icons/svg/skull.svg"], etc..
                 "hidden": False,
                 "dimLight": self.emits_dim_light,
                 "brightLight": self.emits_bright_light,
                 "dimSight": self.dim_sight,
                 "brightSight": self.bright_sight,
+                "vision": self.has_vision,
                 "actorId": self.actor_id,
                 "actorLink": False,
                 "disposition": -1,
@@ -740,25 +757,36 @@ class Actor(Entity):
         default_token = character["defaulttoken"] if character["defaulttoken"] != "" else None
         token = Token(self._id, character["name"], default_token)
         token_filename = ""
+        randomImg = False
         if default_token and default_token.get("imgsrc", "") != "":
             if self.getArgument("use_original_image_urls", False):
                 token_filename = default_token["imgsrc"]
             else:
                 filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "token.png")
                 (_, token_filename) = self.copyZipFile(filename, filename)
+                if avatar_filename == "":
+                    avatar_filename = token_filename
+                if "sides" in default_token and len(default_token["sides"]) > 0:
+                    randomImg = True
+                    for i in range(len(default_token["sides"])):
+                        filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "side_" + str(i) + ".png")
+                        (_, token_filename) = self.copyZipFile(filename, filename)
+                        token_filename = token_filename.replace("side_" + str(i) + ".png", "side_*.png")
             if avatar_filename == "":
                 avatar_filename = token_filename
         if token_filename == "":
             token_filename = avatar_filename
         token.token_filename = token_filename
         token = token.getDict()
-        bar1_link = token.get("bar1_link", "")
-        bar2_link = token.get("bar2_link", "")
-        (_, _, hp_id) = self.getAttribute("hp")
-        if bar1_link == hp_id:
-            token["bar1"]["attribute"] = "attributes.hp"
-        if bar2_link == hp_id:
-            token["bar2"]["attribute"] = "attributes.hp"
+        token["randomImg"] = randomImg
+        if default_token:
+            bar1_link = default_token.get("bar1_link", "")
+            bar2_link = default_token.get("bar2_link", "")
+            (_, _, hp_id) = self.getAttribute("hp")
+            if bar1_link == hp_id:
+                token["bar1"]["attribute"] = "attributes.hp"
+            if bar2_link == hp_id:
+                token["bar2"]["attribute"] = "attributes.hp"
         token["actorLink"] = not npc
 
         if character["archived"] and not self.getArgument("disable_archived", False):
@@ -1332,7 +1360,7 @@ class Scene(Entity):
                         print "Couldn't copy background image for page '%s'" % (name.encode('utf-8'))
                         bg = None
         if not bg:
-            print "Page '%s' doesn't have a recognizable map background" % name.encode('utf-8')
+            print "Background does not match scene dimensions 100%. Will be set as a tile instead"
 
         if self.getArgument("use_original_image_urls", False):
             thumb_image = page["thumbnail"]
@@ -1487,8 +1515,8 @@ class Scene(Entity):
                     token["x"] = margin_left + x * grid_multiplier
                     token["y"] = margin_top + y * grid_multiplier
                     # Token size is in grid units, so we use snapping_increment instead of grid_multiplier
-                    token["width"] /= (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
-                    token["height"] /= (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
+                    token["width"] = token["width"] / (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
+                    token["height"] = token["height"] / (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
                     # Store the token id mapping for the Combat database
                     page_tokens = self.token_ids.setdefault(page["id"], {})
                     page_tokens[graphic["id"]] = token_id
@@ -1511,7 +1539,7 @@ class Scene(Entity):
                              "flags": {},
                              "t": "l",
                              # light object get placed at the center of the graphic, so no need to calculate upper-left corner position
-                             "x":  margin_left + left * grid_multiplier,
+                             "x": margin_left + left * grid_multiplier,
                              "y": margin_top + top * grid_multiplier,
                              "dim": dim,
                              "bright": bright
@@ -1574,10 +1602,10 @@ class Scene(Entity):
                     wall = {"id": wall_id,
                             "flags": {},
                             "c": [
-                            margin_left + (left + previous_point[0]) * grid_multiplier,
-                            margin_top + (top + previous_point[1]) * grid_multiplier,
-                            margin_left + (left + point[0]) * grid_multiplier,
-                            margin_top + (top + point[1]) * grid_multiplier,
+                                    margin_left + (left + previous_point[0]) * grid_multiplier,
+                                    margin_top + (top + previous_point[1]) * grid_multiplier,
+                                    margin_left + (left + point[0]) * grid_multiplier,
+                                    margin_top + (top + point[1]) * grid_multiplier,
                             ],
                             "move": 1 if page["lightrestrictmove"] or self.getArgument("restrict_movement", False) else 0,
                             "sense": 1,
@@ -1679,15 +1707,15 @@ class Scene(Entity):
             except:
                 font = ImageFont.load_default()                
 
-        size = font.getsize(text)
+        size = font.getsize(text.encode('utf-8'))
         img = Image.new("RGBA", size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        draw_size = draw.textsize(text, font=font)
+        draw_size = draw.textsize(text.encode('utf-8'), font=font)
         if draw_size != size:
             img = Image.new("RGBA", draw_size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
 
-        draw.text((0, 0), text, rgb, font=font)
+        draw.text((0, 0), text.encode('utf-8'), rgb, font=font)
         img.save(filename)
         return img.size
 
@@ -1810,7 +1838,7 @@ class Encounter(Entity):
                     graphic = Scene.findItemByID(page, token["id"], "graphics")
                     hidden = (graphic and graphic["layer"] == "gmlayer")
                 try:
-                    initiative = float(token["pr"])
+                    initiative = int(token["pr"])
                 except:
                     initiative = None
                 combatants.append({"id": combatant_id,
@@ -1912,8 +1940,6 @@ class Playlist(Entity):
                        "mode": modes.get(playlist["s"], -1), # Default to soundboard only for the root folder
                        "playing": False
                        }
-        
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="R20Converter", epilog="Convert Roll20 campaigns into Foundry VTT worlds.")
@@ -1921,7 +1947,6 @@ if __name__ == "__main__":
     parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
     parser.add_argument("--campaign-title", default=None, help="Override the Campaign title")
     parser.add_argument("--description", default="Imported from Roll20 using R20Converter", help="World Desription")
-    parser.add_argument("--original-folder-names", action="store_true", help="Keep the original folder names instead of prefix-ing them with their position.")
     parser.add_argument("-r", "--restrict-movement", action="store_true", help="Force all walls to restrict movement")
     parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
     parser.add_argument("--disable-fog", action="store_true", help="Disable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
