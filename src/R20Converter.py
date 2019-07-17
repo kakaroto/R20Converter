@@ -723,6 +723,7 @@ class Actor(Entity):
         self._character = character
 
         print "Creating Character : %s" % character["name"].encode('utf-8')
+        self.parseAttributes()
         permissions = {"default": Handout.PERMISSION_NONE}
         for player in character.get("inplayerjournals", []):
             if player == "all":
@@ -823,10 +824,7 @@ class Actor(Entity):
         return None
 
     def getAttribute(self, key, default=None):
-        for attr in self._character["attributes"]:
-            if attr["name"] == key:
-                return (attr["current"], attr["max"], attr["id"])
-        return (default, default, None)
+        return self._attributes.get(key, (default, default, None))
 
     def isNPC(self):
         npc = self.getAttribute("npc", "0")
@@ -835,11 +833,22 @@ class Actor(Entity):
         except:
             return False
 
+    def parseAttributes(self):
+        self._attributes = {}
+        self._repeating = {}
+        for attr in self._character["attributes"]:
+            value = (attr["current"], attr["max"], attr["id"])
+            if attr["name"].startswith("repeating_"):
+                (_, repeating_type, id, name) = attr["name"].split("_", 3)
+                self._repeating.setdefault(repeating_type, {}).setdefault(id, {})[name] = value
+            else:
+                self._attributes[attr["name"]] = value
+
     def createActorAbility(self, name):
         ability = self.getAttribute(name.lower(), 10)
         mod = self.getAttribute(name.lower() + "_mod", 0)
         if self.isNPC():
-            save = self.getAttribute(name.lower() + "_save_bonus", mod)
+            save = self.getAttribute(name.lower() + "_save_bonus", mod[0])
             proficient = (save[0] == mod[0])
         else:
             save = self.getAttribute("npc_" + name.lower()[0:3] + "_save", "")
@@ -862,27 +871,50 @@ class Actor(Entity):
                 "cha": self.createActorAbility("Charisma")
                 }
 
+    def createAttributeAC(self):
+        if self.isNPC():
+            ac = self.getAttribute("npc_ac", 10)[1]
+        else:
+            ac = self.getAttribute("ac", 10)[0]
+
+        res = {"type": "Number",
+               "label": "Armor Class",
+               "min": ac,
+               "value": ac
+               }
+        if self.isNPC():
+            res["formula"] = self.getAttribute("npc_actype", "")[0]
+        return res
+
+    def createAttributeHP(self):
+        hp = self.getAttribute("hp", 10)
+        if self.isNPC():
+            if hp[2] == None:
+                hp = self.getAttribute("npc_hpbase", 10)
+            value = hp[1]
+            max = hp[1]
+            formula = self.getAttribute("npc_hpformula", "")[0]
+        else:
+            value = hp[0]
+            max = hp[1]
+            formula = ""
+        return {"type": "Number",
+                "label": "Hit Points",
+                "value": value,
+                "min": 0,
+                "max": max,
+                "temp": 0,
+                "tempmax": 0,
+                "formula": formula
+                }
     def createActorAttributes(self):
         attributes = {
-            "ac": {
-                "type": "Number",
-                "label": "Armor Class",
-                "min": 0,
-                "value": 0
-                },
-            "hp": {
-                "type": "Number",
-                "label": "Hit Points",
-                "value": 10,
-                "min": 0,
-                "max": 10,
-                "temp": 0,
-                "tempmax": 0
-                },
+            "ac": self.createAttributeAC(),
+            "hp": self.createAttributeHP(),
             "init": {
                 "type": "Number",
                 "label": "Initiative Modifier",
-                "value": 0
+                "value": self.getAttribute("initiative_bonus", 0)[0]
                 },
             "prof": {
                 "type": "Number",

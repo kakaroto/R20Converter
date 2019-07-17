@@ -3,7 +3,7 @@
 import os, sys, argparse, json
 
 class DatabaseFile(object):
-    def __init__(self, path, filename):
+    def __init__(self, path, filename=None):
         self._path = path
         self._filename = filename
         self.load()
@@ -12,7 +12,10 @@ class DatabaseFile(object):
         return "\n".join(map(str, self.entities))
 
     def load(self):
-        full_path = os.path.join(self._path, "data", self._filename)
+        if self._filename is not None:
+            full_path = os.path.join(self._path, "data", self._filename)
+        else:
+            full_path = self._path
         self.entities = {}
         with open(full_path, "r") as f:
             lines = f.readlines()
@@ -25,8 +28,13 @@ class Differ(object):
     def __init__(self, args):
         self.args = args
 
-        worlds = [self.load_world(args.left), self.load_world(args.right)]
-        self.diff_json("", worlds[0], worlds[1])
+        if args.world:
+            worlds = [self.load_world(args.left), self.load_world(args.right)]
+            self.diff_json("", worlds[0], worlds[1])
+        else:
+            left = DatabaseFile(args.left).entities
+            right = DatabaseFile(args.right).entities
+            self.diff_json("", left, right)
 
     def load_world(self, path):
         with open(os.path.join(path, "world.json"), "r") as f:
@@ -68,6 +76,7 @@ class Differ(object):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FVTT Database Differ", epilog="Compare databases from two worlds.")
+    parser.add_argument("--world", action="store_true", help="If set, will diff world directories instead of DB files")
     parser.add_argument("left", metavar="first-world", help="The first world's directory in public/worlds/")
     parser.add_argument("right", metavar="second-world", help="The secnd world's directory in public/worlds/")
     args = parser.parse_args()
