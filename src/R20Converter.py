@@ -155,7 +155,7 @@ class Entity(object):
         return re.sub('<a ([^>]*)href=[\'"]http://journal.roll20.net/([^/]+)/([^\'"]+)[\'"]([^>]*)>(.*?)</a>', self._foundJournal, content)
 
     def replaceCompendiumLinks(self, content):
-        return re.sub('<a ([^>]*)href=[\'"]https?://roll20.net/compendium/dnd5e/([^\'"]+)(?:(?:%3[aA])|\:)([^\'"]+)[\'"]([^>]*)>(.*?)</a>', self._foundCompendium, content)
+        return re.sub('<a ([^>]*)href=[\'"]https?://roll20.net/compendium/dnd5e/([^\'"]+)(?:(?:%3[aA])|:)([^\'"]+)[\'"]([^>]*)>(.*?)</a>', self._foundCompendium, content)
 
     def _foundCompendium(self, match):
         converter = self._database._converter
@@ -237,13 +237,12 @@ class Entity(object):
     def color(val, default="#c0c0c0", allow_transparent=False):
         if allow_transparent and val == "transparent":
             return None
-        m = re.match("rgb\((\d+), (\d+), (\d+)\)", val)
+        m = re.match(r"rgb\((\d+), (\d+), (\d+)\)", val)
         if m:
             return "#%02x%02x%02x" % tuple(map(int, m.groups()))
         if not val.startswith("#") or len(val) < 4:
             return default
         val = val[1:]
-        lv = len(val)
         try:
             if len(val) < 6:
                 rgb = tuple(int(val[i:i+1], 16) * 16 for i in (0, 1, 2))
@@ -432,7 +431,6 @@ class Folders(DatabaseFile):
         return folder
 
     def genEntities(self):
-        parent = None
         folders = []
         for item in self._campaign["journalfolder"]:
             if type(item) == dict:
@@ -670,7 +668,7 @@ class Token(Entity):
                 token_radius = width if width > height else height
                 # Transform tile width into feet
                 if scale_units == "ft":
-                    token_radius = float(scale_number) * token_radius / grid_size
+                    token_radius = float(scale) * token_radius / grid_size
                 else:
                     token_radius = 0
             except:
@@ -1785,7 +1783,6 @@ class Scene(Entity):
             return (int(w), int(h))
         circle = False
         for point in path:
-            type = point[0]
             if point[0] == "M": # First Point
                 (w, h) = add_point(point[1], point[2], w, h)
             elif point[0] == "L": # A line
@@ -1927,11 +1924,10 @@ class Playlists(DatabaseFile):
                 root_playlist["i"].append("")
             else:
                 root_playlist["i"].append(item)
+                root_playlist_has_items = True
 
-        for i in root_playlist["i"]:
-            if i != "":
-                playlists.append(Playlist(self, root_playlist))
-                break
+        if root_playlist_has_items:
+            playlists.append(Playlist(self, root_playlist))
 
         return playlists
 
