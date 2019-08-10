@@ -1,0 +1,7 @@
+Campaigns/
+worlds/
+*.pyc
+*~
+windows/
+build/
+systems/
