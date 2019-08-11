@@ -31,6 +31,12 @@ class Differ(object):
         if args.world:
             worlds = [self.load_world(args.left), self.load_world(args.right)]
             self.diff_json("", worlds[0], worlds[1])
+        elif args.json:
+            with open(os.path.join(args.left), "r") as f:
+                left = json.load(f)
+            with open(os.path.join(args.right), "r") as f:
+                right = json.load(f)
+            self.diff_json("", left, right)
         else:
             left = DatabaseFile(args.left).entities
             right = DatabaseFile(args.right).entities
@@ -77,6 +83,7 @@ class Differ(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="FVTT Database Differ", epilog="Compare databases from two worlds.")
     parser.add_argument("--world", action="store_true", help="If set, will diff world directories instead of DB files")
+    parser.add_argument("--json", action="store_true", help="If set, will diff json files")
     parser.add_argument("left", metavar="first-world", help="The first world's directory in public/worlds/")
     parser.add_argument("right", metavar="second-world", help="The secnd world's directory in public/worlds/")
     args = parser.parse_args()
