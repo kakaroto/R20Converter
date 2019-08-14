@@ -15,13 +15,19 @@ import re
 import sys
 import os
 import errno
+import requests
 
 class R20Converter(object):
     def __init__(self, args):
         self.args = args
         self.path = args.path
-        self.zip = zipfile.ZipFile(args.zip_file, "r")
-        self.campaign = json.load(self.getZipFile("campaign.json"))
+        if args.json:
+            with open(args.zip_file, "r") as f:
+                self.campaign = json.load(f)
+            self.campaign["jukeboxfolder"] = ""
+        else:
+            self.zip = zipfile.ZipFile(args.zip_file, "r")
+            self.campaign = json.load(self.getZipFile("campaign.json"))
         self.packs = {}
         self.fvtt_path = self.getArgument("fvtt_public_path", None)
         if self.fvtt_path == None:
@@ -136,6 +142,7 @@ class DatabaseFile(object):
 class Entity(object):
     # Ensures ids are unique accross all entities
     id_database = {}
+    resource_cache = {}
 
     def __init__(self, database, id):
         self._database = database
@@ -285,6 +292,28 @@ class Entity(object):
         config_path = os.path.join("worlds", world_dir_name, destination_safe)
         return (dest_filename, config_path.replace(os.path.sep, "/"))
     
+    def downloadResource(self, url, destination):
+        (dest_filename, config_path) = self.getDestinationPaths(destination)
+        # all Roll20 URLs use thumb/med/max/original for the filename but the actual image
+        # loaded depends on the size. If we don't grab the original image, then maps will be
+        # of much lower resolution than they should be.
+        if not url.startswith("http"):
+            url = "https://app.roll20.net/" + url
+        url = re.sub(r"/(thumb|med|max)\.", "/original.", url)
+        content = Entity.resource_cache.get(url, None)
+        if content is None:
+            r = requests.get(url)
+            if r.status_code == 200:
+                content = r.content
+                Entity.resource_cache[url] = content
+        if content is not None:
+            with open(dest_filename, "wb") as f:
+                f.write(content)
+            return (dest_filename, config_path)
+        else:
+            print "ERROR: Can't download URL : %s" % url
+            return (None, "")
+
     def copyFile(self, file, destination):
         (dest_filename, config_path) = self.getDestinationPaths(destination)
         with open(dest_filename, "wb") as f:
@@ -529,7 +558,10 @@ class Handout(Entity):
                 avatar_filename = handout["avatar"]
             else:
                 filename = os.path.join(path, "%03d - %s" % (index, handout["name"]), "avatar.png")
-                (_, avatar_filename) = self.copyZipFile(filename, filename)
+                if self.getArgument("json", False):
+                    (_, avatar_filename) = self.downloadResource(handout["avatar"], filename)
+                else:
+                    (_, avatar_filename) = self.copyZipFile(filename, filename)
         if handout["archived"] and not self.getArgument("disable_archived", False):
             parent = "archived-handouts-folder-id"
         self.entity = {"_id": self._id,
@@ -750,7 +782,10 @@ class Actor(Entity):
                 avatar_filename = character["avatar"]
             else:
                 filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "avatar.png")
-                (_, avatar_filename) = self.copyZipFile(filename, filename)
+                if self.getArgument("json", False):
+                    (_, avatar_filename) = self.downloadResource(character["avatar"], filename)
+                else:
+                    (_, avatar_filename) = self.copyZipFile(filename, filename)
         folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
 
         default_token = character["defaulttoken"] if character["defaulttoken"] != "" else None
@@ -762,14 +797,20 @@ class Actor(Entity):
                 token_filename = default_token["imgsrc"]
             else:
                 filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "token.png")
-                (_, token_filename) = self.copyZipFile(filename, filename)
+                if self.getArgument("json", False):
+                    (_, token_filename) = self.downloadResource(default_token["imgsrc"], filename)
+                else:
+                    (_, token_filename) = self.copyZipFile(filename, filename)
                 if avatar_filename == "":
                     avatar_filename = token_filename
                 if "sides" in default_token and len(default_token["sides"]) > 0:
                     randomImg = True
                     for i in range(len(default_token["sides"])):
                         filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "side_" + str(i) + ".png")
-                        (_, token_filename) = self.copyZipFile(filename, filename)
+                        if self.getArgument("json", False):
+                            (_, token_filename) = self.downloadResource(default_token["sides"][i], filename)
+                        else:
+                            (_, token_filename) = self.copyZipFile(filename, filename)
                         token_filename = token_filename.replace("side_" + str(i) + ".png", "side_*.png")
             if avatar_filename == "":
                 avatar_filename = token_filename
@@ -1378,14 +1419,17 @@ class Scene(Entity):
         bg = None
         bg_image = ""
         for m in map_layer:
-            if m["width"] == width and m["height"] == height:
+            if m["imgsrc"] != "" and m["width"] == width and m["height"] == height:
                 bg = m
                 if self.getArgument("use_original_image_urls", False):
                     bg_image = bg["imgsrc"]
                 else:
                     filename = os.path.join(zip_page_path, "graphics", bg["id"] + ".png")
                     dest = os.path.join("scenes", "backgrounds", name + ".png")
-                    (_, bg_image) = self.copyZipFile(filename, dest)
+                    if self.getArgument("json", False):
+                        (_, bg_image) = self.downloadResource(bg["imgsrc"], dest)
+                    else:
+                        (_, bg_image) = self.copyZipFile(filename, dest)
                     if bg_image == "":
                         print "Couldn't copy background image for page '%s'" % (name.encode('utf-8'))
                         bg = None
@@ -1397,7 +1441,10 @@ class Scene(Entity):
         else:
             filename = os.path.join(zip_page_path, "thumbnail.png")
             dest = os.path.join("scenes", "thumbs", name + ".png")
-            (thumb_filename, thumb_image) = self.copyZipFile(filename, dest)
+            if self.getArgument("json", False):
+                (thumb_filename, thumb_image) = self.downloadResource(page["thumbnail"], dest)
+            else:
+                (thumb_filename, thumb_image) = self.copyZipFile(filename, dest)
             try:
                 im = Image.open(thumb_filename)
                 im.thumbnail((300, 100))
@@ -1429,7 +1476,7 @@ class Scene(Entity):
         ids_to_display.extend([i["id"] for i in self.filterItems("paths", "gmlayer", ids_to_display)])
         ids_to_display.extend([i["id"] for i in self.filterItems("paths", "walls", ids_to_display)])
 
-        # Try to figure out wh
+        # Try to figure out what colors are the doors/secret doors
         door_color =  self.getArgument("door_color", None)
         secret_door_color = self.getArgument("secret_door_color", None)
         if self.getArgument("auto_doors", False) or self.getArgument("interactive", False):
@@ -1489,7 +1536,7 @@ class Scene(Entity):
             text = self.findItemByID(page, zid, "texts")
             path = self.findItemByID(page, zid, "paths")
             obj = graphic or text or path
-            if obj is None:
+            if obj is None or (graphic is not None and graphic["imgsrc"] == ""):
                 continue
             tile_image = None
             layer = obj["layer"]
@@ -1517,7 +1564,10 @@ class Scene(Entity):
                     else:
                         filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
                         dest = os.path.join("scenes", "tokens", name, "token_" + str(token_id) + ".png")
-                        (_, token_image) = self.copyZipFile(filename, dest)
+                        if self.getArgument("json", False):
+                            (_, token_image) = self.downloadResource(graphic["imgsrc"], dest)
+                        else:
+                            (_, token_image) = self.copyZipFile(filename, dest)
                     token.token_filename = token_image
 
                     # We drop the token object and make it into the dict
@@ -1558,7 +1608,10 @@ class Scene(Entity):
                     else:
                         filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
                         dest = os.path.join("scenes", "tiles", name, "tile_" + str(tile_id) + ".png")
-                        (_, tile_image) = self.copyZipFile(filename, dest)
+                        if self.getArgument("json", False):
+                            (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest)
+                        else:
+                            (_, tile_image) = self.copyZipFile(filename, dest)
             elif graphic and layer == "walls" and graphic["light_otherplayers"]:
                 # NOTE: We ignore tokens in the dynamic layer that are not emitting light.
                 (dim, bright) = Token.computeLighting(graphic["light_radius"], graphic["light_dimradius"],
@@ -1948,7 +2001,11 @@ class Playlist(Entity):
                 mp3_file = "%03d - %s.mp3" % (index, track["title"])
                 filename = os.path.join("jukebox", folder_name, mp3_file)
                 dest = os.path.join("audio", folder_name, mp3_file)
-                (_, mp3_path) = self.copyZipFile(filename, dest)
+                if self.getArgument("json", False):
+                    print "Cannot download Jukebox Track from campaign.json file"
+                    mp3_path = ""
+                else:
+                    (_, mp3_path) = self.copyZipFile(filename, dest)
                 if mp3_path != "":
                     sounds.append({"id": sound_id,
                                    "flags": {},
@@ -1969,33 +2026,34 @@ class Playlist(Entity):
                        "playing": False
                        }
 
+parser = argparse.ArgumentParser(description="R20Converter", epilog="Convert Roll20 campaigns into Foundry VTT worlds.")
+parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/")
+parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
+parser.add_argument("--json", action="store_true", help="Use campaign.json as input instead of a ZIP file (playlist will be empty due to audio tracks being accessible only when logged into Roll20)")
+parser.add_argument("--campaign-title", default=None, help="Override the Campaign title")
+parser.add_argument("--description", default="Imported from Roll20 using R20Converter", help="World Desription")
+parser.add_argument("-r", "--restrict-movement", action="store_true", help="Force all walls to restrict movement")
+parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
+parser.add_argument("--disable-fog", action="store_true", help="Disable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
+parser.add_argument("--interactive", action="store_true", help="Ask questions about decisions to be made during the conversion process.")
+parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
+parser.add_argument("--auto-doors", action="store_true", help="Automatically detect doors and set them as such.")
+parser.add_argument("--door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into doors. For example, set it to '#ff0000' for Red walls.")
+parser.add_argument("--secret-door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into secret doors")
+parser.add_argument("--player-password", default="", help="Default player password")
+parser.add_argument("--gm-password", default="", help="Default GM password")
+parser.add_argument("--disable-archived", action="store_true", help="Disable the automatic move of archived scenes/handouts/characters to an Archived folder.")
+parser.add_argument("--minimum-wall-length", default=0, type=float, help="Minimum distance for walls (in pixels).\n"
+                    "If a wall is smaller and part of a longer chain of walls, it will get merged with the adjacent wall.\n"
+                    "This is useful if there are a lot of small/jagged walls or freehand-drawn walls (Default: 0 (disabled))")
+parser.add_argument("--maximum-wall-angle", default=30, type=float, help="Maximum angle (in degrees) between walls before they are merged (when using --minimum-wall-distance option).\n"
+                    "This is to prevent small walls at high angles (a small triangle or U shape) from being merged and becoming a line that cuts through the map.\n"
+                    "The angle is calculated with every point in the wall that is skipped, so a circle drawn with small lines and small angles will not be removed.\n"
+                    "Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points (Default: 30)")
+parser.add_argument("--debug-page", default=None, help="Only convert a specific page. Useful for debugging")
+parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT public directory (used for importing items and spells from dnd5e system")
+                   
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="R20Converter", epilog="Convert Roll20 campaigns into Foundry VTT worlds.")
-    parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/")
-    parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
-    parser.add_argument("--campaign-title", default=None, help="Override the Campaign title")
-    parser.add_argument("--description", default="Imported from Roll20 using R20Converter", help="World Desription")
-    parser.add_argument("-r", "--restrict-movement", action="store_true", help="Force all walls to restrict movement")
-    parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
-    parser.add_argument("--disable-fog", action="store_true", help="Disable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
-    parser.add_argument("--interactive", action="store_true", help="Ask questions about decisions to be made during the conversion process.")
-    parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
-    parser.add_argument("--auto-doors", action="store_true", help="Automatically detect doors and set them as such.")
-    parser.add_argument("--door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into doors. For example, set it to '#ff0000' for Red walls.")
-    parser.add_argument("--secret-door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into secret doors")
-    parser.add_argument("--player-password", default="", help="Default player password")
-    parser.add_argument("--gm-password", default="", help="Default GM password")
-    parser.add_argument("--disable-archived", action="store_true", help="Disable the automatic move of archived scenes/handouts/characters to an Archived folder.")
-    parser.add_argument("--minimum-wall-length", default=0, type=float, help="Minimum distance for walls (in pixels).\n"
-                        "If a wall is smaller and part of a longer chain of walls, it will get merged with the adjacent wall.\n"
-                        "This is useful if there are a lot of small/jagged walls or freehand-drawn walls (Default: 0 (disabled))")
-    parser.add_argument("--maximum-wall-angle", default=30, type=float, help="Maximum angle (in degrees) between walls before they are merged (when using --minimum-wall-distance option).\n"
-                        "This is to prevent small walls at high angles (a small triangle or U shape) from being merged and becoming a line that cuts through the map.\n"
-                        "The angle is calculated with every point in the wall that is skipped, so a circle drawn with small lines and small angles will not be removed.\n"
-                        "Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points (Default: 30)")
-    parser.add_argument("--debug-page", default=None, help="Only convert a specific page. Useful for debugging")
-    parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT public directory (used for importing items and spells from dnd5e system")
-
     args = parser.parse_args()
 
     if os.path.exists(args.path):
