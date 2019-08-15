@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 from PIL import Image
@@ -61,7 +61,7 @@ class R20Converter(object):
         return len(self.packs) > 0
 
     def convert(self):
-        print "*** Converting Campaign '%s' ***" % self.campaign["campaign_title"].encode('utf-8')
+        print("*** Converting Campaign '%s' ***" % self.campaign["campaign_title"])
         os.makedirs(self.path)
         os.makedirs(os.path.join(self.path, "data"))
         os.makedirs(os.path.join(self.path, "scenes"))
@@ -82,7 +82,7 @@ class R20Converter(object):
         # Could get modified by the journal
         self.folders.save()
         self.items.save()
-        print "\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\nThank you for your support!"
+        print("\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\nThank you for your support!")
 
 class DatabaseFile(object):
     def __init__(self, converter, filename):
@@ -169,7 +169,7 @@ class Entity(object):
         item_id = None
         before_href = match.group(1)
         compendium = match.group(2)
-        name = urllib.unquote(match.group(3))
+        name = urllib.parse.unquote(match.group(3))
         name = name.split("#")[0].split("?")[0]
         after_href = match.group(4)
         text = match.group(5)
@@ -189,7 +189,7 @@ class Entity(object):
                 folder_id = "r20converter-dnd5e-items"
             for item in items:
                 if "name" in item and item["name"] == name:
-                    #print "Found item '%s' in '%s'" % (name, folder)
+                    #print("Found item '%s' in '%s'" % (name, folder))
                     item_id = name
                     converter.folders.ensureFolder(folder_id, folder, "Item")
                     entity = Entity(converter.items, item_id)
@@ -201,7 +201,7 @@ class Entity(object):
         if item_id:
             return self.replaceEntityLinks('<a %shref="http://journal.roll20.net/item/%s"%s>%s</a>' % (before_href, item_id, after_href, text))
         else:
-            print "Could not find compendium item of type '%s' and name '%s'" % (compendium, name)
+            print("Could not find compendium item of type '%s' and name '%s'" % (compendium, name))
             return match.group(0)
         
 
@@ -221,7 +221,7 @@ class Entity(object):
     @staticmethod
     def strToID(id_str):
         new_str = "0"*12 + hex(hash(id_str))
-        return base64.b64encode(new_str[-12:])
+        return base64.b64encode(new_str[-12:].encode()).decode()
 
     @staticmethod
     def normalizeID(id):
@@ -261,7 +261,7 @@ class Entity(object):
 
     @staticmethod
     def urlsafe(filename):
-        url = urllib.quote(filename.replace(os.path.sep, "/").replace(" ", "_").encode('utf-8'))
+        url = urllib.parse.quote(filename.replace(os.path.sep, "/").replace(" ", "_"))
         url.replace("/", os.path.sep)
         # Url encoded characters won't resolve, since the URL would become invalid, so we replace them
         return re.sub("%([0-9A-F]{2})", "_\\1", url)
@@ -311,7 +311,7 @@ class Entity(object):
                 f.write(content)
             return (dest_filename, config_path)
         else:
-            print "ERROR: Can't download URL : %s" % url
+            print("ERROR: Can't download URL : %s" % url)
             return (None, "")
 
     def copyFile(self, file, destination):
@@ -325,7 +325,7 @@ class Entity(object):
             zipfile = self._database._converter.getZipFile(filename)
             return self.copyFile(zipfile, destination)
         except Exception as e:
-            print "Error copying file '%s' from Zip: %s" % (filename.encode('utf-8'), e)
+            print("Error copying file '%s' from Zip: %s" % (filename, e))
             return (None, "")
 
     def __str__(self):
@@ -403,7 +403,7 @@ class User(Entity):
                        "color": self.color(player["color"]),
                        "scene": Entity.normalizeID(scene),
                        }
-        print("Creating User : %s (%s)" % (self.entity["name"].encode("utf-8"), "GM" if is_gm else "Player"))
+        print("Creating User : %s (%s)" % (self.entity["name"], "GM" if is_gm else "Player"))
         
         self.setGM(is_gm)
 
@@ -426,7 +426,7 @@ class Folders(DatabaseFile):
                 # Found a folder
                 folder_id = folder["id"]
                 if depth >= 2:
-                    print "Folder '%s' has a depth of %d. Dropping it to parent" % (item["n"], depth)
+                    print("Folder '%s' has a depth of %d. Dropping it to parent" % (item["n"], depth))
                     folder_id = parent
                 (children, child_handouts, child_characters) = self.addJournalFolder(item, folder_id, index + 1 + len(folders), depth + 1)
                 folders.extend(children)
@@ -438,7 +438,7 @@ class Folders(DatabaseFile):
                 elif self.findID(item, "handout") != None:
                     has_handouts = True
                 else:
-                    print "Unknown ID in Journal folder: %s"  % item.encode('utf-8')
+                    print("Unknown ID in Journal folder: %s"  % item)
 
         # By default, an empty folder would appear in the journal
         if has_handouts or not has_characters:
@@ -532,7 +532,7 @@ class Handout(Entity):
     PERMISSION_OWNER = 3
     def __init__(self, database, handout, index, parent, path):
         Entity.__init__(self, database, handout["id"])
-        print "Creating Handout : %s" % handout["name"].encode('utf-8')
+        print("Creating Handout : %s" % handout["name"])
         # TODO: Replace cross-link journals with @Journal...
         content = handout["notes"]
         gmnotes = handout["gmnotes"]
@@ -607,9 +607,7 @@ class Token(Entity):
         self.rotation = 0
         show_name = True
         all_see_name = False
-        show_bar1 = True
         all_see_bar1 = False
-        show_bar2 = True
         all_see_bar2 = False
         self.bar1_val = 0
         self.bar1_max = 0
@@ -632,18 +630,16 @@ class Token(Entity):
             self.width = token.get("width", self.width)
             self.height = token.get("height", self.height)
             self.rotation = token.get("rotation", self.rotation)
-            self.bar1_val = token.get("bar1_value", self.bar1_val)
-            if self.bar1_val == "":
-                self.bar1_val = 0
-            self.bar1_max = token.get("bar1_max", self.bar1_max)
-            if self.bar1_max == "":
-                self.bar1_max = 0
-            self.bar2_val = token.get("bar2_value", self.bar2_val)
-            if self.bar2_val == "":
-                self.bar2_val = 0
-            self.bar2_max = token.get("bar2_max", self.bar2_max)
-            if self.bar2_max == "":
-                self.bar2_max = 0
+            def parseInt(name, default):
+                try:
+                    val = token.get(name, default)
+                    return int(val)
+                except:
+                    return default
+            self.bar1_val = parseInt("bar1_value", self.bar1_val)
+            self.bar1_max = parseInt("bar1_max", self.bar1_max)
+            self.bar2_val = parseInt("bar2_value", self.bar2_val)
+            self.bar2_max = parseInt("bar2_max", self.bar2_max)
             all_see_bar1 = token.get("showplayers_bar1", all_see_bar1)
             all_see_bar2 = token.get("showplayers_bar2", all_see_bar2)
             lradius = token.get("light_radius", 0)
@@ -737,11 +733,11 @@ class Token(Entity):
                 "actorLink": False,
                 "disposition": -1,
                 "displayBars": self.display_bars,
-                "bar1": {"attribute": "attributes.bar1" if self.bar1_max != "" or self.bar1_val != "" else "",
+                "bar1": {"attribute": "attributes.bar1" if self.bar1_max != 0 or self.bar1_val != 0 else "",
                          "value": self.bar1_val,
                          "max": self.bar1_max
                          },
-                "bar2": {"attribute": "attributes.bar2" if self.bar2_max != "" or self.bar2_val != "" else "",
+                "bar2": {"attribute": "attributes.bar2" if self.bar2_max != 0 or self.bar2_val != 0 else "",
                          "value": self.bar2_val,
                          "max": self.bar2_max
                          }
@@ -752,7 +748,7 @@ class Actor(Entity):
         Entity.__init__(self, database, character["id"])
         self._character = character
 
-        print "Creating Character : %s" % character["name"].encode('utf-8')
+        print("Creating Character : %s" % character["name"])
         self.parseAttributes()
         permissions = {"default": Handout.PERMISSION_NONE}
         for player in character.get("inplayerjournals", []):
@@ -1384,7 +1380,7 @@ class Scene(Entity):
         self._page = page
 
         name = page["name"] if page["name"] != "" else "Untitled"
-        print "Creating Scene : %s" % name.encode('utf-8')
+        print("Creating Scene : %s" % name)
         # Snapping increment gets set to 0 if grid is disabled
         orig_grid_size = 70 * (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
         # Page grid size is hardcoded to 70px in Roll20
@@ -1400,10 +1396,10 @@ class Scene(Entity):
             grid_size = 50
 
         if grid_multiplier * width > 10000 or grid_multiplier * height > 10000:
-            print "******** WARNING ***********"
-            print "Your scene has a size of over 10k pixels in one dimension"
-            print "It will most probably not work properly in FVTT until 0.3.1 is released"
-            print ""
+            print("******** WARNING ***********")
+            print("Your scene has a size of over 10k pixels in one dimension")
+            print("It will most probably not work properly in FVTT until 0.3.1 is released")
+            print("")
 
         margin_left = math.ceil(width * grid_multiplier / grid_size * 0.25) * grid_size
         margin_top = math.ceil(height * grid_multiplier / grid_size * 0.25) * grid_size
@@ -1431,10 +1427,10 @@ class Scene(Entity):
                     else:
                         (_, bg_image) = self.copyZipFile(filename, dest)
                     if bg_image == "":
-                        print "Couldn't copy background image for page '%s'" % (name.encode('utf-8'))
+                        print("Couldn't copy background image for page '%s'" % (name))
                         bg = None
         if not bg:
-            print "Background does not match scene dimensions 100%. Will be set as a tile instead"
+            print("Background does not match scene dimensions 100%. Will be set as a tile instead")
 
         if self.getArgument("use_original_image_urls", False):
             thumb_image = page["thumbnail"]
@@ -1450,7 +1446,7 @@ class Scene(Entity):
                 im.thumbnail((300, 100))
                 im.save(thumb_filename)
             except Exception as e:
-                print "Unable to create thumbnail : %s" % e
+                print("Unable to create thumbnail : %s" % e)
         
         tile_id = 1
         map_tiles = []
@@ -1489,10 +1485,10 @@ class Scene(Entity):
                 wall_colors[path["stroke"]] += len(path["path"]) - 1
 
             if len(wall_colors) > 1:
-                print "In the page, walls are available in these colors : "
+                print("In the page, walls are available in these colors : ")
                 for index, color in enumerate(wall_colors):
-                    print "%d: %s (%d lines)" % (index + 1, color, wall_colors[color])
-                print ""
+                    print("%d: %s (%d lines)" % (index + 1, color, wall_colors[color]))
+                print("")
                 if self.getArgument("auto_doors", False):
                     lowest = None
                     second_lowest = None
@@ -1506,8 +1502,8 @@ class Scene(Entity):
                     if len(wall_colors) > 2:
                         secret_door_color = lowest
                         door_color = second_lowest
-                        print "Secret door color automatically chosen as : %s" % secret_door_color
-                    print "Door color automatically chosen as : %s" % door_color
+                        print("Secret door color automatically chosen as : %s" % secret_door_color)
+                    print("Door color automatically chosen as : %s" % door_color)
                 elif self.getArgument("interactive", False):
                     choice = -1
                     while choice < 0 or choice > len(wall_colors):
@@ -1653,7 +1649,7 @@ class Scene(Entity):
                 top = (top - (drawing_height / 2))
                 (polygon, circle, _, _) = self.pathToPolygonList(path["path"], 0, 0)
                 if circle:
-                    print "Circle in the dynamic layer! Not supported!"
+                    print("Circle in the dynamic layer! Not supported!")
                     continue
                 previous_point = None
                 previous_point_idx = 0
@@ -1790,15 +1786,15 @@ class Scene(Entity):
             except:
                 font = ImageFont.load_default()                
 
-        size = font.getsize(text.encode('utf-8'))
+        size = font.getsize(text)
         img = Image.new("RGBA", size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        draw_size = draw.textsize(text.encode('utf-8'), font=font)
+        draw_size = draw.textsize(text, font=font)
         if draw_size != size:
             img = Image.new("RGBA", draw_size, (0, 0, 0, 0))
             draw = ImageDraw.Draw(img)
 
-        draw.text((0, 0), text.encode('utf-8'), rgb, font=font)
+        draw.text((0, 0), text, rgb, font=font)
         img.save(filename)
         return img.size
 
@@ -1846,7 +1842,7 @@ class Scene(Entity):
             elif point[0] == "C": # Circle
                 circle = True
             else:
-                print "Unknown path type: %s" % str(point)
+                print("Unknown path type: %s" % str(point))
         return (polygon, circle, w, h)
 
     # Get angle between points P1, P2, P3 with the angle at P2 being returned in degrees
@@ -1994,7 +1990,7 @@ class Playlist(Entity):
                  }
         sounds = []
         sound_id = 1
-        print "creating playlist %s" % playlist["n"].encode('utf-8')
+        print("creating playlist %s" % playlist["n"])
         for index, track_id in enumerate(playlist["i"]):
             track = self.findID(track_id, "track")
             if track:
@@ -2002,7 +1998,7 @@ class Playlist(Entity):
                 filename = os.path.join("jukebox", folder_name, mp3_file)
                 dest = os.path.join("audio", folder_name, mp3_file)
                 if self.getArgument("json", False):
-                    print "Cannot download Jukebox Track from campaign.json file"
+                    print("Cannot download Jukebox Track from campaign.json file")
                     mp3_path = ""
                 else:
                     (_, mp3_path) = self.copyZipFile(filename, dest)
@@ -2057,15 +2053,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if os.path.exists(args.path):
-        print "Destination directory must not exist"
+        print("Destination directory must not exist")
         sys.exit(-1)
 
     if args.use_original_image_urls:
-        print "*** WARNING ***"
-        print "You have decided to use direct image URLs instead of copying the images to the world folder"
-        print "This is NOT recommended, as you are still dependent on the assets being available on Roll 20"
-        print "Also, you'd be using the servers of Roll20 but not playing on their platform which is not ethically correct"
-        print "Use only this option for testing purposes for examples."
+        print("*** WARNING ***")
+        print("You have decided to use direct image URLs instead of copying the images to the world folder")
+        print("This is NOT recommended, as you are still dependent on the assets being available on Roll 20")
+        print("Also, you'd be using the servers of Roll20 but not playing on their platform which is not ethically correct")
+        print("Use only this option for testing purposes for examples.")
         
     converter = R20Converter(args)
     converter.convert()
