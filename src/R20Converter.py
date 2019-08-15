@@ -125,7 +125,7 @@ class DatabaseFile(object):
     def save(self, full_path=None):
         if full_path is None:
             full_path = os.path.join(self._path, "data", self._filename)
-        with open(full_path, "w") as f:
+        with open(full_path, "w", encoding='utf-8') as f:
             f.write(str(self))
         return self
 
@@ -133,7 +133,7 @@ class DatabaseFile(object):
         if full_path is None:
             full_path = os.path.join(self._path, "data", self._filename)
         self.entities = []
-        with open(full_path, "r") as f:
+        with open(full_path, "r", encoding='utf-8') as f:
             lines = f.readlines()
             for line in lines:
                 self.entities.append(json.loads(line))
