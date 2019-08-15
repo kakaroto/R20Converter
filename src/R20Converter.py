@@ -292,20 +292,31 @@ class Entity(object):
         config_path = os.path.join("worlds", world_dir_name, destination_safe)
         return (dest_filename, config_path.replace(os.path.sep, "/"))
     
-    def downloadResource(self, url, destination):
-        (dest_filename, config_path) = self.getDestinationPaths(destination)
+    def fixImageUrl(self, url):
+        if url == "":
+            return ""
+        if not url.startswith("http"):
+            url = "https://app.roll20.net/" + url
         # all Roll20 URLs use thumb/med/max/original for the filename but the actual image
         # loaded depends on the size. If we don't grab the original image, then maps will be
         # of much lower resolution than they should be.
-        if not url.startswith("http"):
-            url = "https://app.roll20.net/" + url
-        url = re.sub(r"/(thumb|med|max)\.", "/original.", url)
+        # Also remove the '?number' at the end of URLs because they seem unnecessary and they
+        # break FVTT which doesn't recognize the URL as having a valid extension.
+        url = re.sub(r"/(thumb|med|max)\.", r"/original.", url)
+        return url
+
+    def downloadResource(self, url, destination):
+        (dest_filename, config_path) = self.getDestinationPaths(destination)
+        url = self.fixImageUrl(url)
         content = Entity.resource_cache.get(url, None)
         if content is None:
-            r = requests.get(url)
-            if r.status_code == 200:
-                content = r.content
-                Entity.resource_cache[url] = content
+            try:
+                r = requests.get(url)
+                if r.status_code == 200:
+                    content = r.content
+                    Entity.resource_cache[url] = content
+            except:
+                pass
         if content is not None:
             with open(dest_filename, "wb") as f:
                 f.write(content)
