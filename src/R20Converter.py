@@ -1518,7 +1518,7 @@ class Scene(Entity):
                 elif self.getArgument("interactive", False):
                     choice = -1
                     while choice < 0 or choice > len(wall_colors):
-                        choice = raw_input("Select which color is a door (0 for none) : ")
+                        choice = input("Select which color is a door (0 for none) : ")
                         try:
                             choice = int(choice)
                         except:
@@ -1528,7 +1528,7 @@ class Scene(Entity):
                     if len(wall_colors) > 2:
                         choice = -1
                         while choice < 0 and choice > len(wall_colors):
-                            choice = raw_input("Select which color is a door (0 for none) : ")
+                            choice = input("Select which color is a door (0 for none) : ")
                             try:
                                 choice = int(choice)
                             except:
@@ -1683,7 +1683,7 @@ class Scene(Entity):
                         if next_idx != len(polygon):
                             next_point = polygon[next_idx]
                             angles = []
-                            for idx in xrange(previous_point_idx + 1, point_idx+1):
+                            for idx in range(previous_point_idx + 1, point_idx+1):
                                 old_point = (polygon[idx][0] * path["scaleX"], polygon[idx][1] * path["scaleY"])
                                 angles.append(self.getPointsAngle(previous_point, old_point, next_point))
                             if min(angles) >= min_angle:
