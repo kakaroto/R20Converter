@@ -16,6 +16,7 @@ import sys
 import os
 import errno
 import requests
+from collections import OrderedDict
 
 class R20Converter(object):
     def __init__(self, args):
@@ -744,11 +745,11 @@ class Token(Entity):
                 "actorLink": False,
                 "disposition": -1,
                 "displayBars": self.display_bars,
-                "bar1": {"attribute": "attributes.bar1" if self.bar1_max != 0 or self.bar1_val != 0 else "",
+                "bar1": {"attribute": "attributes.bar1" if self.bar1_max != 0 or self.bar1_val != 0 else None,
                          "value": self.bar1_val,
                          "max": self.bar1_max
                          },
-                "bar2": {"attribute": "attributes.bar2" if self.bar2_max != 0 or self.bar2_val != 0 else "",
+                "bar2": {"attribute": "attributes.bar2" if self.bar2_max != 0 or self.bar2_val != 0 else None,
                          "value": self.bar2_val,
                          "max": self.bar2_max
                          }
@@ -776,12 +777,6 @@ class Actor(Entity):
                 permissions[player_id] = Handout.PERMISSION_OWNER
 
         npc = self.isNPC()
-        bio = character["bio"]
-        gmnotes = character["gmnotes"]
-        if gmnotes != "":
-            bio += "\n<section class=\"secret\"><p>GM Notes : </p>" + gmnotes + "</section>"
-
-        bio = self.replaceCompendiumLinks(self.replaceEntityLinks(bio))
 
         avatar_filename = ""
         if character["avatar"] != "":
@@ -838,21 +833,26 @@ class Actor(Entity):
 
         if character["archived"] and not self.getArgument("disable_archived", False):
             folder = "archived-characters-folder-id"
+
+        self._save_bonus = self.calculateSaveBonus()
+        actor_data = OrderedDict([
+            ("abilities", self.createActorAbilities()),
+            ("attributes", self.createActorAttributes()),
+            ("details", self.createActorDetails()),
+            ("skills", self.createActorSkills()),
+            ("traits", self.createActorTraits()),
+            ("currency", self.createActorCurrency()),
+            ("spells", self.createActorSpells()),
+            ("resources", self.createActorResources()),
+        ])
         self.entity = {"_id": self._id,
                        "name": character["name"],
                        "img": avatar_filename,
                        "permission": permissions,
-                       "data": {"abilities" : self.createActorAbilities(),
-                                "attributes" : self.createActorAttributes(),
-                                "details" : self.createActorDetails(bio),
-                                "skills" : self.createActorSkills(),
-                                "traits" : self.createActorTraits(),
-                                "currency" : self.createActorCurrency(),
-                                "spells" : self.createActorSpells(),
-                                "resources" : self.createActorResources(),
-                                },
+                       "data": actor_data,
                        "folder": Entity.normalizeID(folder),
-                       "flags": {"entityorder": {"order": index}},
+                       "flags": {"dnd5e": {"saveBonus": self._save_bonus},
+                                 "entityorder": {"order": index}},
                        "type": "npc" if npc else "character",
                        "token": token,
                        "items": []
@@ -872,36 +872,107 @@ class Actor(Entity):
     def getAttribute(self, key, default=None):
         return self._attributes.get(key, (default, default, None))
 
-    def isNPC(self):
-        npc = self.getAttribute("npc", "0")
+    def getAttributeInt(self, key, default=0):
+        value = self.getAttribute(key, default)[0]
         try:
-            return bool(int(npc[0]))
+            return int(value)
+        except:
+            return int(default)
+
+    def isNPC(self):
+        npc = self.getAttributeInt("npc", 0)
+        try:
+            return bool(npc)
         except:
             return False
 
+    def getNPCType(self):
+        npc_type = self.getAttribute("npc_type", "")[0]
+        size = npc_type.split(",", 1)[0].split(" ", 1)[0].strip()
+        creature_type = npc_type.split(",", 1)[0].split(" ", 1)[-1].strip()
+        alignment = npc_type.split(",", 1)[-1].strip()
+        return (size, creature_type, alignment)
+
     def parseAttributes(self):
-        self._attributes = {}
-        self._repeating = {}
+        self._attributes = OrderedDict()
+        self._repeating = OrderedDict()
         for attr in self._character["attributes"]:
             value = (attr["current"], attr["max"], attr["id"])
-            if attr["name"].startswith("repeating_"):
+            if attr["name"].startswith("_reporder_repeating_"):
+                pass
+            elif attr["name"].startswith("repeating_"):
                 (_, repeating_type, id, name) = attr["name"].split("_", 3)
-                self._repeating.setdefault(repeating_type, {}).setdefault(id, {})[name] = value
+                rep = self._repeating.get(repeating_type, None)
+                if rep is None:
+                    rep = self._repeating[repeating_type] = OrderedDict()
+                    order = ""
+                    for a in self._character["attributes"]:
+                        if a["name"] == "_reporder_repeating_%s" % repeating_type:
+                            order = a["current"]
+                            break
+                    for order_id in order.split(","):
+                        if order_id != "":
+                            rep.setdefault(order_id, {})
+                rep.setdefault(id, {})[name] = value
             else:
                 self._attributes[attr["name"]] = value
 
-    def createActorAbility(self, name):
-        ability = self.getAttribute(name.lower(), 10)
-        mod = self.getAttribute(name.lower() + "_mod", 0)
+        self.displayAttributes()
+
+
+    def displayAttributes(self):
+        print("Parsed attributes for character %s: %s" % (self._character["id"], self._character["name"]))
+        keys = list(self._attributes.keys())
+        keys.sort()
+        for key in keys:
+            attr = self._attributes[key]
+            print("%s: %s%s" % (key, str(attr[0]), ("(" + str(attr[1]) + ")") if attr[1] != "" else ""))
+        for _type in self._repeating:
+            print("\n****** %s ******" % _type)
+            for item in self._repeating[_type]:
+                print("\t%s" % item)
+                items = self._repeating[_type][item]
+                keys = list(items.keys())
+                keys.sort()
+                for key in keys:
+                    attr = items[key]
+                    print("\t\t%s: %s%s" % (key, str(attr[0]), ("(" + str(attr[1]) + ")") if attr[1] != "" else ""))
+
+    def calculateSaveBonus(self):
         if self.isNPC():
-            save = self.getAttribute(name.lower() + "_save_bonus", mod[0])
-            proficient = (save[0] == mod[0])
+            return 0
+
+        pb = self.getAttributeInt("pb", 2)
+        bases = []
+        for ability in ["strength", "dexterity", "constitution",
+                        "intelligence", "wisdom", "charisma"]:
+            mod = self.getAttributeInt(ability + "_mod", 0)
+            save = self.getAttributeInt(ability + "_save_bonus", 0)
+            bases.append(save - mod)
+        min_base = min(bases)
+        max_base = max(bases)
+        if min_base != 0:
+            print("*** save Bonus : ", min_base, bases)
+        if min_base + pb == max_base and bases.count(min_base) == 4 and bases.count(max_base) == 2:
+            return min_base
         else:
-            save = self.getAttribute("npc_" + name.lower()[0:3] + "_save", "")
-            proficient = (save[0] != "")
+            print("*** Bases don't match expected : ", pb, " - ", bases)
+            return min_base
+
+
+    def createActorAbility(self, name):
+        ability = self.getAttributeInt(name.lower(), 10)
+        mod = self.getAttributeInt(name.lower() + "_mod", 0)
+        proficiency_bonus = self.getAttributeInt("pb", 0)
+        if self.isNPC():
+            save = self.getAttributeInt("npc_" + name.lower()[0:3] + "_save", 0)
+            proficient = (save != 0)
+        else:
+            save = self.getAttributeInt(name.lower() + "_save_bonus", mod)
+            proficient = (save == mod + proficiency_bonus + self._save_bonus)
         return {"type": "Number",
                 "label": name,
-                "value": ability[0],
+                "value": ability,
                 "min": 3,
                 "proficient": 1 if proficient else 0,
                 "mod": mod,
@@ -909,20 +980,51 @@ class Actor(Entity):
                 }
 
     def createActorAbilities(self):
-        return {"str": self.createActorAbility("Strength"),
-                "dex": self.createActorAbility("Dexterity"),
-                "con": self.createActorAbility("Constitution"),
-                "int": self.createActorAbility("Intelligence"),
-                "wis": self.createActorAbility("Wisdom"),
-                "cha": self.createActorAbility("Charisma")
+        return OrderedDict([("str", self.createActorAbility("Strength")),
+                            ("dex", self.createActorAbility("Dexterity")),
+                            ("con", self.createActorAbility("Constitution")),
+                            ("int", self.createActorAbility("Intelligence")),
+                            ("wis", self.createActorAbility("Wisdom")),
+                            ("cha", self.createActorAbility("Charisma"))
+                            ])
+
+    def createAttributeNumber(self, name, attribute_name, default=0, extra={}):
+        (current, max, _) = self.getAttribute(attribute_name, default)
+        try:
+            current = int(current)
+        except:
+            pass
+        ret = {
+                "type": "Number",
+                "label": name,
+                "value": current,
                 }
+        if max != "":
+            ret["min"] = 0
+            ret["max"] = max
+        ret.update(extra)
+        return ret
+        
+    def createAttributeString(self, name, attribute_name, default="", extra={}):
+        ret = {
+                "type": "String",
+                "label": name,
+                "value": self.getAttribute(attribute_name, default)[0]
+                }
+        ret.update(extra)
+        return ret
+    def createAttributeBoolean(self, name, attribute_name, default=False, extra={}):
+        ret = {
+                "type": "Boolean",
+                "label": name,
+                "value": self.getAttribute(attribute_name, "on" if default else "")[0] == "on",
+                }
+        ret.update(extra)
+        return ret
 
     def createAttributeAC(self):
-        if self.isNPC():
-            ac = self.getAttribute("npc_ac", 10)[1]
-        else:
-            ac = self.getAttribute("ac", 10)[0]
-
+        ac = self.getAttribute("npc_ac" if self.isNPC() else "ac", 10)[0]
+        
         res = {"type": "Number",
                "label": "Armor Class",
                "min": ac,
@@ -953,274 +1055,223 @@ class Actor(Entity):
                 "tempmax": 0,
                 "formula": formula
                 }
-    def createActorAttributes(self):
-        attributes = {
-            "ac": self.createAttributeAC(),
-            "hp": self.createAttributeHP(),
-            "init": {
+    def createAttributeInitiative(self):
+        mod = self.getAttributeInt("dexterity_mod", 0)
+        init = self.getAttributeInt("initiative_bonus", 0)
+        return {
                 "type": "Number",
                 "label": "Initiative Modifier",
-                "value": self.getAttribute("initiative_bonus", 0)[0]
-                },
-            "prof": {
-                "type": "Number",
-                "label": "Proficiency",
-                "value": 0
-                },
-            "speed": {
-                "type": "String",
+                "value": init - mod,
+                "mod": init
+                }
+
+    def createAttributeSpeed(self):
+        speed = self.getAttribute("npc_speed" if self.isNPC() else "speed", "30 ft")[0]
+        if type(speed) == int:
+            speed = "%d ft" % speed
+        parts = speed.replace("ft.", "ft").split(",", 1)
+        if len(parts) > 1:
+            speed = parts[0].strip()
+            special = parts[1].strip()
+        else:
+            speed = parts[0].strip()
+            special = ""
+        return {"type": "String",
                 "label": "Movement Speed",
-                "value": "30 ft",
-                "special": ""
-                },
-            "spellcasting": {
+                "value": speed,
+                "special": special
+                }
+    def createAttributeSpellcasting(self):
+        spellcasting_ability = ""
+        attribute = self.getAttribute("spellcasting_ability", None)[0]
+        if attribute:
+            match = re.search(r"@{(.*)}", attribute)
+            if match:
+                spellcasting_ability = match.group(1)[0:3].lower()
+        return {
                 "type": "String",
                 "label": "Spellcasting Ability",
-                "value": ""
-                },
-            "spelldc": {
-                "type": "String",
-                "label": "Spell DC"
-                },
-            "bar1": {
-                "type": "Number",
-                "label": "Arbitrary Token Bar #1",
-                "value": 0,
-                "min": 0,
-                "max": 0,
-                },
-            "bar2": {
-                "type": "Number",
-                "label": "Arbitrary Token Bar #2",
-                "value": 0,
-                "min": 0,
-                "max": 0,
+                "value": spellcasting_ability
                 }
-            }
+    def createAttributeDeath(self):
+        success = 0
+        failure = 0
+        for i in range(1, 4):
+            if self.getAttribute("deathsave_succ%d" % i, 0)[0] == "on":
+                success += 1
+            if self.getAttribute("deathsave_fail%d" % i, 0)[0] == "on":
+                failure += 1
+
+        return {"type": "Number",
+                "label": "Death Saves",
+                "success": success,
+                "failure": failure
+                }
+
+    def createActorAttributes(self):
+        attributes = OrderedDict([
+            ("ac", self.createAttributeAC()),
+            ("hp", self.createAttributeHP()),
+            ("init", self.createAttributeInitiative()),
+            ("prof", self.createAttributeNumber("Proficiency", "pb", 0)),
+            ("speed", self.createAttributeSpeed()),
+            ("spellcasting", self.createAttributeSpellcasting()),
+            ("spelldc", self.createAttributeString("Spell DC", "npc_spelldc" if self.isNPC() else "spell_save_dc", 10)),
+            # Add our own bar data
+            #TODO: handle these
+            ("bar1", self.createAttributeNumber("Token Bar #1", "foundry_vtt_is_the_best", 1)),
+            ("bar2", self.createAttributeNumber("Token Bar #2", "foundry_vtt_is_the_best", 1)),
+        ])
         if not self.isNPC():
-            attributes.update({
-                    "hd": {
-                        "type": "Number",
-                        "label": "Hit Dice",
-                        "value": 1,
-                        "min": 0
-                        },
-                    "death": {
-                        "type": "Number",
-                        "label": "Death Saves",
-                        "success": 0,
-                        "failure": 0
-                        },
-                    "exhaustion": {
-                        "type": "Number",
-                        "label": "Exhaustion Level",
-                        "value": 0
-                        },
-                    "inspiration": {
-                        "type": "Boolean",
-                        "label": "Inspiration",
-                        "value": False
-                        }
-                    })
+            attributes.update([
+                    ("hd", self.createAttributeNumber("Hit Dice", "hit_dice", 0)),
+                    ("death", self.createAttributeDeath()),
+                    ("exhaustion", self.createAttributeNumber("Exhaustion Level", "exhaustion_level", 0)),
+                    ("inspiration", self.createAttributeBoolean("Inspiration", "inspiration", False)),
+            ])
         return attributes
 
-    def createActorDetails(self, bio):
-        details = {
-            "alignment": {
+    def createDetailAlignment(self):
+        if self.isNPC():
+            alignment = self.getNPCType()[2]
+        else:
+            alignment = self.getAttribute("alignment", "")[0]
+        # NPCs have it all lowercase
+        alignment = " ".join(map(lambda x: x.capitalize(), alignment.split(" ")))
+        return {
                 "type": "String",
                 "label": "Alignment",
-                "value": ""
-                },
-            "biography": {
+                "value": alignment
+                }
+
+    def createDetailBio(self):
+        bio = self._character["bio"]
+        gmnotes = self._character["gmnotes"]
+        if gmnotes != "":
+            bio += "\n<section class=\"secret\"><p>GM Notes : </p>" + gmnotes + "</section>"
+
+        bio = self.replaceCompendiumLinks(self.replaceEntityLinks(bio))
+        return {
                 "type": "String",
                 "label": "Biography",
                 "value": bio
-                },
-            "class": {
-                "type": "String",
-                "label": "Class"
-                },
-            "race": {
-                "type": "String",
-                "label": "Race",
-                "value": ""
                 }
-            }
+
+    def createDetailSource(self):
+        return {
+                "type": "Source",
+                "label": "Source Location",
+                "value": self.getArgument("npc_source", "Roll 20")
+                }
+    def createDetailType(self):
+        return {
+                "type": "String",
+                "label": "Creature Type",
+                "value": self.getNPCType()[1]
+                }
+    def createDetailChallengeRating(self):
+        cr = self.getAttribute("npc_challenge", 0)[0]
+        try:
+            cr = int(cr)
+        except:
+            try:
+                cr = int(cr.split("/")[0]) / int(cr.split("/")[1])
+            except:
+                cr = 0
+            
+        return {
+                "type": "Number",
+                "label": "Challenge Rating",
+                "value": cr,
+                "min": 0
+                }
+
+    def createActorDetails(self):
+        details =  OrderedDict([
+            ("alignment", self.createDetailAlignment()),
+            ("biography", self.createDetailBio()),
+            ("class", self.createAttributeString("Class", "class_display", "")),
+            ("race", self.createAttributeString("Race", "race_display", ""))
+        ])
         if self.isNPC():
-            details.update({
-                    "type": {
-                        "type": "String",
-                        "label": "Creature Type"
-                        },
-                    "environment": {
+            details.update([
+                    ("type", self.createDetailType()),
+                    ("environment", {
                         "type": "String",
                         "label": "Environment"
-                        },
-                    "cr": {
-                        "type": "Number",
-                        "label": "Challenge Rating",
-                        "value": 1,
-                        "min": 0
-                        },
-                    "xp": {
-                        "type": "Number",
-                        "label": "Kill Experience"
-                        },
-                    "source": {
-                        "type": "Source",
-                        "label": "Source Location"
-                        }
-                    })
+                        }),
+                    ("cr", self.createDetailChallengeRating()),
+                    ("xp", self.createAttributeNumber("Kill Experience", "npc_xp", 0)),
+                    ("source", self.createDetailSource())
+                    ])
         else:
-            details.update({
-                    "background": {
-                        "type": "String",
-                        "label": "Background",
-                        "value": ""
-                        },
-                    "level": {
-                        "type": "Number",
-                        "label": "Character Level",
-                        "value": 1,
-                        "min": 1
-                        },
-                    "xp": {
-                        "type": "Number",
-                        "label": "Experience Points",
-                        "value": 0,
-                        "min": 0,
-                        "max": 300
-                        },
-                    "trait": {
-                        "type": "String",
-                        "label": "Trait"
-                        },
-                    "ideal": {
-                        "type": "String",
-                        "label": "Ideal"
-                        },
-                    "bond": {
-                        "type": "String",
-                        "label": "Bond"
-                        },
-                    "flaw": {
-                        "type": "String",
-                        "label": "Flaw"
-                        }
-                    })
+            details.update([
+                    ("background", self.createAttributeString("Background", "background", "")),
+                    ("level", self.createAttributeNumber("Character Level", "level", 1, {"min": 1})),
+                    ("xp", self.createAttributeNumber("Experience Points", "experience", 0)),
+                    ("trait", self.createAttributeString("Trait", "personality_traits", "")),
+                    ("ideal", self.createAttributeString("Ideal", "ideals", "")),
+                    ("bond", self.createAttributeString("Bond", "bonds", "")),
+                    ("flaw", self.createAttributeString("Flaw", "flaws", ""))
+                    ])
         return details
 
-    def createActorSkills(self):
+    def createActorSkill(self, label, attribute_name, ability):
+        mod = self.getAttribute("npcd_" + attribute_name if self.isNPC() else attribute_name + "_bonus", "")[0]
+        base_mod = self.getAttribute(ability + "_mod", 0)[0]
+        if mod == "":
+            mod = base_mod
+        value = 0
+
+        if self.isNPC():
+            prof = self.getAttributeInt("pb", 2)
+            flag = self.getAttributeInt("npc_" + attribute_name + "_flag", 0)
+            print("Flag : {} - prof {}".format(flag, prof))
+            flag = bool(flag)
+            if flag:
+                if mod == base_mod + prof:
+                    value = 1
+                elif mod == base_mod + prof // 2:
+                    value = 0.5
+                elif mod == base_mod + prof * 2:
+                    value = 2
+                else:
+                    value = (mod - base_mod) / prof
+        else:
+            prof = self.getAttribute(attribute_name + "_prof", "")[0]
+            prof_type = self.getAttribute(attribute_name + "_type", "")[0]
+            print("Ability : %s - prof '%s' - type : '%s'" % (ability, prof, prof_type))
+            if "pb" in prof:
+                value = int(prof_type) if prof_type != "" else 1
+        print("Skill %s : %d : %d" % (label, value, mod))
         return {
-            "acr": {
                 "type": "Number",
-                "label": "Acrobatics",
-                "value": 0,
-                "ability": "dex"
-                },
-            "ani": {
-                "type": "Number",
-                "label": "Animal Handling",
-                "value": 0,
-                "ability": "wis"
-                },
-            "arc": {
-                "type": "Number",
-                "label": "Arcana",
-                "value": 0,
-                "ability": "int"
-                },
-            "ath": {
-                "type": "Number",
-                "label": "Athletics",
-                "value": 0,
-                "ability": "str"
-                },
-            "dec": {
-                "type": "Number",
-                "label": "Deception",
-                "value": 0,
-                "ability": "cha"
-                },
-            "his": {
-                "type": "Number",
-                "label": "History",
-                "value": 0,
-                "ability": "int"
-                },
-            "ins": {
-                "type": "Number",
-                "label": "Insight",
-                "value": 0,
-                "ability": "wis"
-                },
-            "itm": {
-                "type": "Number",
-                "label": "Intimidation",
-                "value": 0,
-                "ability": "cha"
-                },
-            "inv": {
-                "type": "Number",
-                "label": "Investigation",
-                "value": 0,
-                "ability": "int"
-                },
-            "med": {
-                "type": "Number",
-                "label": "Medicine",
-                "value": 0,
-                "ability": "wis"
-                },
-            "nat": {
-                "type": "Number",
-                "label": "Nature",
-                "value": 0,
-                "ability": "int"
-                },
-            "prc": {
-                "type": "Number",
-                "label": "Perception",
-                "value": 0,
-                "ability": "wis"
-                },
-            "prf": {
-                "type": "Number",
-                "label": "Performance",
-                "value": 0,
-                "ability": "cha"
-                },
-            "per": {
-                "type": "Number",
-                "label": "Persuasion",
-                "value": 0,
-                "ability": "cha"
-                },
-            "rel": {
-                "type": "Number",
-                "label": "Religion",
-                "value": 0,
-                "ability": "int"
-                },
-            "slt": {
-                "type": "Number",
-                "label": "Sleight of Hand",
-                "value": 0,
-                "ability": "dex"
-                },
-            "ste": {
-                "type": "Number",
-                "label": "Stealth",
-                "value": 0,
-                "ability": "dex"
-                },
-            "sur": {
-                "type": "Number",
-                "label": "Survival",
-                "value": 0,
-                "ability": "wis"
+                "label": label,
+                "value": value,
+                "ability": ability.lower()[0:3],
+                "mod": mod
                 }
-            }
+    def createActorSkills(self):
+        return OrderedDict([
+            ("acr", self.createActorSkill("Acrobatics", "acrobatics", "dexterity")),
+            ("ani", self.createActorSkill("Animal Handling", "animal_handling", "wisdom")),
+            ("arc", self.createActorSkill("Arcana", "arcana", "intelligence")),
+            ("ath", self.createActorSkill("Athletics", "athletics", "strength")),
+            ("dec", self.createActorSkill("Deception", "deception", "charisma")),
+            ("his", self.createActorSkill("History", "history", "intelligence")),
+            ("ins", self.createActorSkill("Insight", "insight", "wisdom")),
+            ("itm", self.createActorSkill("Intimidation", "intimitation", "charisma")),
+            ("inv", self.createActorSkill("Investigation", "investigation", "intelligence")),
+            ("med", self.createActorSkill("Medicine", "medicine", "wisdom")),
+            ("nat", self.createActorSkill("Nature", "nature", "intelligence")),
+            ("prc", self.createActorSkill("Perception", "perception", "wisdom")),
+            ("prf", self.createActorSkill("Performance", "performance", "charisma")),
+            ("per", self.createActorSkill("Persuasion", "persuasion", "charisma")),
+            ("rel", self.createActorSkill("Religion", "religion", "intelligence")),
+            ("slt", self.createActorSkill("Sleight of Hand", "sleight_of_hand", "dexterity")),
+            ("ste", self.createActorSkill("Stealth", "stealth", "dexterity")),
+            ("sur", self.createActorSkill("Survival", "survival", "wisdom"))
+        ])
     def createActorTraits(self):
         return {
             "size": {
@@ -2058,8 +2109,9 @@ parser.add_argument("--maximum-wall-angle", default=30, type=float, help="Maximu
                     "The angle is calculated with every point in the wall that is skipped, so a circle drawn with small lines and small angles will not be removed.\n"
                     "Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points (Default: 30)")
 parser.add_argument("--debug-page", default=None, help="Only convert a specific page. Useful for debugging")
-parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT public directory (used for importing items and spells from dnd5e system")
-                   
+parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT public directory (used for importing items and spells from dnd5e system)")
+parser.add_argument("--npc-source", default="Roll 20", help="Source location for NPC actors (displayed in the character sheet)")
+                 
 if __name__ == "__main__":
     args = parser.parse_args()
 
