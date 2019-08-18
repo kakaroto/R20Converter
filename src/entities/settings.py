@@ -1,0 +1,14 @@
+from .base import DatabaseFile, Entity
+import json
+
+class SettingsDB(DatabaseFile):
+    def __init__(self, converter):
+        DatabaseFile.__init__(self, converter, "settings.db")
+        self.entities = [Setting(self, "core.moduleConfiguration", {"entityorder": True, "permission_viewer": True})]
+
+class Setting(Entity):
+    def __init__(self, database, key, value):
+        Entity.__init__(self, database, key)
+        self.entity = {"_id": self._id,
+                       "key": key,
+                       "value": json.dumps(value)}
