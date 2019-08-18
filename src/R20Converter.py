@@ -752,7 +752,21 @@ class Token(Entity):
                 "bar2": {"attribute": "attributes.bar2" if self.bar2_max != 0 or self.bar2_val != 0 else None,
                          "value": self.bar2_val,
                          "max": self.bar2_max
-                         }
+                         },
+                "actorData": {
+                    "data": {
+                        "attributes": {
+                            "bar1": {
+                                "value": self.bar1_val,
+                                "max": self.bar1_max
+                                 },
+                            "bar2": {
+                                "value": self.bar2_val,
+                                "max": self.bar2_max
+                                }
+                            }
+                        }
+                    }
                 }
 
 class Actor(Entity):    
@@ -791,7 +805,7 @@ class Actor(Entity):
         folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
 
         default_token = character["defaulttoken"] if character["defaulttoken"] != "" else None
-        token = Token(self._id, character["name"], default_token)
+        self.token = Token(self._id, character["name"], default_token)
         token_filename = ""
         randomImg = False
         if default_token and default_token.get("imgsrc", "") != "":
@@ -818,8 +832,8 @@ class Actor(Entity):
                 avatar_filename = token_filename
         if token_filename == "":
             token_filename = avatar_filename
-        token.token_filename = token_filename
-        token = token.getDict()
+        self.token.token_filename = token_filename
+        token = self.token.getDict()
         token["randomImg"] = randomImg
         if default_token:
             bar1_link = default_token.get("bar1_link", "")
@@ -869,6 +883,9 @@ class Actor(Entity):
                     return folder_id
         return None
 
+    def _capitalizeAll(self, sentence):
+        return " ".join(map(lambda x: x.capitalize(), sentence.split(" ")))
+
     def getAttribute(self, key, default=None):
         return self._attributes.get(key, (default, default, None))
 
@@ -917,7 +934,7 @@ class Actor(Entity):
             else:
                 self._attributes[attr["name"]] = value
 
-        self.displayAttributes()
+        #self.displayAttributes()
 
 
     def displayAttributes(self):
@@ -928,9 +945,9 @@ class Actor(Entity):
             attr = self._attributes[key]
             print("%s: %s%s" % (key, str(attr[0]), ("(" + str(attr[1]) + ")") if attr[1] != "" else ""))
         for _type in self._repeating:
-            print("\n****** %s ******" % _type)
+            print("\n\n****** %s ******" % _type)
             for item in self._repeating[_type]:
-                print("\t%s" % item)
+                print("\n************************\n\t%s" % item)
                 items = self._repeating[_type][item]
                 keys = list(items.keys())
                 keys.sort()
@@ -942,23 +959,19 @@ class Actor(Entity):
         if self.isNPC():
             return 0
 
-        pb = self.getAttributeInt("pb", 2)
         bases = []
         for ability in ["strength", "dexterity", "constitution",
                         "intelligence", "wisdom", "charisma"]:
             mod = self.getAttributeInt(ability + "_mod", 0)
             save = self.getAttributeInt(ability + "_save_bonus", 0)
             bases.append(save - mod)
-        min_base = min(bases)
-        max_base = max(bases)
-        if min_base != 0:
-            print("*** save Bonus : ", min_base, bases)
-        if min_base + pb == max_base and bases.count(min_base) == 4 and bases.count(max_base) == 2:
-            return min_base
-        else:
-            print("*** Bases don't match expected : ", pb, " - ", bases)
-            return min_base
-
+        return min(bases)
+        #min_base = min(bases)
+        #max_base = max(bases)
+        #pb = self.getAttributeInt("pb", 2)
+        #if min_base + pb == max_base and bases.count(min_base) == 4 and bases.count(max_base) == 2:
+        #    return min_base
+        
 
     def createActorAbility(self, name):
         ability = self.getAttributeInt(name.lower(), 10)
@@ -1118,9 +1131,16 @@ class Actor(Entity):
             ("spellcasting", self.createAttributeSpellcasting()),
             ("spelldc", self.createAttributeString("Spell DC", "npc_spelldc" if self.isNPC() else "spell_save_dc", 10)),
             # Add our own bar data
-            #TODO: handle these
-            ("bar1", self.createAttributeNumber("Token Bar #1", "foundry_vtt_is_the_best", 1)),
-            ("bar2", self.createAttributeNumber("Token Bar #2", "foundry_vtt_is_the_best", 1)),
+            ("bar1", {"type": "Number",
+                      "label": "Token Bar #1",
+                      "value": self.token.bar1_val,
+                      "min": 0,
+                      "max": self.token.bar1_max}),
+            ("bar2", {"type": "Number",
+                      "label": "Token Bar #2",
+                      "value": self.token.bar2_val,
+                      "min": 0,
+                      "max": self.token.bar2_max}),
         ])
         if not self.isNPC():
             attributes.update([
@@ -1137,7 +1157,7 @@ class Actor(Entity):
         else:
             alignment = self.getAttribute("alignment", "")[0]
         # NPCs have it all lowercase
-        alignment = " ".join(map(lambda x: x.capitalize(), alignment.split(" ")))
+        alignment = self._capitalizeAll(alignment)
         return {
                 "type": "String",
                 "label": "Alignment",
@@ -1218,7 +1238,7 @@ class Actor(Entity):
 
     def createActorSkill(self, label, attribute_name, ability):
         mod = self.getAttribute("npcd_" + attribute_name if self.isNPC() else attribute_name + "_bonus", "")[0]
-        base_mod = self.getAttribute(ability + "_mod", 0)[0]
+        base_mod = self.getAttributeInt(ability + "_mod", 0)
         if mod == "":
             mod = base_mod
         value = 0
@@ -1226,7 +1246,7 @@ class Actor(Entity):
         if self.isNPC():
             prof = self.getAttributeInt("pb", 2)
             flag = self.getAttributeInt("npc_" + attribute_name + "_flag", 0)
-            print("Flag : {} - prof {}".format(flag, prof))
+            #print("Flag : {} - prof {}".format(flag, prof))
             flag = bool(flag)
             if flag:
                 if mod == base_mod + prof:
@@ -1240,10 +1260,10 @@ class Actor(Entity):
         else:
             prof = self.getAttribute(attribute_name + "_prof", "")[0]
             prof_type = self.getAttribute(attribute_name + "_type", "")[0]
-            print("Ability : %s - prof '%s' - type : '%s'" % (ability, prof, prof_type))
+            #print("Ability : %s - prof '%s' - type : '%s'" % (ability, prof, prof_type))
             if "pb" in prof:
                 value = int(prof_type) if prof_type != "" else 1
-        print("Skill %s : %d : %d" % (label, value, mod))
+        #print("Skill %s : %d : %d" % (label, value, mod))
         return {
                 "type": "Number",
                 "label": label,
@@ -1272,146 +1292,304 @@ class Actor(Entity):
             ("ste", self.createActorSkill("Stealth", "stealth", "dexterity")),
             ("sur", self.createActorSkill("Survival", "survival", "wisdom"))
         ])
-    def createActorTraits(self):
+        
+    def createTraitSize(self):
+        dnd5e_sizes = {
+            "Gargantuan": "grg",
+            "Huge": "huge",
+            "Large": "lg",
+            "Medium": "med",
+            "Small": "sm",
+            "Tiny": "tiny"
+        }
+        if self.isNPC():
+            size = self.getNPCType()[0]
+        else:
+            size = self.getAttribute("size", "Medium")[0]
+
         return {
-            "size": {
                 "type": "String",
                 "label": "Size",
-                "value": "med"
-                },
-            "senses": {
+                "value": dnd5e_sizes.get(size, "med")
+                }
+
+    def createTraitSenses(self):
+        if self.isNPC():
+            npc_senses = self.getAttribute("npc_senses", "")[0].split(",")
+            npc_senses = list(map(lambda x: x.strip(), npc_senses))
+            for i, sense in enumerate(npc_senses):
+                if sense.strip().startswith("passive perception"):
+                    npc_senses.pop(i)
+                    break
+            senses = ", ".join(npc_senses)
+        else:
+            senses = ""
+
+        return {
                 "type": "String",
                 "label": "Senses",
-                "value": ""
-                },
-            "perception": {
-                "type": "Number",
+                "value": senses
+                }
+
+    def createTraitPassivePerception(self):
+        pp = 10 + self.createActorSkill("Perception", "perception", "wisdom")["mod"]
+        # An NPC might have overriden the PP in its senses
+        if self.isNPC():
+            senses = self.getAttribute("npc_senses", "")[0]
+            match = re.search(r"passive perception (\d+)", senses)
+            if match:
+                pp = int(match.group(1))
+
+        return {"type": "Number",
                 "label": "Passive Perception",
-                "value": 0
-                },
-            "languages": {
-                "type": "String",
-                "label": "Known Languages"
-                },
-            "di": {
-                "type": "Array",
-                "label": "Damage Immunities"
-                },
-            "dr": {
-                "type": "Array",
-                "label": "Damage Resistances"
-                },
-            "dv": {
-                "type": "Array",
-                "label": "Damage Vulnerabilities"
-                },
-            "ci": {
-                "type": "Array",
-                "label": "Condition Immunities"
+                "value": pp
                 }
-            }
-    def createActorCurrency(self):
+
+    def _addKnownToArray(self, known_list, name, array, custom):
+        name = self._capitalizeAll(name.strip())
+        known = known_list.get(name, None)
+        if known:
+            array.append(known)
+        else:
+            custom.append(name)
+
+    def createTraitLanguages(self):
+        known_languages = { 'Aarakocra': 'aarakocra',
+                            'Abyssal': 'abyssal',
+                            'Aquan': 'aquan',
+                            'Auran': 'auran',
+                            'Celestial': 'celestial',
+                            'Common': 'common',
+                            'Deep Speech': 'deep',
+                            'Draconic': 'draconic',
+                            'Druidic': 'druidic',
+                            'Dwarvish': 'dwarvish',
+                            'Elvish': 'elvish',
+                            'Giant': 'giant',
+                            'Gith': 'gith',
+                            'Gnoll': 'gnoll',
+                            'Gnomish': 'gnomish',
+                            'Goblin': 'goblin',
+                            'Halfling': 'halfling',
+                            'Ignan': 'ignan',
+                            'Infernal': 'infernal',
+                            'Orc': 'orc',
+                            'Primordial': 'primordial',
+                            'Sylvan': 'sylvan',
+                            'Terran': 'terran',
+                            "Thieves' Cant": 'cant',
+                            'Undercommon': 'undercommon'
+                            }
+
+        languages = []
+        custom = []
+        if self.isNPC():
+            npc_languages = self.getAttribute("npc_languages", "")[0]
+            for lang in npc_languages.split(","):
+                self._addKnownToArray(known_languages, lang, languages, custom)
+        else:
+            proficiencies = self._repeating.get("proficiencies", {})
+            for id in proficiencies:
+                prof = proficiencies[id]
+                #print("Proficienty : {} = {}".format(id, prof))
+                if prof.get("prof_type", [""])[0] == "LANGUAGE":
+                    self._addKnownToArray(known_languages, prof.get("name", [""])[0], languages, custom)
+
         return {
-            "pp": {
-                "type": "Number",
-                "label": "Platinum",
-                "value": 0
-                },
-            "gp": {
-                "type": "Number",
-                "label": "Gold",
-                "value": 0
-                },
-            "sp": {
-                "type": "Number",
-                "label": "Silver",
-                "value": 0
-                },
-            "cp": {
-                "type": "Number",
-                "label": "Copper",
-                "value": 0
-                }
+                "type": "Array",
+                "label": "Known Languages",
+                "value": languages,
+                "custom": ", ".join(custom)
+        }
+
+    def _addDamagesToArray(self, damages, damages_array, custom):
+        known_damages = {'Acid': 'acid',
+                        'Bludgeoning': 'bludgeoning',
+                        'Cold': 'cold',
+                        'Fire': 'fire',
+                        'Force': 'force',
+                        'Lightning': 'lightning',
+                        'Necrotic': 'necrotic',
+                        'Piercing': 'piercing',
+                        'Poison': 'poison',
+                        'Psychic': 'psychic',
+                        'Radiant': 'radiant',
+                        'Slashing': 'slashing',
+                        'Thunder': 'thunder'
+                        }
+        # When they add 'piercing, bludgeoning, and slashing from non magical weapons",
+        # they separate it with a ';' from the rest of the list
+        sections = damages.split(";")
+        for i, damage in enumerate(sections):
+            if i == 0:
+                for damage2 in damage.split(","):
+                    self._addKnownToArray(known_damages, damage2, damages_array, custom)
+            else:
+                self._addKnownToArray(known_damages, damage, damages_array, custom)
+
+    def createTraitDamageImmunities(self):
+        immunities = []
+        custom = []
+        if self.isNPC():
+            npc_immunities = self.getAttribute("npc_immunities", "")[0]
+            self._addDamagesToArray(npc_immunities, immunities, custom)
+
+        return {
+            "type": "Array",
+            "label": "Damage Immunities",
+            "value": immunities,
+            "custom": ", ".join(custom)
             }
 
-    def createActorSpells(self):
+    def createTraitDamageResistances(self):
+        resistances = []
+        custom = []
+        if self.isNPC():
+            npc_resistances = self.getAttribute("npc_resistances", "")[0]
+            self._addDamagesToArray(npc_resistances, resistances, custom)
+
         return {
-            "spell0": {
-                "type": "Number",
-                "label": "Cantrip"
-                },
-            "spell1": {
-                "type": "Number",
-                "label": "1st Level"
-                },
-            "spell2": {
-                "type": "Number",
-                "label": "2nd Level"
-                },
-            "spell3": {
-                "type": "Number",
-                "label": "3rd Level"
-                },
-            "spell4": {
-                "type": "Number",
-                "label": "4th Level"
-                },
-            "spell5": {
-                "type": "Number",
-                "label": "5th Level"
-                },
-            "spell6": {
-                "type": "Number",
-                "label": "6th Level"
-                },
-            "spell7": {
-                "type": "Number",
-                "label": "7th Level"
-                },
-            "spell8": {
-                "type": "Number",
-                "label": "8th Level"
-                },
-            "spell9": {
-                "type": "Number",
-                "label": "9th Level"
+                "type": "Array",
+                "label": "Damage Resistances",
+                "value": resistances,
+                "custom": ", ".join(custom)
                 }
-            }
+    def createTraitDamageVulnerabilities(self):
+        vulnerabilities = []
+        custom = []
+        if self.isNPC():
+            npc_vulnerabilities = self.getAttribute("npcvulnerabilities", "")[0]
+            self._addDamagesToArray(npc_vulnerabilities, vulnerabilities, custom)
+
+        return {
+                "type": "Array",
+                "label": "Damage Vulnerabilities",
+                "value": vulnerabilities,
+                "custom": ", ".join(custom)
+                }
+
+    def createTraitConditionImmunities(self):
+        known_immunities = {'Blinded': 'blinded',
+                            'Charmed': 'charmed',
+                            'Deafened': 'deafened',
+                            'Diseased': 'diseased',
+                            'Exhaustion': 'exhaustion',
+                            'Frightened': 'frightened',
+                            'Grappled': 'grappled',
+                            'Inacapacitated': 'incapacitated',
+                            'Invisible': 'invisible',
+                            'Paralyzed': 'paralyzed',
+                            'Petrified': 'petrified',
+                            'Poisoned': 'poisoned',
+                            'Prone': 'prone',
+                            'Restrained': 'restrained',
+                            'Stunned': 'stunned',
+                            'Unconscious': 'unconscious'
+                            }
+
+        immunities = []
+        custom = []
+        if self.isNPC():
+            npc_immunities = self.getAttribute("npc_condition_immunities", "")[0]
+            for immunity in npc_immunities.split(","):
+                self._addKnownToArray(known_immunities, immunity, immunities, custom)
+
+        return {"type": "Array",
+                "label": "Condition Immunities",
+                "value": immunities,
+                "custom": ", ".join(custom)
+                }
+
+    def createActorTraits(self):
+        return OrderedDict([
+            ("size", self.createTraitSize()),
+            ("senses", self.createTraitSenses()),
+            ("perception", self.createTraitPassivePerception()),
+            ("languages", self.createTraitLanguages()),
+            ("di", self.createTraitDamageImmunities()),
+            ("dr", self.createTraitDamageResistances()),
+            ("dv", self.createTraitDamageVulnerabilities()),
+            ("ci", self.createTraitConditionImmunities()),
+        ])
+
+    def createActorCurrency(self):
+        return OrderedDict([
+            ("pp", self.createAttributeNumber("Platinum", "pp", 0)),
+            ("gp", self.createAttributeNumber("Gold", "gp", 0)),
+            ("sp", self.createAttributeNumber("Silver", "sp", 0)),
+            ("cp", self.createAttributeNumber("Copper", "cp", 0))
+        ])
+
+    def createActorSpells(self):
+        spells = OrderedDict([("spell0", {
+                                "type": "Number",
+                                "label": "Cantrip"
+                                })])
+        for level in range(1, 10):
+            if level == 1:
+                level_str = "1st"
+            elif level == 2:
+                level_str = "2nd"
+            elif level == 3:
+                level_str = "3rd"
+            else:
+                level_str = "%dth" % level
+
+            spell = self.createAttributeNumber("%s Level" % level_str, "lvl%d_slots_expended" % level, 0)
+            spell["max"] = self.getAttribute("lvl%d_slots_total" % level, spell["value"])[0]
+            spells["spell%d" % level]  = spell
+        return spells
+
+    def createCharacterResource(self, label, resource):
+        name = self.getAttribute(resource + "_name", label)[0]
+        (current, max, _) = self.getAttribute(resource, 0)
+        try:
+            current = int(current)
+        except:
+            pass
+        try:
+            max = int(max)
+        except:
+            pass
+        return {"type": "String",
+                "label": name,
+                "sr": False,
+                "lr": False,
+                "value": current,
+                "max": max
+                }
+
+    def createResourceLegendaryResistance(self):
+        legres = 0
+        for id in self._repeating.get("npctrait", {}):
+            trait = self._repeating["npctrait"][id]
+            name = trait.get("name", [""])[0]
+            match = re.search(r"Legendary Resistance \((\d+)/day\)", name)
+            if match:
+                legres = int(match.group(1))
+
+        return {"type": "Number",
+                "label": "Legendary Resistance",
+                "value": legres
+                }
+                    
+    def createResourceLairAction(self):
+        lair_actions = self._repeating.get("npcaction-l", {})
+        return {"type": "Boolean",
+                "label": "Lair Action",
+                "value": len(lair_actions) > 0
+                }
+
     def createActorResources(self):
         if self.isNPC():
-            return {
-                "legact": {
-                    "type": "Number",
-                    "label": "Legendary Actions"
-                    },
-                "legres": {
-                    "type": "Number",
-                    "label": "Legendary Resistance"
-                    },
-                "lair": {
-                    "type": "Boolean",
-                    "label": "Lair Action"
-                    }
-                }
+            return OrderedDict([
+                ("legact", self.createAttributeNumber("Legendary Actions", "npc_legendary_actions", 0)),
+                ("legres", self.createResourceLegendaryResistance()),
+                ("lair", self.createResourceLairAction())
+            ])
         else:
-            return {
-                "primary": {
-                    "type": "String",
-                    "label": "Primary Resource",
-                    "sr": False,
-                    "lr": False,
-                    "value": 0,
-                    "max": 0
-                    },
-                "secondary": {
-                    "type": "String",
-                    "label": "Secondary Resource",
-                    "sr": False,
-                    "lr": False,
-                    "value": 0,
-                    "max": 0
-                    }
-                }
+            return OrderedDict([("primary", self.createCharacterResource("Primary Resource", "class_resource")),
+                                ("secondary", self.createCharacterResource("Secondary Resource", "other_resource"))])
 
 class Scenes(DatabaseFile):
     def __init__(self, converter):
