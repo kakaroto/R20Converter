@@ -3,6 +3,7 @@ from .journal import Handout
 from collections import OrderedDict
 import re
 import os
+import copy
 
 class Actors(DatabaseFile):
     def __init__(self, converter):
@@ -272,6 +273,12 @@ class Actor(Entity):
             ("spells", self.createActorSpells()),
             ("resources", self.createActorResources()),
         ])
+        owned_items = []
+        self.addInventory(owned_items)
+        self.addTraits(owned_items)
+        self.addActions(owned_items)
+        self.addSpells(owned_items)
+
         self.entity = {"_id": self._id,
                        "name": character["name"],
                        "img": avatar_filename,
@@ -282,7 +289,7 @@ class Actor(Entity):
                                  "entityorder": {"order": index}},
                        "type": "npc" if npc else "character",
                        "token": token,
-                       "items": []
+                       "items": owned_items
                        }
 
     def findFolder(self, id, folder, folder_id=None):
@@ -299,11 +306,13 @@ class Actor(Entity):
     def _capitalizeAll(self, sentence):
         return " ".join(map(lambda x: x.capitalize(), sentence.split(" ")))
 
-    def getAttribute(self, key, default=None):
-        return self._attributes.get(key, (default, default, None))
+    def getAttribute(self, key, default=None, from_dict=None):
+        if from_dict is None:
+            from_dict = self._attributes
+        return from_dict.get(key, (default, default, None))
 
-    def getAttributeInt(self, key, default=0):
-        value = self.getAttribute(key, default)[0]
+    def getAttributeInt(self, key, default=0, from_dict=None):
+        value = self.getAttribute(key, default, from_dict)[0]
         try:
             return int(value)
         except:
@@ -347,7 +356,7 @@ class Actor(Entity):
             else:
                 self._attributes[attr["name"]] = value
 
-        self.displayAttributes()
+        #self.displayAttributes()
 
 
     def displayAttributes(self):
@@ -367,6 +376,7 @@ class Actor(Entity):
                 for key in keys:
                     attr = items[key]
                     print("\t\t%s: %s%s" % (key, str(attr[0]), ("(" + str(attr[1]) + ")") if attr[1] != "" else ""))
+        
 
     def calculateSaveBonus(self):
         if self.isNPC():
@@ -802,11 +812,10 @@ class Actor(Entity):
                 self._addKnownToArray(known_languages, lang, languages, custom)
         else:
             proficiencies = self._repeating.get("proficiencies", {})
-            for id in proficiencies:
-                prof = proficiencies[id]
+            for prof in proficiencies.values():
                 #print("Proficienty : {} = {}".format(id, prof))
-                if prof.get("prof_type", [""])[0] == "LANGUAGE":
-                    self._addKnownToArray(known_languages, prof.get("name", [""])[0], languages, custom)
+                if self.getAttribute("prof_type", "", from_dict=prof)[0] == "LANGUAGE":
+                    self._addKnownToArray(known_languages, self.getAttribute("name", "", from_dict=prof)[0], languages, custom)
 
         return {
                 "type": "Array",
@@ -976,7 +985,7 @@ class Actor(Entity):
         legres = 0
         for id in self._repeating.get("npctrait", {}):
             trait = self._repeating["npctrait"][id]
-            name = trait.get("name", [""])[0]
+            name = self.getAttribute("name", "", from_dict=trait)[0]
             match = re.search(r"Legendary Resistance \((\d+)/day\)", name)
             if match:
                 legres = int(match.group(1))
@@ -1003,3 +1012,191 @@ class Actor(Entity):
         else:
             return OrderedDict([("primary", self.createCharacterResource("Primary Resource", "class_resource")),
                                 ("secondary", self.createCharacterResource("Secondary Resource", "other_resource"))])
+
+
+    def textToHtml(self, text):
+        # Replace each line with <p>line</p>
+        return "".join(list(map(lambda l: "<p>" + l + "</p>", text.split("\n"))))
+
+    def createItemFromCompendium(self, compendium_item, items, description, **kwargs):
+        item = copy.deepcopy(compendium_item)
+        del item["_id"]
+        item["id"] = len(items) + 1
+        item["data"]["description"]["value"] = description
+        for key in kwargs:
+            valueKey = "max" if key.endswith("_max") else "value"
+            item["data"][key][valueKey] = kwargs[key]
+
+        items.append(item)
+        return item
+
+    def createItemInventory(self, items, name, description, inventory_type, **kwargs):
+        description = self.textToHtml(description)
+        compendium_item = self.findCompendiumItem("Items", name)
+        if compendium_item:
+            return self.createItemFromCompendium(compendium_item, items, description, **kwargs)
+
+        data = {"description": {"type": "String", "label": "Description", "value": description},
+                "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
+                "quantity": {"type": "Number", "label": "Quantity", "value": kwargs.get("quantity", 1)},
+                "weight": {"type": "Number", "label": "Weight", "value": kwargs.get("weight", 1)},
+                "price": {"type": "String", "label": "Price", "value": kwargs.get("price", 0)}
+                }
+        if inventory_type == "backpack":
+            pass
+        elif inventory_type == "equipment":
+            data.update({"armor": {"type": "Number", "label": "Armor Value", "value": kwargs.get("armor", 0)},
+                        "armorType": {"type": "String", "label": "Armor Type", "value": kwargs.get("armorType", "")},
+                        "strength": {"type": "String", "label": "Required Strength", "value": kwargs.get("strength", "")},
+                        "stealth": {"type": "Boolean", "label": "Stealth Disadvantage", "value": kwargs.get("stealth", False)},
+                        "proficient": {"type": "Boolean", "label": "Proficient", "value": kwargs.get("proficient", False)},
+                        "attuned": {"type": "Boolean", "label": "Attuned", "value": kwargs.get("attuned", False)},
+                        "equipped": {"type": "Boolean", "label": "Equipped", "value": kwargs.get("equipped", True)}
+                        })
+        elif inventory_type == "consumable":
+            data.update({"consumableType": {"type": "String", "label": "Consumable Type", "value": "potion"},
+                        "charges": {"type": "Number", "label": "Charges", "value": kwargs.get("charges", 1), "max": kwargs.get("charges_max", 1)},
+                        "consume": {"type": "String", "label": "Roll on Consume", "value": kwargs.get("consume", "")},
+                        "autoUse": {"type": "Boolean", "label": "Consume on Use", "value": kwargs.get("autoUse", True)},
+                        "autoDestroy": {"type": "Boolean", "label": "Destroy on Empty", "value": kwargs.get("autoDestroy", True)}
+                        })
+        elif inventory_type == "tool":
+            data.update({"ability": {"type": "String", "label": "Default Ability", "value": kwargs.get("ability", "str")},
+                        "proficient": {"type": "Number", "label": "Proficiency", "value": kwargs.get("proficient", 0)}
+                        })
+        elif inventory_type == "weapon":
+            data.update({"weaponType": {"type": "String", "label": "Weapon Type", "value": kwargs.get("weaponType", "")},
+                        "bonus": {"type": "String", "label": "Attack Bonus", "value": kwargs.get("bonus", "")},
+                        "damage": {"type": "String", "label": "Damage Formula", "value": kwargs.get("damage", "")},
+                        "damageType": {"type": "String", "label": "Damage Type", "value": kwargs.get("damageType", "")},
+                        "damage2": {"type": "String", "label": "Alternate Damage", "value": kwargs.get("damage2", "")},
+                        "damage2Type": {"type": "String", "label": "Alternate Type", "value": kwargs.get("damage2Type", "")},
+                        "range": {"type": "String", "label": "Weapon Range", "value": kwargs.get("range", "")},
+                        "properties": {"type": "String", "label": "Weapon Properties", "value": kwargs.get("properties", "")},
+                        "proficient": {"type": "Boolean", "label": "Proficient", "value": kwargs.get("proficient", False)},
+                        "attuned": {"type": "Boolean", "label": "Attuned", "value": kwargs.get("attuned", False)},
+                        "ability": {"type": "String", "label": "Offensive Ability", "value": kwargs.get("ability", "str")}
+                        })
+        item = {"id": len(items) + 1,
+                "flags": {},
+                "name": name,
+                "type": inventory_type,
+                "img": self.token.token_filename,
+                "data": data
+                }
+        items.append(item)
+        return item
+
+    def addInventory(self, items):
+        inventory = self._repeating.get("inventory", {})
+        for id in inventory:
+            item = inventory[id]
+            name = self.getAttribute("itemname", "", from_dict=item)[0]
+            content = self.getAttribute("itemcontent", "", from_dict=item)[0]
+            count = self.getAttributeInt("itemcount", 1, from_dict=item)
+            weight = self.getAttributeInt("itemweight", 1, from_dict=item)
+            mods = self.getAttribute("itemmodifiers", "", from_dict=item)[0]
+            modifiers = {}
+            for mod in mods.split(", "):
+                if mod == "":
+                    continue
+                if ":" in mod:
+                    key, value = mod.split(": ", 1)
+                    modifiers[key.strip()] = value
+                elif "+" in mod:
+                    key, value = mod.split(" +", 1)
+                    modifiers[key.strip()] = "+" + value
+                elif "-" in mod:
+                    key, value = mod.split(" -", 1)
+                    modifiers[key.strip()] = "-" + value
+            item_type = modifiers.get("Item Type", "")
+            if item_type in ["Adventuring Gear", "Items"]:
+                item = self.createItemInventory(items, name, content, "backpack", weight=weight, quantity=count)
+                print("Created item : ", item)
+            elif item_type == "Ammunition":
+                self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, weaponType="ammo")
+            elif item_type in ["Light Armor", "Medium Armor", "Heavy Armor", "shield"]:
+                armor = modifiers.get("AC", 0)
+                try:
+                    armor = int(armor)
+                except:
+                    pass
+                armorType = item_type.split(" ")[0].lower()
+                equipped = bool(self.getAttributeInt("equipped", 1, from_dict=item))
+                self.createItemInventory(items, name, content, "equipment", weight=weight, quantity=count, armor=armor, armorType=armorType, equipped=equipped)
+            elif item_type in ["Melee Weapon", "Ranged Weapon"]:
+                kwargs = {
+                    "properties": self.getAttribute("itemproperties", "", from_dict=item)[0],
+                    "damage": modifiers.get("Damage", ""),
+                    "damageType": modifiers.get("Damage Type", ""),
+                    "damage2": modifiers.get("Alternate Damage", ""),
+                    "damage2Type": modifiers.get("Altermate Damage Type", ""),
+                    "range": modifiers.get("Range", "")
+                }
+                item = self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, **kwargs)
+                if item["data"]["weaponType"]["value"] == "":
+                    # Don't override the weapon type if taken from compendium, set it otherwise
+                    weaponType = "simpleM" if item_type == "Melee Weapon" else "simpleR",
+                    item["data"]["weaponType"]["value"] = weaponType
+
+            
+
+    def createItemFeat(self, items, name, description, feat_type, **kwargs):
+        description = self.textToHtml(description)
+        compendium_item = self.findCompendiumItem("Class Features", name)
+        if compendium_item:
+            return self.createItemFromCompendium(compendium_item, items, description, **kwargs)
+        item = {"id": len(items) + 1,
+                "flags": {},
+                "name": name,
+                "type": "feat",
+                "img": self.token.token_filename,
+                "data": {
+                    "description": {"type": "String", "label": "Description", "value": description},
+                    "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
+                    "featType": {"type": "String", "label": "Feat Type", "value": feat_type},
+                    "requirements": {"type": "String", "label": "Requirements", "value": kwargs.get("requirements", "")},
+                    "ability": {"type": "String", "label": "Ability Modifier", "value": kwargs.get("ability", "")},
+                    "target": {"type": "String", "label": "Target", "value": kwargs.get("target", "")},
+                    "range": {"type": "String", "label": "Range", "value": kwargs.get("range, """)},
+                    "time": {"type": "String", "label": "Casting Time", "value": kwargs.get("time", "")},
+                    "duration": {"type": "String", "label": "Duration", "value": kwargs.get("duration", "")},
+                    "damage": {"type": "String", "label": "Ability Damage", "value": kwargs.get("damage", "")},
+                    "damageType": {"type": "String", "label": "Damage Type", "value": kwargs.get("damageType", "")},
+                    "save": {"type": "String", "label": "Saving Throw", "value": kwargs.get("save", "")},
+                    "uses": {"type": "", "label": "Limited Uses", "value": kwargs.get("uses", 0), "max": kwargs.get("uses_max", 0)}
+                    }
+                }
+        items.append(item)
+        return item
+
+    def addTraits(self, items):
+        if self.isNPC():
+            npc_traits = self._repeating.get("npctrait", {})
+            for trait in npc_traits.values():
+                name = self.getAttribute("name", "", from_dict=trait)[0]
+                description = self.getAttribute("desc", "", from_dict=trait)[0]
+                self.createItemFeat(items, name, description, "passive")
+
+            npc_reactions = self._repeating.get("npcreaction", {})
+            for trait in npc_reactions.values():
+                name = self.getAttribute("name", "", from_dict=trait)[0]
+                description = self.getAttribute("desc", "", from_dict=trait)[0]
+                self.createItemFeat(items, "Reaction: " + name, description, "ability", requirements="Reaction")
+        else:
+            traits = self._repeating.get("traits", {})
+            for id in traits:
+                trait = traits[id]
+                name = self.getAttribute("name", "", from_dict=trait)[0]
+                description = self.getAttribute("description", "", from_dict=trait)[0]
+                source = self.getAttribute("source", "", from_dict=trait)[0]
+                source_type = self.getAttribute("source_type", "", from_dict=trait)[0]
+                if source_type != "":
+                    source = (source + ": " + source_type) if source != "" else source_type
+                self.createItemFeat(items, name, description, "passive", source=source, requirements=source)
+
+    def addActions(self, items):
+        pass
+
+    def addSpells(self, items):
+        pass

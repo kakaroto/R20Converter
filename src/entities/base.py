@@ -85,6 +85,31 @@ class Entity(object):
     def replaceCompendiumLinks(self, content):
         return re.sub('<a ([^>]*)href=[\'"]https?://roll20.net/compendium/dnd5e/([^\'"]+)(?:(?:%3[aA])|:)([^\'"]+)[\'"]([^>]*)>(.*?)</a>', self._foundCompendium, content)
 
+    def findCompendiumItem(self, compendium, item_name):
+        converter = self._database._converter
+        if converter.hasSystemPacks():
+            items = []
+            if compendium == "Spells":
+                db = converter.packs.get("spells", None)
+                if db:
+                    items = db.entities
+            elif compendium == "Items":
+                db = converter.packs.get("items", None)
+                if db:
+                    items = db.entities
+            elif compendium == "Classes":
+                db = converter.packs.get("classes", None)
+                if db:
+                    items = db.entities
+            elif compendium == "Class Features":
+                db = converter.packs.get("classfeatures", None)
+                if db:
+                    items = db.entities
+            for item in items:
+                if "name" in item and item["name"] == item_name:
+                    print("Found item '%s'" % (item_name))
+                    return item
+        return None
     def _foundCompendium(self, match):
         converter = self._database._converter
         item_id = None
@@ -94,31 +119,21 @@ class Entity(object):
         name = name.split("#")[0].split("?")[0]
         after_href = match.group(4)
         text = match.group(5)
-        if converter.hasSystemPacks():
-            items = []
-            if compendium == "Spells":
-                db = converter.packs.get("spells", None)
-                if db:
-                    items = db.entities
-                folder = "D&D 5e Spells (SRD)"
-                folder_id = "r20converter-dnd5e-spells"
-            elif compendium == "Items":
-                db = converter.packs.get("items", None)
-                if db:
-                    items = db.entities
-                folder = "D&D 5e Items (SRD)"
-                folder_id = "r20converter-dnd5e-items"
-            for item in items:
-                if "name" in item and item["name"] == name:
-                    #print("Found item '%s' in '%s'" % (name, folder))
-                    item_id = name
-                    converter.folders.ensureFolder(folder_id, folder, "Item")
-                    entity = Entity(converter.items, item_id)
-                    entity.entity = item
-                    entity.entity["_id"] = entity.getID()
-                    entity.entity["folder"] = Entity.normalizeID(folder_id)
-                    converter.items.entities.append(entity)
-                    break
+        if compendium == "Spells":
+            folder = "D&D 5e Spells (SRD)"
+            folder_id = "r20converter-dnd5e-spells"
+        elif compendium == "Items":
+            folder = "D&D 5e Items (SRD)"
+            folder_id = "r20converter-dnd5e-items"
+        item = self.findCompendiumItem(compendium, name)
+        if item:
+            item_id = name
+            converter.folders.ensureFolder(folder_id, folder, "Item")
+            entity = Entity(converter.items, item_id)
+            entity.entity = item
+            entity.entity["_id"] = entity.getID()
+            entity.entity["folder"] = Entity.normalizeID(folder_id)
+            converter.items.entities.append(entity)
         if item_id:
             return self.replaceEntityLinks('<a %shref="http://journal.roll20.net/item/%s"%s>%s</a>' % (before_href, item_id, after_href, text))
         else:

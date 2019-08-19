@@ -43,7 +43,7 @@ class R20Converter(object):
 
     def loadDnD5ePacks(self):
         self.packs = {}
-        for file in ["items", "spells"]:
+        for file in ["items", "spells", "classfeatures", "classes", "monsters"]:
             db  = DatabaseFile(self, "%s.db" % file)
             path = os.path.join(self.fvtt_path, "systems", "dnd5e", "packs", "%s.db" % file)
             db.load(path)
@@ -74,7 +74,10 @@ class R20Converter(object):
         # Could get modified by the journal
         self.folders.save()
         self.items.save()
-        print("\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\nThank you for your support!")
+        print("\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\n")
+        print("It is strongly suggested to check the sheets of the player characters for any errors or missing information, or for adding special traits.")
+        print("Some things may not have been carried over, especially to-hit, damage, AC or saving throw modifiers or more complicated weapon or spell macros")
+        print("\nThank you for your support!")
 
 
 
@@ -124,4 +127,3 @@ if __name__ == "__main__":
         
     converter = R20Converter(args)
     converter.convert()
-        
