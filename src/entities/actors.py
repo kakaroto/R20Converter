@@ -1136,9 +1136,9 @@ class Actor(Entity):
                 kwargs = {
                     "properties": self.getAttribute("itemproperties", "", from_dict=item)[0],
                     "damage": modifiers.get("Damage", ""),
-                    "damageType": modifiers.get("Damage Type", ""),
+                    "damageType": modifiers.get("Damage Type", "").lower(),
                     "damage2": modifiers.get("Alternate Damage", ""),
-                    "damage2Type": modifiers.get("Altermate Damage Type", ""),
+                    "damage2Type": modifiers.get("Altermate Damage Type", "").lower(),
                     "range": modifiers.get("Range", "")
                 }
                 item = self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, **kwargs)
@@ -1216,8 +1216,70 @@ class Actor(Entity):
                     source = (source + ": " + source_type) if source != "" else source_type
                 self.createItemFeat(items, name, description, "passive", source=source, requirements=source)
 
+    def addNPCAction(self, items, action, legendary):
+        name = self.getAttribute("name", "", from_dict=action)[0]
+        name_display = self.getAttribute("name_display", "", from_dict=action)[0]
+        attack_type = self.getAttribute("attack_type_display", "", from_dict=action)[0]
+        tohitrange = self.getAttribute("attack_tohitrange", "", from_dict=action)[0]
+        onhit = self.getAttribute("attack_onhit", "", from_dict=action)[0]
+        description = self.getAttribute("description", "", from_dict=action)[0]
+        dmg = self.getAttribute("attack_damage", "", from_dict=action)[0]
+        dmg2 = self.getAttribute("attack_damage2", "", from_dict=action)[0]
+        dmg_type = self.getAttribute("attack_damagetype", "", from_dict=action)[0]
+        dmg2_type = self.getAttribute("attack_damagetype2", "", from_dict=action)[0]
+        tohit = self.getAttributeInt("attack_tohit", 0, from_dict=action)
+        atk_range = self.getAttribute("attack_range", "", from_dict=action)[0]
+        atk_target = self.getAttribute("attack_target", "", from_dict=action)[0]
+        description_block = "<strong>" + name_display + "</strong>"
+        if dmg != "":
+            description_block += "<em>" + attack_type + " </em>" + tohitrange + ". <em>Hit : </em>" + onhit
+        description_block += description
+        match = re.search(r"DC (\d+) (.*?) saving throw", description)
+        save = ""
+        if match:
+            save = match.group(2).lower()[0:3]
+        atk_ability = "str"
+        proficiency_bonus = self.getAttributeInt("pb", 0)
+        for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
+            mod = self.getAttributeInt(ability.lower() + "_mod", 0)
+            if mod + proficiency_bonus == tohit:
+                atk_ability = ability[0:3]
+                break
+        if dmg2 != "" and save == "":
+            # Let's make this into a weapon attack due to alternate damage
+            kwargs = {
+                    "weaponType": "natural",
+                    "damage": dmg,
+                    "damageType": dmg_type.lower(),
+                    "damage2": dmg2,
+                    "damage2Type": dmg2_type.lower(),
+                    "range": atk_range,
+                    "ability": atk_ability
+            }
+            self.createItemInventory(items, name, description, "weapon", **kwargs)
+        else:
+            kwargs = {
+                    "ability": atk_ability,
+                    "target": atk_target,
+                    "range": atk_range,
+                    "damage": dmg,
+                    "damageType": dmg_type.lower(),
+                    "save": save
+            }
+
+            feat_type = "attack" if dmg != "" else "ability"
+            if legendary:
+                feat_type = "legendary"
+            self.createItemFeat(items, name, description_block, feat_type, **kwargs)
+
     def addActions(self, items):
-        pass
+        if self.isNPC():
+            npc_actions = self._repeating.get("npcaction", {})
+            npc_legendary_actions = self._repeating.get("npcaction-l", {})
+            for action in npc_actions.values():
+                self.addNPCAction(items, action, False)
+            for action in npc_legendary_actions.values():
+                self.addNPCAction(items, action, True)
 
     def addSpells(self, items):
         pass
