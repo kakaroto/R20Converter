@@ -811,8 +811,7 @@ class Actor(Entity):
             for lang in npc_languages.split(","):
                 self._addKnownToArray(known_languages, lang, languages, custom)
         else:
-            proficiencies = self._repeating.get("proficiencies", {})
-            for prof in proficiencies.values():
+            for prof in self._repeating.get("proficiencies", {}).values():
                 #print("Proficienty : {} = {}".format(id, prof))
                 if self.getAttribute("prof_type", "", from_dict=prof)[0] == "LANGUAGE":
                     self._addKnownToArray(known_languages, self.getAttribute("name", "", from_dict=prof)[0], languages, custom)
@@ -1115,15 +1114,24 @@ class Actor(Entity):
                 print("Created item : ", item)
             elif item_type == "Ammunition":
                 self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, weaponType="ammo")
-            elif item_type in ["Light Armor", "Medium Armor", "Heavy Armor", "shield"]:
+            elif item_type in ["Light Armor", "Medium Armor", "Heavy Armor", "Shield"]:
                 armor = modifiers.get("AC", 0)
                 try:
                     armor = int(armor)
                 except:
                     pass
-                armorType = item_type.split(" ")[0].lower()
-                equipped = bool(self.getAttributeInt("equipped", 1, from_dict=item))
-                self.createItemInventory(items, name, content, "equipment", weight=weight, quantity=count, armor=armor, armorType=armorType, equipped=equipped)
+                kwargs = {
+                    "armor": armor,
+                    "armorType": item_type.split(" ")[0].lower(),
+                    "equipped": bool(self.getAttributeInt("equipped", 1, from_dict=item)),
+                    "proficient": False,
+                }
+                for prof in self._repeating.get("proficiencies", {}).values():
+                    if self.getAttribute("prof_type", "", from_dict=prof)[0] == "ARMOR":
+                        prof_name = self.getAttribute("name", "", from_dict=prof)[0]
+                        if prof_name.lower() == item_type.lower():
+                            kwargs["proficient"] = True
+                self.createItemInventory(items, name, content, "equipment", weight=weight, quantity=count, **kwargs)
             elif item_type in ["Melee Weapon", "Ranged Weapon"]:
                 kwargs = {
                     "properties": self.getAttribute("itemproperties", "", from_dict=item)[0],
@@ -1136,8 +1144,21 @@ class Actor(Entity):
                 item = self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, **kwargs)
                 if item["data"]["weaponType"]["value"] == "":
                     # Don't override the weapon type if taken from compendium, set it otherwise
-                    weaponType = "simpleM" if item_type == "Melee Weapon" else "simpleR",
+                    weaponType = "simpleM" if item_type == "Melee Weapon" else "simpleR"
                     item["data"]["weaponType"]["value"] = weaponType
+                weaponType = item["data"]["weaponType"]["value"]
+                
+                proficient = False
+                for prof in self._repeating.get("proficiencies", {}).values():
+                    if self.getAttribute("prof_type", "", from_dict=prof)[0] == "WEAPON":
+                        prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
+                        if prof_name == name.lower() or \
+                            (prof_name.startswith("simple") and weaponType.startswith("simple")) or \
+                            (prof_name.startswith("martial") and weaponType.startswith("martial")):
+                            proficient = True
+                            break
+
+                item["data"]["proficient"]["value"] = proficient
 
             
 
