@@ -282,8 +282,8 @@ class Actor(Entity):
         owned_items = []
         self.addInventory(owned_items)
         self.addTraits(owned_items)
-        self.addActions(owned_items)
         self.addSpells(owned_items)
+        self.addActions(owned_items)
 
         self.entity = {"_id": self._id,
                        "name": character["name"],
@@ -372,6 +372,7 @@ class Actor(Entity):
         for key in keys:
             attr = self._attributes[key]
             print("%s: %s%s" % (key, str(attr[0]), ("(" + str(attr[1]) + ")") if attr[1] != "" else ""))
+        print("Repeated attributes for character %s: %s" % (self._character["id"], self._character["name"]))
         for _type in self._repeating:
             print("\n\n****** %s ******" % _type)
             for item in self._repeating[_type]:
@@ -1028,15 +1029,17 @@ class Actor(Entity):
         del item["_id"]
         del item["permission"]
         item["id"] = len(items) + 1
-        item["data"]["description"]["value"] = description
-        for key in kwargs:
-            valueKey = "max" if key.endswith("_max") else "value"
-            item["data"][key][valueKey] = kwargs[key]
+        if self.getArgument("no_compendium_overwrite", False) is False:
+            item["data"]["description"]["value"] = description
+            for key in kwargs:
+                valueKey = "max" if key.endswith("_max") else "value"
+                item["data"][key][valueKey] = kwargs[key]
 
         items.append(item)
         return item
 
     def createItemInventory(self, items, name, description, inventory_type, **kwargs):
+        name = name if name != "" else "<no name>"
         description = self.textToHtml(description)
         compendium_item = self.findCompendiumItem("Items", name)
         if compendium_item:
@@ -1167,9 +1170,9 @@ class Actor(Entity):
 
                 item["data"]["proficient"]["value"] = proficient
 
-            
 
     def createItemFeat(self, items, name, description, feat_type, **kwargs):
+        name = name if name != "" else "<no name>"
         description = self.textToHtml(description)
         compendium_item = self.findCompendiumItem("Class Features", name)
         if compendium_item:
@@ -1210,7 +1213,7 @@ class Actor(Entity):
             for trait in npc_reactions.values():
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("desc", "", from_dict=trait)[0]
-                self.createItemFeat(items, "Reaction: " + name, description, "ability", requirements="Reaction")
+                self.createItemFeat(items, "[Reaction] " + name, description, "ability", requirements="Reaction")
         else:
             traits = self._repeating.get("traits", {})
             for trait in traits.values():
@@ -1251,7 +1254,8 @@ class Actor(Entity):
             if mod + proficiency_bonus == tohit:
                 atk_ability = ability[0:3]
                 break
-        if dmg2 != "" and save == "":
+        compendium_item = self.findCompendiumItem("Items", name)
+        if (compendium_item is not None and "weaponType" in compendium_item["data"]) or (dmg2 != "" and save == ""):
             # Let's make this into a weapon attack due to alternate damage
             kwargs = {
                     "weaponType": "natural",
@@ -1276,6 +1280,7 @@ class Actor(Entity):
             feat_type = "attack" if dmg != "" else "ability"
             if legendary:
                 feat_type = "legendary"
+                name = "[Legendary]" + name
             self.createItemFeat(items, name, description_block, feat_type, **kwargs)
 
     def addActions(self, items):
@@ -1286,6 +1291,164 @@ class Actor(Entity):
                 self.addNPCAction(items, action, False)
             for action in npc_legendary_actions.values():
                 self.addNPCAction(items, action, True)
+        
+        # This is mostly for non NPCs if they manually added a custom attack
+        # otherwise, most will be filtered out as they'd match existing inventory
+        # items or existing spells
+        attacks = self._repeating.get("attack", {})
+        for attack in attacks.values():
+            # Skip existing spells and items
+            if "spellid" in attack or "itemid" in attack:
+                continue
+            name = self.getAttribute("atkname", "", from_dict=attack)[0]
+            description = self.getAttribute("atk_desc", "", from_dict=attack)[0]
+            dmg = self.getAttribute("dmgbase", "", from_dict=attack)[0]
+            dmg2 = self.getAttribute("dmg2base", "", from_dict=attack)[0]
+            dmg_type = self.getAttribute("dmgtype", "", from_dict=attack)[0]
+            dmg2_type = self.getAttribute("dmg2type", "", from_dict=attack)[0]
+            atk_attr = self.getAttribute("atkattr_base", "", from_dict=attack)[0]
+            atk_range = self.getAttribute("atkrange", "", from_dict=attack)[0]
+            saveattr = self.getAttribute("saveattr", "", from_dict=attack)[0]
+            if self.getAttributeInt("dmg2flag", 0, from_dict=attack) == 0:
+                dmg2 = ""
+
+            atk_ability = "str"
+            for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
+                if ability in atk_attr:
+                    atk_ability = ability[0:3]
+                    break
+            save = saveattr.lower()[0:3]
+            if dmg2 != "" and save == "":
+                # Let's make this into a weapon attack due to alternate damage
+                kwargs = {
+                        "weaponType": "simpleM",
+                        "damage": dmg,
+                        "damageType": dmg_type.lower(),
+                        "damage2": dmg2,
+                        "damage2Type": dmg2_type.lower(),
+                        "range": atk_range,
+                        "ability": atk_ability
+                }
+                self.createItemInventory(items, name, description, "weapon", **kwargs)
+            else:
+                kwargs = {
+                        "ability": atk_ability,
+                        "target": "",
+                        "range": atk_range,
+                        "damage": dmg,
+                        "damageType": dmg_type.lower(),
+                        "save": save
+                }
+                self.createItemFeat(items, name, description, "attack", **kwargs)
+
+
+    def createItemSpell(self, items, name, description, spell_type, school, level, **kwargs):
+        name = name if name != "" else "<no name>"
+        description = self.textToHtml(description)
+        compendium_item = self.findCompendiumItem("Spells", name)
+        if compendium_item:
+            # Some spells don't have the 'prepared' 
+            if "prepared" not in compendium_item["data"]:
+                compendium_item["data"]["prepared"] = {"type": "String", "label": "Prepared Spell", "value": False}
+            return self.createItemFromCompendium(compendium_item, items, description, **kwargs)
+        item = {"id": len(items) + 1,
+                "flags": {},
+                "name": name,
+                "type": "spell",
+                "img": self.token.token_filename,
+                "data": {
+                    "description": {"type": "String", "label": "Description", "value": description},
+                    "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
+                    "spellType": {"type": "String", "label": "Spell Type", "value": spell_type},
+                    "level": {"type": "Number", "label": "Spell Level", "value": level},
+                    "school": {"type": "String", "label": "Spell School", "value": school},
+                    "components": {"type": "String", "label": "Spell Components", "value": kwargs.get("components", "")},
+                    "materials": {"type": "String", "label": "Materials", "value": kwargs.get("materials", "")},
+                    "target": {"type": "String", "label": "Target", "value": kwargs.get("target", "")},
+                    "range": {"type": "String", "label": "Range", "value": kwargs.get("range", "")},
+                    "time": {"type": "String", "label": "Casting Time", "value": kwargs.get("time", "")},
+                    "duration": {"type": "String", "label": "Duration", "value": kwargs.get("duration", "")},
+                    "damage": {"type": "String", "label": "Spell Damage", "value": kwargs.get("damage", "")},
+                    "damageType": {"type": "String", "label": "Damage Type", "value": kwargs.get("damageType", "")},
+                    "save": {"type": "String", "label": "Saving Throw", "value": kwargs.get("save", "")},
+                    "concentration": {"type": "Boolean", "label": "Requires Concentration", "value": kwargs.get("concentration", False)},
+                    "ritual": {"type": "Boolean", "label": "Cast as Ritual", "value": kwargs.get("ritual", False)},
+                    "ability": {"type": "String", "label": "Spellcasting Ability", "value": kwargs.get("ability", "")},
+                    "prepared": {"type": "Boolean", "label": "Prepared Spell", "value": kwargs.get("prepared", False)}
+                    }
+                }
+        items.append(item)
+        return item
 
     def addSpells(self, items):
-        pass
+        for level in range(10):
+            spells = self._repeating.get("spell-{}".format(level if level > 0 else "cantrip"), {})
+            for spell in spells.values():
+                name = self.getAttribute("spellname", "", from_dict=spell)[0]
+                description = self.getAttribute("spelldescription", "", from_dict=spell)[0]
+                higherlevel = self.getAttribute("spellathigherlevels", "", from_dict=spell)[0]
+                school = self.getAttribute("spellschool", "Abjuration", from_dict=spell)[0]
+                save = self.getAttribute("spellsave", "", from_dict=spell)[0]
+                dmg = self.getAttribute("spelldamage", "", from_dict=spell)[0]
+                dmg2 = self.getAttribute("spelldamage2", "", from_dict=spell)[0]
+                dmg_type = self.getAttribute("spelldamagetype", "", from_dict=spell)[0]
+                healing = self.getAttribute("spellhealing", "", from_dict=spell)[0]
+                output = self.getAttribute("spelloutput", "", from_dict=spell)[0]
+                target = self.getAttribute("spelltarget", "", from_dict=spell)[0]
+                spellrange = self.getAttribute("spellrange", "", from_dict=spell)[0]
+                castingtime = self.getAttribute("spellcastingtime", "", from_dict=spell)[0]
+                duration = self.getAttribute("spellduration", "", from_dict=spell)[0]
+                spell_ability = self.getAttribute("spell_ability", "", from_dict=spell)[0]
+                materials = self.getAttribute("spellcomp_materials", "", from_dict=spell)[0]
+                innate = self.getAttribute("innate", "", from_dict=spell)[0]
+                spell_innate = self.getAttribute("spell_innate", "", from_dict=spell)[0]
+                concentration = self.getAttribute("spellconcentration", "", from_dict=spell)[0] != ""
+                ritual = self.getAttribute("spellritual", "", from_dict=spell)[0] != ""
+                prepared = bool(self.getAttributeInt("spellprepared", 0, from_dict=spell))
+
+                save = save.lower()[0:3]
+                school = "trs" if school == "transmutation" else school.lower()[0:3]
+                if save != "":
+                    spell_type = "save"
+                elif healing != "":
+                    spell_type = "heal"
+                    dmg = healing
+                    dmg_type = "healing"
+                elif output == "ATTACK":
+                    spell_type = "attack"
+                else:
+                    spell_type = "utility"
+                if dmg2 != "":
+                    dmg += "+ {}".format(dmg2)
+                if higherlevel != "":
+                    description += "\n<strong>Higher Level.</strong>" + higherlevel
+                use_ability = "" # spell casting ability
+                for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
+                    if ability in spell_ability:
+                        use_ability = ability[0:3]
+                        break
+                components = []
+                if self.getAttributeInt("spellcomp_v", 1, from_dict=spell) != 0:
+                    components.append("V")
+                if self.getAttributeInt("spellcomp_s", 1, from_dict=spell) != 0:
+                    components.append("S")
+                if self.getAttributeInt("spellcomp_m", 1, from_dict=spell) != 0:
+                    components.append("M")
+                if innate != "" or spell_innate != "":
+                    name += " (" + (innate if innate != "" else spell_innate) + ")"
+                kwargs = {
+                    "target": target,
+                    "range": spellrange,
+                    "time": castingtime,
+                    "duration": duration,
+                    "damage": dmg,
+                    "damageType": dmg_type.lower(),
+                    "save": save,
+                    "ability": use_ability,
+                    "materials": materials,
+                    "components": ", ".join(components),
+                    "concentration": concentration,
+                    "ritual": ritual,
+                    "prepared": prepared
+                }
+                self.createItemSpell(items, name, description, spell_type, school, level, **kwargs)
