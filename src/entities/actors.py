@@ -247,16 +247,39 @@ class Actor(Entity):
         if token_filename == "":
             token_filename = avatar_filename
         self.token.token_filename = token_filename
+
         token = self.token.getDict()
-        token["randomImg"] = randomImg
         if default_token:
             bar1_link = default_token.get("bar1_link", "")
             bar2_link = default_token.get("bar2_link", "")
             (_, _, hp_id) = self.getAttribute("hp")
+            # Some NPCs will not have any bar values set, just the bar_link
+            for attr in self._character["attributes"]:
+                (current, max, id) = (attr["current"], attr["max"], attr["id"])
+                if bar1_link == id:
+                    try:
+                        self.token.bar1_val = int(current)
+                    except:
+                        pass
+                    try:
+                        self.token.bar1_max = int(max)
+                    except:
+                        pass
+                elif bar2_link == id:
+                    try:
+                        self.token.bar2_val = int(current)
+                    except:
+                        pass
+                    try:
+                        self.token.bar2_max = int(max)
+                    except:
+                        pass
+            token = self.token.getDict()
             if bar1_link == hp_id:
                 token["bar1"]["attribute"] = "attributes.hp"
             if bar2_link == hp_id:
                 token["bar2"]["attribute"] = "attributes.hp"
+        token["randomImg"] = randomImg
         token["actorLink"] = not npc
         del token["effects"]
         del token["hidden"]
@@ -264,6 +287,7 @@ class Actor(Entity):
         del token["bar1"]["max"]
         del token["bar2"]["value"]
         del token["bar2"]["max"]
+        del token["actorData"]
 
         if character["archived"] and not self.getArgument("disable_archived", False):
             folder = "archived-characters-folder-id"
