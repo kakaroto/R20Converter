@@ -60,7 +60,7 @@ class Token(Entity):
                 try:
                     val = token.get(name, default)
                     return int(val)
-                except:
+                except ValueError:
                     return default
             self.bar1_val = parseInt("bar1_value", self.bar1_val)
             self.bar1_max = parseInt("bar1_max", self.bar1_max)
@@ -105,11 +105,11 @@ class Token(Entity):
     def computeLighting(light_radius, light_dimradius, width, height, scale=5, scale_units="ft", grid_size=70):
         try:
             g_light_radius = float(light_radius)
-        except:
+        except ValueError:
             g_light_radius = ""
         try:
             g_light_dimradius = float(light_dimradius)
-        except:
+        except ValueError:
             g_light_dimradius = 0.25 * g_light_radius if g_light_radius != "" else ""
         if g_light_radius != "":
             # The way light works in R20 is weird, the light_radius is from the edges of the token, but the
@@ -125,7 +125,7 @@ class Token(Entity):
                     token_radius = float(scale) * token_radius / grid_size
                 else:
                     token_radius = 0
-            except:
+            except ValueError:
                 token_radius = 0
             light_radius = token_radius + g_light_radius
             if light_radius < 0:
@@ -259,20 +259,20 @@ class Actor(Entity):
                 if bar1_link == id:
                     try:
                         self.token.bar1_val = int(current)
-                    except:
+                    except ValueError:
                         pass
                     try:
                         self.token.bar1_max = int(max)
-                    except:
+                    except ValueError:
                         pass
                 elif bar2_link == id:
                     try:
                         self.token.bar2_val = int(current)
-                    except:
+                    except ValueError:
                         pass
                     try:
                         self.token.bar2_max = int(max)
-                    except:
+                    except ValueError:
                         pass
             token = self.token.getDict()
             if bar1_link == hp_id:
@@ -345,14 +345,14 @@ class Actor(Entity):
         value = self.getAttribute(key, default, from_dict)[0]
         try:
             return int(value)
-        except:
+        except ValueError:
             return int(default)
 
     def isNPC(self):
         npc = self.getAttributeInt("npc", 0)
         try:
             return bool(npc)
-        except:
+        except ValueError:
             return False
 
     def getNPCType(self):
@@ -459,7 +459,7 @@ class Actor(Entity):
         (current, max, _) = self.getAttribute(attribute_name, default)
         try:
             current = int(current)
-        except:
+        except ValueError:
             pass
         ret = {
                 "type": "Number",
@@ -647,10 +647,10 @@ class Actor(Entity):
         cr = self.getAttribute("npc_challenge", 0)[0]
         try:
             cr = int(cr)
-        except:
+        except ValueError:
             try:
                 cr = int(cr.split("/")[0]) / int(cr.split("/")[1])
-            except:
+            except ValueError:
                 cr = 0
             
         return {
@@ -997,11 +997,11 @@ class Actor(Entity):
         (current, max, _) = self.getAttribute(resource, 0)
         try:
             current = int(current)
-        except:
+        except ValueError:
             pass
         try:
             max = int(max)
-        except:
+        except ValueError:
             pass
         return {"type": "String",
                 "label": name,
@@ -1152,7 +1152,7 @@ class Actor(Entity):
                 armor = modifiers.get("AC", 0)
                 try:
                     armor = int(armor)
-                except:
+                except ValueError:
                     pass
                 kwargs = {
                     "armor": armor,

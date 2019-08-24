@@ -32,7 +32,7 @@ class Encounter(Entity):
                     hidden = (graphic and graphic["layer"] == "gmlayer")
                 try:
                     initiative = int(token["pr"])
-                except:
+                except ValueError:
                     initiative = None
                 combatants.append({"id": combatant_id,
                                    "flags": {},

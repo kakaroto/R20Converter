@@ -168,7 +168,7 @@ class Scene(Entity):
                         choice = input("Select which color is a door (0 for none) : ")
                         try:
                             choice = int(choice)
-                        except:
+                        except ValueError:
                             choice = -1
                     if choice > 0:
                         door_color = wall_colors.keys()[choice-1]
@@ -178,7 +178,7 @@ class Scene(Entity):
                             choice = input("Select which color is a door (0 for none) : ")
                             try:
                                 choice = int(choice)
-                            except:
+                            except ValueError:
                                 choice = -1
                         if choice > 0:
                             secret_door_color = wall_colors.keys()[choice-1]
@@ -434,15 +434,29 @@ class Scene(Entity):
         rgb = tuple(int(color[i:i+2], 16) for i in (1, 3, 5))
         # Don't know why they added a quote around the font family name for shadows into light
         font_family = font_family.replace("\"", "")
+        # If using pyinstaller, there won't be a 'src' directory anymore
+        parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        if os.path.basename(parent) == "src":
+            parent = os.path.abspath(os.path.join(parent, ".."))
+        font_dir = os.path.join(parent, "fonts")
         try:
-            font = ImageFont.truetype("fonts/" + font_family + ".ttf", font_size)
+        try:
+                # Check if the text is ASCII, otherwise, if it has unicode characters, default back to LiberationSans
+                text.encode('ascii')
+                is_unicode = False
+            except UnicodeEncodeError:
+                is_unicode = True
+            if font_family == "Arial" or is_unicode:
+                font_family = "LiberationSans-Regular"
+            font = ImageFont.truetype(os.path.join(font_dir, font_family + ".ttf"), font_size)
             #print("Loaded font ", font_family)
         except:
             #print("Error loading font ", font_family)
             try:
-                font = ImageFont.truetype("fonts/LiberationSans-Regular.ttf", font_size)
+                font = ImageFont.truetype(os.path.join(font_dir, "LiberationSans-Regular.ttf"), font_size)
             except:
                 font = ImageFont.load_default()                
+                print("Error loading fonts. Loading default font!")
 
         size = font.getsize(text)
         img = Image.new("RGBA", size, (0, 0, 0, 0))
