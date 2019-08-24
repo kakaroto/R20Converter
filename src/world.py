@@ -13,8 +13,8 @@ class World(object):
         return {"name": self._title,
                 "description": self._description,
                 "system": "dnd5e",
-                "coreVersion": "0.3.2",
-                "systemVersion": 0.6,
+                "coreVersion": "0.3.5",
+                "systemVersion": 0.61,
                 "packs": [],
                 "scripts": [],
                 "styles": []

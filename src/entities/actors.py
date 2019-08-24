@@ -258,6 +258,12 @@ class Actor(Entity):
             if bar2_link == hp_id:
                 token["bar2"]["attribute"] = "attributes.hp"
         token["actorLink"] = not npc
+        del token["effects"]
+        del token["hidden"]
+        del token["bar1"]["value"]
+        del token["bar1"]["max"]
+        del token["bar2"]["value"]
+        del token["bar2"]["max"]
 
         if character["archived"] and not self.getArgument("disable_archived", False):
             folder = "archived-characters-folder-id"
@@ -985,7 +991,7 @@ class Actor(Entity):
         for id in self._repeating.get("npctrait", {}):
             trait = self._repeating["npctrait"][id]
             name = self.getAttribute("name", "", from_dict=trait)[0]
-            match = re.search(r"Legendary Resistance \((\d+)/day\)", name)
+            match = re.search(r"Legendary Resistance \((\d+)/[Dd]ay\)", name)
             if match:
                 legres = int(match.group(1))
 
@@ -1020,6 +1026,7 @@ class Actor(Entity):
     def createItemFromCompendium(self, compendium_item, items, description, **kwargs):
         item = copy.deepcopy(compendium_item)
         del item["_id"]
+        del item["permission"]
         item["id"] = len(items) + 1
         item["data"]["description"]["value"] = description
         for key in kwargs:
@@ -1111,7 +1118,7 @@ class Actor(Entity):
             item_type = modifiers.get("Item Type", "")
             if item_type in ["Adventuring Gear", "Items"]:
                 item = self.createItemInventory(items, name, content, "backpack", weight=weight, quantity=count)
-                print("Created item : ", item)
+                #print("Created item : ", item)
             elif item_type == "Ammunition":
                 self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, weaponType="ammo")
             elif item_type in ["Light Armor", "Medium Armor", "Heavy Armor", "Shield"]:
@@ -1206,8 +1213,7 @@ class Actor(Entity):
                 self.createItemFeat(items, "Reaction: " + name, description, "ability", requirements="Reaction")
         else:
             traits = self._repeating.get("traits", {})
-            for id in traits:
-                trait = traits[id]
+            for trait in traits.values():
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("description", "", from_dict=trait)[0]
                 source = self.getAttribute("source", "", from_dict=trait)[0]

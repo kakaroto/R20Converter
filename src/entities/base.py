@@ -4,6 +4,7 @@ import json
 import re
 import urllib
 import errno
+import hashlib
 
 class DatabaseFile(object):
     def __init__(self, converter, filename):
@@ -107,9 +108,9 @@ class Entity(object):
                     items = db.entities
             for item in items:
                 if "name" in item and item["name"] == item_name:
-                    print("Found item '%s'" % (item_name))
                     return item
         return None
+
     def _foundCompendium(self, match):
         converter = self._database._converter
         item_id = None
@@ -156,7 +157,7 @@ class Entity(object):
 
     @staticmethod
     def strToID(id_str):
-        new_str = "0"*12 + hex(hash(id_str))
+        new_str = hashlib.sha256(id_str.encode()).hexdigest()
         return base64.b64encode(new_str[-12:].encode()).decode()
 
     @staticmethod
