@@ -183,8 +183,32 @@ class Scene(Entity):
                         if choice > 0:
                             secret_door_color = wall_colors.keys()[choice-1]
                         
+        if self.getArgument("add_walls_around_map", False):
+            positions = [
+                ((0, 0), (width, 0)),
+                ((width, 0), (width, height)),
+                ((width, height), (0, height)),
+                ((0, height), (0, 0))
+            ]
+            for (x0, x1) in positions:
+                wall = {"id": wall_id,
+                        "flags": {},
+                        "c": [
+                                margin_left + x0[0] * grid_multiplier,
+                                margin_top + x0[1] * grid_multiplier,
+                                margin_left + x1[0] * grid_multiplier,
+                                margin_top + x1[1] * grid_multiplier,
+                        ],
+                        "move": 1,
+                        "sense": 1,
+                        "door": 0,
+                        "t": "w",
+                        "s": 0
+                        }
+                wall_id += 1
+                walls.append(wall)
                 
-        total_walls = 0
+        total_walls = len(walls)
         for zid in ids_to_display:
             graphic = self.findItemByID(page, zid, "graphics")
             text = self.findItemByID(page, zid, "texts")
@@ -440,7 +464,7 @@ class Scene(Entity):
             parent = os.path.abspath(os.path.join(parent, ".."))
         font_dir = os.path.join(parent, "fonts")
         try:
-        try:
+            try:
                 # Check if the text is ASCII, otherwise, if it has unicode characters, default back to LiberationSans
                 text.encode('ascii')
                 is_unicode = False
@@ -455,7 +479,7 @@ class Scene(Entity):
             try:
                 font = ImageFont.truetype(os.path.join(font_dir, "LiberationSans-Regular.ttf"), font_size)
             except:
-                font = ImageFont.load_default()                
+                font = ImageFont.load_default()
                 print("Error loading fonts. Loading default font!")
 
         size = font.getsize(text)
