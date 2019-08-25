@@ -51,6 +51,11 @@ class Differ(object):
         return world
 
     def diff_json(self, path, left, right):
+        if type(left) == float and int(left) == left:
+            left = int(left)
+        if type(right) == float and int(right) == right:
+            right = int(right)
+
         if type(left) != type(right):
             print "%s: type mismatch between left and right elements : %s != %s" % (path, type(left), type(right))
         elif type(left) == dict:
