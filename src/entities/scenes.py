@@ -458,9 +458,9 @@ class Scene(Entity):
         rgb = tuple(int(color[i:i+2], 16) for i in (1, 3, 5))
         # Don't know why they added a quote around the font family name for shadows into light
         font_family = font_family.replace("\"", "")
-        # If using pyinstaller, there won't be a 'src' directory anymore
+        # If running from the windows directory alone, there won't be a 'src' directory anymore
         parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        if os.path.basename(parent) == "src":
+        if not os.path.exists(os.path.join(parent, "fonts")):
             parent = os.path.abspath(os.path.join(parent, ".."))
         font_dir = os.path.join(parent, "fonts")
         try:

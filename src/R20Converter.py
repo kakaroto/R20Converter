@@ -9,6 +9,8 @@ import os
 from world import World
 from entities import DatabaseFile, EmptyDB, Actors, Combat, Folders, Journal, Playlists, Scenes, SettingsDB, Users
 
+version = "0.4"
+
 class R20Converter(object):
     def __init__(self, args):
         self.args = args
@@ -83,7 +85,7 @@ class R20Converter(object):
 
 
 
-parser = argparse.ArgumentParser(description="R20Converter", epilog="Convert Roll20 campaigns into Foundry VTT worlds.")
+parser = argparse.ArgumentParser(description="R20Converter v{}".format(version), epilog="Convert Roll20 campaigns into Foundry VTT worlds.")
 parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/")
 parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
 parser.add_argument("--json", action="store_true", help="Use campaign.json as input instead of a ZIP file (playlist will be empty due to audio tracks being accessible only when logged into Roll20)")

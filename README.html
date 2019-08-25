@@ -1,0 +1,160 @@
+<style>
+/* Thanks to http://demo.showdownjs.com/ */
+pre {
+    white-space: pre-wrap;       /* css-3 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+    background-color: #f8f8f8;
+    border: 1px solid #dfdfdf;
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
+    padding: 0.125rem 0.3125rem 0.0625rem;
+}
+
+pre code {
+    background-color: transparent;
+    border: 0;
+    padding: 0;
+}
+code {
+    background-color: #f8f8f8;
+    border-color: #dfdfdf;
+    border-style: solid;
+    border-width: 1px;
+    color: #333;
+    font-family: Consolas,"Liberation Mono",Courier,monospace;
+    font-weight: normal;
+    padding: 0.125rem 0.3125rem 0.0625rem;
+}
+</style>
+<div ng-bind-html="trustedHtml" class="ng-binding"><h3>R20Converter</h3>
+<p>This application converts a Roll20 campaign into a Foundry VTT world.</p>
+<p>It will automate the entire conversion process and most(*) of your campaign will be setup just the way it was in Roll 20</p>
+<p>(*) Your chat log will not be converted (yet) and things such as decks, tables and macros will not be converted either as those features are not yet available in Foundry VTT.</p>
+<h4>How to use</h4>
+<h5>Windows</h5>
+<p>This package comes with an executable for Windows in the <code>windows</code> subdirectory. To run R20Converter, you will need to open a Console window and run the <code>windows\R20Converter.exe</code> executable using the command line.</p>
+<p>For those of you who are less tech savvy, you can refer to the tutorial video I posted, or see the step by step guide below : </p>
+<ul>
+<li>Make sure you extract the R20Converter zip archive into its own directory</li>
+<li>Open the directory where R20Converter was extracted using Windows File Explorer</li>
+<li>Click on the 'address bar' of the window, which contains the path of the directory you are in</li>
+<li>Type "cmd" and press Enter</li>
+<li>A console window will have appeared, you can now type <code>windows\R20Converter.exe --help</code> to run the program and see the options available to you</li>
+</ul>
+<h5>Linux</h5>
+<p>If using Linux, you can run it with <code>python3 src/R20Converter.py</code> in a terminal. Use the --help option to see which options are available to you during conversion</p>
+<h4>Campaign Conversion</h4>
+<p>To convert a campaign, you first need to have your Roll 20 campaign exported. To do so, use the <a href="https://github.com/kakaroto/R20Exporter">R20Exporter</a> script and follow its README instructions on how to use it.</p>
+<p>Once you have your campaign exported as a zip file, you can start the conversion process. Note that you do not need to extract the campaign's zip file; R20Converter will work directly with the zip file itself to do the conversion.</p>
+<p>To start the conversion, run the R20Converter application giving it two arguments (in this order) : the world directory to create, and the zip file. </p>
+<p>Don't forget that the directory name needs to be url-friendly, so don't use spaces (see <a href="http://foundryvtt.com/pages/hosting.html#where-do-i-put-my-content">http://foundryvtt.com/pages/hosting.html#where-do-i-put-my-content</a>). Also note that image paths are dependent on the world directory name, so you cannot rename the directory after the conversion is done.</p>
+<h4>Examples</h4>
+<p>Here's the simplest example to convert the campaign from the file "The Lost Mine of Phandelver.zip" into the world directory "lmop"</p>
+<pre><code>windows\R20Converter.exe "lmop" "The Lost Mine of Phandelver.zip"</code></pre>
+<p>Here's another example with a bit more options given to it in order to fine tune the converted result.</p>
+<pre><code>./src/R20Converter.py "C:\FVTT\resources\app\public\worlds\CoS" "C:\Downloads\Curse of Strahd.zip" --door-color #ff0000 --enable-fog --restrict-movement --gm-password "strahd-is-my-hero" --player-password "prepare-to-die"</code></pre>
+<p>In the above example, the script (which is run on linux) will convert the "Curse of Strahd.zip" campaign (from the C:\Downloads directory) into the directory "CoS" (in the FVTT worlds directory) and will automatically replace all walls from the dynamic lighting layer which are red (RGB color #ff0000) into doors, will enable Exploration Fog on all maps, make all walls restrict movement (even if the page settings in Roll20 did not have the "restrict movement" option enabled) and will set the GM and player passwords to the values provided.</p>
+<p>Finally, here's a more complex command which uses many of the available options</p>
+<pre><code>windows\R20Converter.exe "STSS" "Stranger Things.zip" --campaign-title "Stranger Things Starter Set" --description "Get your fireballs ready as you investigate the mysterious castle and battle the ferocious Demogorgon. Prepare for just about anything, because the game just got stranger" --auto-doors --enable-fog --restrict-movement --npc-source "PHB" --minimum-wall-length 35 --maximum-wall-angle 30 --fvtt-public-path "C:\FVTT\resources\app\public" --add-walls-around-map</code></pre>
+<p>In this last example, we convert the "Stranger Things.zip" file into the STSS directory, we set the campaign title to "Stranger Things Starter Set", replace the default world description, ask the script to automatically detect doors and secret doors from the dynamic lighting walls, and make sure that small walls get removed if they are less than 35 pixels long, are contiguous to other walls and don't have an angle of over 30 degrees with the neighboring walls (this can be very useful in dropping the number of walls in cave-like maps where the Roll20 team made thousands of walls instead of a few hundred). Finally we give it the path to the FVTT public directory so it can auto-import spells, items and class features, and we ask for walls to be added around each map.</p>
+<h4>Full options</h4>
+<p>If you run the application with the <code>--help</code> option, you will get the full list of available options to you. For convenience, here is the usage of the program : </p>
+<pre><code>usage: R20Converter.py [-h] [--json] [--campaign-title CAMPAIGN_TITLE]
+                       [--description DESCRIPTION] [-r] [--enable-fog]
+                       [--disable-fog] [--interactive]
+                       [--use-original-image-urls] [--auto-doors]
+                       [--door-color DOOR_COLOR]
+                       [--secret-door-color SECRET_DOOR_COLOR]
+                       [--player-password PLAYER_PASSWORD]
+                       [--gm-password GM_PASSWORD] [--disable-archived]
+                       [--minimum-wall-length MINIMUM_WALL_LENGTH]
+                       [--maximum-wall-angle MAXIMUM_WALL_ANGLE]
+                       [--debug-page DEBUG_PAGE]
+                       [--fvtt-public-path FVTT_PUBLIC_PATH]
+                       [--npc-source NPC_SOURCE] [--no-compendium-overwrite]
+                       [--add-walls-around-map]
+                       destination-directory exported.zip
+
+R20Converter v0.4
+
+positional arguments:
+  destination-directory
+                        The destination directory in public/worlds/
+  exported.zip          The exported ZIP file from R20Exporter
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --json                Use campaign.json as input instead of a ZIP file
+                        (playlist will be empty due to audio tracks being
+                        accessible only when logged into Roll20)
+  --campaign-title CAMPAIGN_TITLE
+                        Override the Campaign title
+  --description DESCRIPTION
+                        World Desription
+  -r, --restrict-movement
+                        Force all walls to restrict movement
+  --enable-fog          Enable Fog Exploration on all Scenes with Dynamic
+                        Lighting regardless of Advanced Fog of War setting
+  --disable-fog         Disable Fog Exploration on all Scenes with Dynamic
+                        Lighting regardless of Advanced Fog of War setting
+  --interactive         Ask questions about decisions to be made during the
+                        conversion process.
+  --use-original-image-urls
+                        Do not copy images to the world folder but use Roll20
+                        URL instead. (NOT recommended)
+  --auto-doors          Automatically detect doors and set them as such.
+  --door-color DOOR_COLOR
+                        Sets the color of the dynamic lighting walls to
+                        convert into doors. For example, set it to '#ff0000'
+                        for Red walls.
+  --secret-door-color SECRET_DOOR_COLOR
+                        Sets the color of the dynamic lighting walls to
+                        convert into secret doors
+  --player-password PLAYER_PASSWORD
+                        Default player password
+  --gm-password GM_PASSWORD
+                        Default GM password
+  --disable-archived    Disable the automatic move of archived
+                        scenes/handouts/characters to an Archived folder.
+  --minimum-wall-length MINIMUM_WALL_LENGTH
+                        Minimum distance for walls (in pixels). If a wall is
+                        smaller and part of a longer chain of walls, it will
+                        get merged with the adjacent wall. This is useful if
+                        there are a lot of small/jagged walls or freehand-
+                        drawn walls (Default: 0 (disabled))
+  --maximum-wall-angle MAXIMUM_WALL_ANGLE
+                        Maximum angle (in degrees) between walls before they
+                        are merged (when using --minimum-wall-distance
+                        option). This is to prevent small walls at high angles
+                        (a small triangle or U shape) from being merged and
+                        becoming a line that cuts through the map. The angle
+                        is calculated with every point in the wall that is
+                        skipped, so a circle drawn with small lines and small
+                        angles will not be removed. Note that the angle here
+                        is related to a straight line, so a maximum angle of
+                        30 means an angle between 150 and 210 degrees between
+                        the 3 points (Default: 30)
+  --debug-page DEBUG_PAGE
+                        Only convert a specific page. Useful for debugging
+  --fvtt-public-path FVTT_PUBLIC_PATH
+                        Path to the FVTT public directory (used for importing
+                        items and spells from dnd5e system)
+  --npc-source NPC_SOURCE
+                        Source location for NPC actors (displayed in the
+                        character sheet)
+  --no-compendium-overwrite
+                        If enabled, items, feats and spells found in the
+                        Compendium will not be overwritten with custom
+                        description/damage/etc.. from the Roll20 data
+  --add-walls-around-map
+                        Add 4 walls to enclose the map and cut off
+                        view/movement to the side table
+
+Convert Roll20 campaigns into Foundry VTT worlds.</code></pre>
+<h4>Final steps</h4>
+<p>When the script is done, copy the new directory to the resources/app/public/worlds directory in your FVTT installation and load the world in FVTT. </p>
+<p>And you're done!</p>
+<p>If you use D&amp;D Beyond, check out <a href="https://beyond20.here-for-more.info">Beyond20</a>, another project of mine which lets you roll from monster stat blocks and character sheets directly in D&amp;D Beyond and get the result in your VTT application.</p>
