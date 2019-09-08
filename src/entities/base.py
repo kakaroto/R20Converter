@@ -44,16 +44,21 @@ class DatabaseFile(object):
     def __str__(self):
         return "\n".join(map(str, self.entities))
 
+    def getDirectoryName(self):
+        if self.getArgument("export_as_module", False):
+            return "packs"
+        else:
+            return "data"
     def save(self, full_path=None):
         if full_path is None:
-            full_path = os.path.join(self._path, "data", self._filename)
+            full_path = os.path.join(self._path, self.getDirectoryName(), self._filename)
         with open(full_path, "w", encoding='utf-8') as f:
             f.write(str(self))
         return self
 
     def load(self, full_path=None):
         if full_path is None:
-            full_path = os.path.join(self._path, "data", self._filename)
+            full_path = os.path.join(self._path, self.getDirectoryName(), self._filename)
         self.entities = []
         with open(full_path, "r", encoding='utf-8') as f:
             lines = f.readlines()
@@ -120,6 +125,8 @@ class Entity(object):
         name = name.split("#")[0].split("?")[0]
         after_href = match.group(4)
         text = match.group(5)
+        if self.getArgument("export_as_module", False):
+            return "@Item[" + name + "]"
         if compendium == "Spells":
             folder = "D&D 5e Spells (SRD)"
             folder_id = "r20converter-dnd5e-spells"
@@ -203,6 +210,14 @@ class Entity(object):
         # Url encoded characters won't resolve, since the URL would become invalid, so we replace them
         return re.sub("%([0-9A-F]{2})", "_\\1", url)
 
+    def getDirectoryName(self):
+        world_dir_name = os.path.basename(os.path.dirname(os.path.join(self._database._path, ".")))
+        if self.getArgument("export_as_module", False):
+            directory = "modules"
+        else:
+            directory = "worlds"
+        return os.path.join(directory, world_dir_name)
+
     def getDestinationPaths(self, destination):
         index = 1
         destination_safe = self.urlsafe(destination)
@@ -225,8 +240,7 @@ class Entity(object):
             else:
                 raise
 
-        world_dir_name = os.path.basename(os.path.dirname(os.path.join(self._database._path, ".")))
-        config_path = os.path.join("worlds", world_dir_name, destination_safe)
+        config_path = os.path.join(self.getDirectoryName(), destination_safe)
         return (dest_filename, config_path.replace(os.path.sep, "/"))
     
     def fixImageUrl(self, url):

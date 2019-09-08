@@ -409,6 +409,8 @@ class Scene(Entity):
         folder = None
         if page["archived"] and not self.getArgument("disable_archived", False):
             folder = "archived-scenes-folder-id"
+        if self.getArgument("export_as_module", False):
+            folder = None
         self.entity = {"_id": self._id,
                        "name": name,
                        "permission": {"default": 0},

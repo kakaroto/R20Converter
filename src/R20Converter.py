@@ -7,6 +7,7 @@ import argparse
 import sys
 import os
 from world import World
+from module import Module
 from entities import DatabaseFile, EmptyDB, Actors, Combat, Folders, Journal, Playlists, Scenes, SettingsDB, Users
 
 version = "0.4"
@@ -57,25 +58,35 @@ class R20Converter(object):
     def convert(self):
         print("*** Converting Campaign '%s' ***" % self.campaign["campaign_title"])
         os.makedirs(self.path)
-        os.makedirs(os.path.join(self.path, "data"))
-        os.makedirs(os.path.join(self.path, "scenes"))
+        if self.getArgument("export_as_module", False):
+            os.makedirs(os.path.join(self.path, "packs"))
 
-        self.world = World(self).save()
-        self.settings = SettingsDB(self).save()
-        self.users = Users(self).save()
-        self.folders = Folders(self)
-        self.items = EmptyDB(self, "items")
-        self.journal = Journal(self).save()
-        self.actors = Actors(self).save()
-        self.scenes = Scenes(self).save()
-        self.combat = Combat(self).save()
-        self.playlists = Playlists(self).save()
+            self.journal = Journal(self)
+            self.actors = Actors(self)
+            self.scenes = Scenes(self)
+            self.playlists = Playlists(self)
+            # Module will add the packs that are not empty and save them to file
+            self.module = Module(self).save()
+        else:
+            os.makedirs(os.path.join(self.path, "data"))
 
-        self.sessions = EmptyDB(self, "sessions").save()
-        self.chat = EmptyDB(self, "chat").save()
-        # Could get modified by the journal
-        self.folders.save()
-        self.items.save()
+            self.settings = SettingsDB(self).save()
+            self.users = Users(self).save()
+            self.folders = Folders(self)
+            self.items = EmptyDB(self, "items")
+            self.journal = Journal(self).save()
+            self.actors = Actors(self).save()
+            self.scenes = Scenes(self).save()
+            self.combat = Combat(self).save()
+            self.playlists = Playlists(self).save()
+
+            self.sessions = EmptyDB(self, "sessions").save()
+            self.chat = EmptyDB(self, "chat").save()
+            # Could get modified by the journal
+            self.folders.save()
+            self.items.save()
+            self.world = World(self).save()
+
         print("\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\n")
         print("It is strongly suggested to check the sheets of the player characters for any errors or missing information, or for adding special traits.")
         print("Some things may not have been carried over, especially to-hit, damage, AC or saving throw modifiers or more complicated weapon or spell macros")
@@ -114,6 +125,7 @@ parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT p
 parser.add_argument("--npc-source", default="Roll 20", help="Source location for NPC actors (displayed in the character sheet)")
 parser.add_argument("--no-compendium-overwrite", action="store_true", help="If enabled, items, feats and spells found in the Compendium will not be overwritten with custom description/damage/etc.. from the Roll20 data")
 parser.add_argument("--add-walls-around-map", action="store_true", help="Add 4 walls to enclose the map and cut off view/movement to the side table")
+parser.add_argument("--export-as-module", action="store_true", help="Export the campaign as a module with Compendium for all handouts/characters/scenes/playlists")
 
 if __name__ == "__main__":
     args = parser.parse_args()

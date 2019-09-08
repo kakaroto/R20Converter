@@ -309,6 +309,8 @@ class Actor(Entity):
         self.addSpells(owned_items)
         self.addActions(owned_items)
 
+        if self.getArgument("export_as_module", False):
+            folder = None
         self.entity = {"_id": self._id,
                        "name": character["name"],
                        "img": avatar_filename,
