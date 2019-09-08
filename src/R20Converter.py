@@ -9,6 +9,13 @@ import os
 from world import World
 from module import Module
 from entities import DatabaseFile, EmptyDB, Actors, Combat, Folders, Journal, Playlists, Scenes, SettingsDB, Users
+try:
+    import PySimpleGUIQt as sg
+except:
+    try:
+        import PySimpleGUI as sg
+    except:
+        sg = None
 
 version = "0.4"
 
@@ -87,22 +94,98 @@ class R20Converter(object):
             self.items.save()
             self.world = World(self).save()
 
-        print("\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\n")
-        print("It is strongly suggested to check the sheets of the player characters for any errors or missing information, or for adding special traits.")
-        print("Some things may not have been carried over, especially to-hit, damage, AC or saving throw modifiers or more complicated weapon or spell macros")
-        print("\nThank you for your support!")
 
+class GUI(object):
+    def __init__(self, *args, **kwargs):
+        self.parser = argparse.ArgumentParser(*args, **kwargs)
+        sg.ChangeLookAndFeel('Reddit')
+        self.layout = [[sg.Text(self.parser.description, justification="center", font=("Helvetica", 15), text_color="blue")],
+                        [sg.Text(self.parser.epilog, font=("Helvetica", 12))],
+                        [sg.Text('Use campaign.json as input instead of a ZIP file', key="--json_help", size=(30, 1)), sg.Checkbox('', key="--json")],
+                        [sg.Text("ZIP File (or JSON file) export by R20Exporter", size=(30, 1)), sg.Input('Campaign.zip', key="zip_file", tooltip='The exported ZIP file (or campaign.json) exported by R20Exporter'), sg.FileBrowse()],
+                        [sg.Text("FVTT Public Directory", size=(30, 1)), sg.Input('C:\\FVTT\\resources\\app\\public', key="--fvtt-public-path", tooltip='Path to the Foundry VTT public directory'), sg.FolderBrowse()],
+                        [sg.Text("Export as a Module instead of a World", size=(30, 1), tooltip='Export the campaign as a module (instead of a world) with Compendium packs for all handouts/characters/scenes/playlists', key="--export-as-module_help"), sg.Checkbox('', key="--export-as-module")],
+                        [sg.Text("World or Module URL name", size=(30, 1), tooltip='Name of the directory in which to convert the campaign. Must be URL-safe (Destination directory will be based on the FVTT public directory and this name)'), sg.Input('your-world-url', key="world-name")],
+                        [sg.HorizontalSeparator()],
+                        ]
+        self.options = {}
 
+    def add_argument(self, argument, **kwargs):
+        self.parser.add_argument(argument, **kwargs)
+        if not argument.startswith("--") or argument in ["--interactive", "--debug-page", "--fvtt-public-path"]:
+            return
+        self.options[argument] = kwargs
+        if argument in ["--json", "--export-as-module"]:
+            return
+        name = " ".join(map(lambda x: x.capitalize(), argument[2:].split("-")))
+        default = kwargs.get("default", None) if kwargs.get("default", None) is not None else ""
+        if argument == "--description":
+            widget = sg.Multiline(default, key=argument)
+        elif argument in ["--enable-fog", "--disable-fog"]:
+            enabled = False
+            if argument == "--enable-fog":
+                self.layout.append([sg.Text("Do not modify Fog", tooltip="Sets Fog Exploration on all Scenes according to Advanced Fog of war setting", size=(30, 1)), sg.Radio("", "fog")])
+                enabled = True
+            widget = sg.Radio(default, "fog", key=argument, default=enabled)
+        elif kwargs.get("action", "") == "store_true":
+            if argument == "--use-original-image-urls":
+                default = "(NOT Recommended)"
+            widget = sg.Checkbox(default, key=argument, default=argument in ["--add-walls-around-map", "--restrict-movement"])
+        else:   
+            widget = sg.Input(default, key=argument)
+        self.layout.append([sg.Text(name, tooltip=kwargs.get("help", ""), size=(30, 0.5)), widget])
 
+    def parse_args(self):
+        self.layout.append([sg.Button("Convert Campaign")])
+        window = sg.Window(self.parser.description).Layout(self.layout)
+        while True:
+            button, values = window.Read()
+            if button == None:
+                args = None
+            else:
+                if values["--export-as-module"]:
+                    directory = "modules"
+                else:
+                    directory = "worlds"
+                path = os.path.join(values["--fvtt-public-path"], directory, values["world-name"])
+                args = [path, values["zip_file"]]
+                for option in self.options:
+                    value = values[option]
+                    if option == "--description":
+                        value = "".join(list(map(lambda l: "<p>" + l + "</p>", value.split("\n"))))
+                    if self.options[option].get("action", "") == "store_true":
+                        if value:
+                            args.append(option)
+                    elif self.options[option].get("default", None) is not None or value != "":
+                        args.extend([option, value])
+                if os.path.exists(path):
+                    sg.Popup(self.parser.description, "Destination directory must not exist : ", path)
+                    continue
+                if not os.path.exists(values["zip_file"]):
+                    sg.Popup(self.parser.description, "%s file does not exist : " % ("JSON" if values["--json"] else "ZIP"), values["zip_file"])
+                    continue
+            break
+        window.close()
+        print("Running with args : ", args)
+        return self.parser.parse_args(args)
 
+    def done(self, message):
+        print(message)
+        sg.Popup(self.parser.description, message)
 
-parser = argparse.ArgumentParser(description="R20Converter v{}".format(version), epilog="Convert Roll20 campaigns into Foundry VTT worlds.")
+use_gui = False
+if len(sys.argv) > 1 or sg is None:
+    ArgumentParser = argparse.ArgumentParser
+else:
+    ArgumentParser = GUI
+    use_gui = True
+parser = ArgumentParser(description="R20Converter v{}".format(version), epilog="Convert Roll20 campaigns into Foundry VTT worlds.")
 parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/")
 parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
 parser.add_argument("--json", action="store_true", help="Use campaign.json as input instead of a ZIP file (playlist will be empty due to audio tracks being accessible only when logged into Roll20)")
 parser.add_argument("--campaign-title", default=None, help="Override the Campaign title")
 parser.add_argument("--description", default="Imported from Roll20 using R20Converter", help="World Desription")
-parser.add_argument("-r", "--restrict-movement", action="store_true", help="Force all walls to restrict movement")
+parser.add_argument("--restrict-movement", action="store_true", help="Force all walls to restrict movement")
 parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
 parser.add_argument("--disable-fog", action="store_true", help="Disable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
 parser.add_argument("--interactive", action="store_true", help="Ask questions about decisions to be made during the conversion process.")
@@ -125,7 +208,7 @@ parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT p
 parser.add_argument("--npc-source", default="Roll 20", help="Source location for NPC actors (displayed in the character sheet)")
 parser.add_argument("--no-compendium-overwrite", action="store_true", help="If enabled, items, feats and spells found in the Compendium will not be overwritten with custom description/damage/etc.. from the Roll20 data")
 parser.add_argument("--add-walls-around-map", action="store_true", help="Add 4 walls to enclose the map and cut off view/movement to the side table")
-parser.add_argument("--export-as-module", action="store_true", help="Export the campaign as a module with Compendium for all handouts/characters/scenes/playlists")
+parser.add_argument("--export-as-module", action="store_true", help="Export the campaign as a module (instead of a world) with Compendium packs for all handouts/characters/scenes/playlists")
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -143,3 +226,11 @@ if __name__ == "__main__":
         
     converter = R20Converter(args)
     converter.convert()
+    message = "\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\n\n"
+    message += "It is strongly suggested to check the sheets of the player characters for any errors or missing information, or for adding special traits.\n"
+    message += "Some things may not have been carried over, especially to-hit, damage, AC or saving throw modifiers or more complicated weapon or spell macros\n"
+    message += "\nThank you for your support!"
+    if use_gui:
+        parser.done(message)
+    else:
+        print(message)
