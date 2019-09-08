@@ -621,8 +621,16 @@ class Actor(Entity):
     def createDetailBio(self):
         bio = self._character["bio"]
         gmnotes = self._character["gmnotes"]
+        for (attrib, label) in [("character_appearance", "Character Appearance"),
+                                ("character_backstory", "Character Backstory"),
+                                ("additional_feature_and_traits", "Additional Features and Traits"),
+                                ("allies_and_organizations", "Allies & Organizations"),
+                                ("treasure", "Treasure")]:
+            content = self.getAttribute(attrib, "")[0]
+            if content != "":
+                bio += "\n<hr><section><p><strong>" + label + " :</strong> </p>" + self.textToHtml(content) + "</section>"
         if gmnotes != "":
-            bio += "\n<section class=\"secret\"><p>GM Notes : </p>" + gmnotes + "</section>"
+            bio += "\n<hr><section class=\"secret\"><p><strong>GM Notes :</strong> </p>" + gmnotes + "</section>"
 
         bio = self.replaceCompendiumLinks(self.replaceEntityLinks(bio))
         return {
