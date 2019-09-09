@@ -2,7 +2,10 @@ Campaigns/
 worlds/
 *.pyc
 *~
+*.zip
 windows/
 build/
+dist/
 systems/
 .vscode
+releases/
