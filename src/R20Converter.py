@@ -11,9 +11,11 @@ from module import Module
 from entities import DatabaseFile, EmptyDB, Actors, Combat, Folders, Journal, Playlists, Scenes, SettingsDB, Users
 try:
     import PySimpleGUIQt as sg
+    line_height = 0.5
 except:
     try:
         import PySimpleGUI as sg
+        line_height = 1
     except:
         sg = None
 
@@ -95,8 +97,8 @@ class R20Converter(object):
             self.world = World(self).save()
 
 class GUI(object):
-    LABEL_SIZE = (40, 0.5)
-    BIG_LABEL_SIZE = (70, 0.5)
+    LABEL_SIZE = (40, line_height)
+    BIG_LABEL_SIZE = (70, line_height)
     def __init__(self, *args, **kwargs):
         self.parser = argparse.ArgumentParser(*args, **kwargs)
         sg.ChangeLookAndFeel('Reddit')
@@ -202,8 +204,8 @@ if len(sys.argv) > 1 or sg is None:
 else:
     ArgumentParser = GUI
     use_gui = True
-parser = ArgumentParser(description="R20Converter v{}".format(version), epilog="Convert Roll20 campaigns into Foundry VTT worlds.")
-parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/")
+parser = ArgumentParser(description="R20Converter v{}".format(version), epilog="Convert Roll20 campaigns into Foundry VTT worlds or modules.")
+parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/ or public/modules/")
 parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
 parser.add_argument("--json", action="store_true", help="Use campaign.json as input instead of a ZIP file (playlist will be empty due to audio tracks being accessible only when logged into Roll20)")
 parser.add_argument("--export-as-module", action="store_true", help="Export the campaign as a module (instead of a world) with Compendium packs for all handouts/characters/scenes/playlists")
