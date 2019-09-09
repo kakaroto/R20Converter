@@ -220,6 +220,8 @@ class Entity(object):
 
     def getDestinationPaths(self, destination):
         index = 1
+        # Remove leading, trailing and duplicate spaces in the destination name
+        destination = re.sub(" +", " ", destination).strip()
         destination_safe = self.urlsafe(destination)
         while True:
             dest_filename = os.path.join(self._database._path, destination_safe)
