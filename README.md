@@ -1,6 +1,6 @@
 # R20Converter
 
-This application converts a Roll20 campaign into a Foundry VTT world.
+This application converts a Roll20 campaign into a Foundry VTT world or module.
 
 It will automate the entire conversion process and most(*) of your campaign will be setup just the way it was in Roll 20
 
@@ -10,18 +10,16 @@ It will automate the entire conversion process and most(*) of your campaign will
 
 ### Windows
 
-This package comes with an executable for Windows in the `windows` subdirectory. To run R20Converter, you will need to open a Console window and run the `windows\R20Converter.exe` executable using the command line.
+This package comes with an executable for Windows in the `windows` subdirectory. Simply double click it to open the User Interface, then Browse for the ZIP file that was exported and for the public directory of your FVTT installation (you can also just direct it to the FVTT installation directory itself and it will adjust the path automatically) then enter a name for your world directory.
 
-For those of you who are less tech savvy, you can refer to the tutorial video I posted, or see the step by step guide below : 
-- Make sure you extract the R20Converter zip archive into its own directory
-- Open the directory where R20Converter was extracted using Windows File Explorer
-- Click on the 'address bar' of the window, which contains the path of the directory you are in
-- Type "cmd" and press Enter
-- A console window will have appeared, you can now type `windows\R20Converter.exe --help` to run the program and see the options available to you
+Select the options you would like to use, then press the "Convert Campaign" button. You can always keep your mouse still on one of the options to see a tooltip with more information on what each option does.
+
 
 ### Linux
 
-If using Linux, you can run it with `python3 src/R20Converter.py` in a terminal. Use the --help option to see which options are available to you during conversion
+If using Linux, you can run it with `python3 src/R20Converter.py` in a terminal. Use the --help option to see which options are available to you during conversion.
+
+Dependencies for the GUI, you need to install `pysimplegui`, `pysimpleguiqt` and `pyside2`.
 
 
 ## Campaign Conversion
@@ -30,9 +28,9 @@ To convert a campaign, you first need to have your Roll 20 campaign exported. To
 
 Once you have your campaign exported as a zip file, you can start the conversion process. Note that you do not need to extract the campaign's zip file; R20Converter will work directly with the zip file itself to do the conversion.
 
-To start the conversion, run the R20Converter application giving it two arguments (in this order) : the world directory to create, and the zip file. 
+If using the command line interface, to start the conversion, run the R20Converter application giving it two arguments (in this order) : the world directory to create, and the zip file. 
 
-Don't forget that the directory name needs to be url-friendly, so don't use spaces (see http://foundryvtt.com/pages/hosting.html#where-do-i-put-my-content). Also note that image paths are dependent on the world directory name, so you cannot rename the directory after the conversion is done.
+Don't forget that the directory name needs to be url-friendly, so don't use spaces (see [http://foundryvtt.com/pages/hosting.html#where-do-i-put-my-content](http://foundryvtt.com/pages/hosting.html#where-do-i-put-my-content)). Also note that image paths are dependent on the world directory name, so you cannot rename the directory after the conversion is done.
 
 ## Examples
 
@@ -53,36 +51,39 @@ In the above example, the script (which is run on linux) will convert the "Curse
 Finally, here's a more complex command which uses many of the available options
 
 ```
-windows\R20Converter.exe "STSS" "Stranger Things.zip" --campaign-title "Stranger Things Starter Set" --description "Get your fireballs ready as you investigate the mysterious castle and battle the ferocious Demogorgon. Prepare for just about anything, because the game just got stranger" --auto-doors --enable-fog --restrict-movement --npc-source "PHB" --minimum-wall-length 35 --maximum-wall-angle 30 --fvtt-public-path "C:\FVTT\resources\app\public" --add-walls-around-map
+windows\R20Converter.exe "STSS" "Stranger Things.zip" --campaign-title "Stranger Things Starter Set" --description "Get your fireballs ready as you investigate the mysterious castle and battle the ferocious Demogorgon. Prepare for just about anything, because the game just got stranger" --auto-doors --enable-fog --restrict-movement --npc-source "PHB" --minimum-wall-length 35 --maximum-wall-angle 30 --fvtt-public-path "C:\FVTT\resources\app\public" --add-walls-around-map --cleanup-scenes
 ```
 
-In this last example, we convert the "Stranger Things.zip" file into the STSS directory, we set the campaign title to "Stranger Things Starter Set", replace the default world description, ask the script to automatically detect doors and secret doors from the dynamic lighting walls, and make sure that small walls get removed if they are less than 35 pixels long, are contiguous to other walls and don't have an angle of over 30 degrees with the neighboring walls (this can be very useful in dropping the number of walls in cave-like maps where the Roll20 team made thousands of walls instead of a few hundred). Finally we give it the path to the FVTT public directory so it can auto-import spells, items and class features, and we ask for walls to be added around each map.
+In this last example, we convert the "Stranger Things.zip" file into the STSS directory, we set the campaign title to "Stranger Things Starter Set", replace the default world description, ask the script to automatically detect doors and secret doors from the dynamic lighting walls, and make sure that small walls get removed if they are less than 35 pixels long, are contiguous to other walls and don't have an angle of over 30 degrees with the neighboring walls (this can be very useful in dropping the number of walls in cave-like maps where the Roll20 team made thousands of walls instead of a few hundred). Finally we give it the path to the FVTT public directory so it can auto-import spells, items and class features, we ask for walls to be added around each map and for any elements (tiles, walls, tokens) that are outside the bounds of the map to be removed.
 
 ## Full options
 
 If you run the application with the `--help` option, you will get the full list of available options to you. For convenience, here is the usage of the program : 
 ```
-usage: R20Converter.py [-h] [--json] [--campaign-title CAMPAIGN_TITLE]
-                       [--description DESCRIPTION] [-r] [--enable-fog]
-                       [--disable-fog] [--interactive]
-                       [--use-original-image-urls] [--auto-doors]
+usage: R20Converter.py [-h] [--json] [--export-as-module]
+                       [--campaign-title CAMPAIGN_TITLE]
+                       [--description DESCRIPTION] [--gm-password GM_PASSWORD]
+                       [--player-password PLAYER_PASSWORD]
+                       [--restrict-movement] [--add-walls-around-map]
+                       [--enable-fog] [--disable-fog] [--cleanup-scenes]
+                       [--interactive] [--auto-doors]
                        [--door-color DOOR_COLOR]
                        [--secret-door-color SECRET_DOOR_COLOR]
-                       [--player-password PLAYER_PASSWORD]
-                       [--gm-password GM_PASSWORD] [--disable-archived]
+                       [--disable-archived]
                        [--minimum-wall-length MINIMUM_WALL_LENGTH]
                        [--maximum-wall-angle MAXIMUM_WALL_ANGLE]
                        [--debug-page DEBUG_PAGE]
                        [--fvtt-public-path FVTT_PUBLIC_PATH]
                        [--npc-source NPC_SOURCE] [--no-compendium-overwrite]
-                       [--add-walls-around-map]
+                       [--use-original-image-urls]
                        destination-directory exported.zip
 
-R20Converter v0.4
+R20Converter v0.5
 
 positional arguments:
   destination-directory
-                        The destination directory in public/worlds/
+                        The destination directory in public/worlds/ or
+                        public/modules/
   exported.zip          The exported ZIP file from R20Exporter
 
 optional arguments:
@@ -90,21 +91,29 @@ optional arguments:
   --json                Use campaign.json as input instead of a ZIP file
                         (playlist will be empty due to audio tracks being
                         accessible only when logged into Roll20)
+  --export-as-module    Export the campaign as a module (instead of a world)
+                        with Compendium packs for all
+                        handouts/characters/scenes/playlists
   --campaign-title CAMPAIGN_TITLE
                         Override the Campaign title
   --description DESCRIPTION
                         World Desription
-  -r, --restrict-movement
-                        Force all walls to restrict movement
+  --gm-password GM_PASSWORD
+                        Default GM password
+  --player-password PLAYER_PASSWORD
+                        Default player password
+  --restrict-movement   Force all walls to restrict movement
+  --add-walls-around-map
+                        Add 4 walls to enclose the map and cut off
+                        view/movement to the side table
   --enable-fog          Enable Fog Exploration on all Scenes with Dynamic
                         Lighting regardless of Advanced Fog of War setting
   --disable-fog         Disable Fog Exploration on all Scenes with Dynamic
                         Lighting regardless of Advanced Fog of War setting
+  --cleanup-scenes      Remove any tiles, tokens or walls that are outside of
+                        a scene's boundary
   --interactive         Ask questions about decisions to be made during the
                         conversion process.
-  --use-original-image-urls
-                        Do not copy images to the world folder but use Roll20
-                        URL instead. (NOT recommended)
   --auto-doors          Automatically detect doors and set them as such.
   --door-color DOOR_COLOR
                         Sets the color of the dynamic lighting walls to
@@ -113,10 +122,6 @@ optional arguments:
   --secret-door-color SECRET_DOOR_COLOR
                         Sets the color of the dynamic lighting walls to
                         convert into secret doors
-  --player-password PLAYER_PASSWORD
-                        Default player password
-  --gm-password GM_PASSWORD
-                        Default GM password
   --disable-archived    Disable the automatic move of archived
                         scenes/handouts/characters to an Archived folder.
   --minimum-wall-length MINIMUM_WALL_LENGTH
@@ -143,24 +148,25 @@ optional arguments:
                         Path to the FVTT public directory (used for importing
                         items and spells from dnd5e system)
   --npc-source NPC_SOURCE
-                        Source location for NPC actors (displayed in the
+                        Source reference for NPC actors (displayed in the
                         character sheet)
   --no-compendium-overwrite
                         If enabled, items, feats and spells found in the
                         Compendium will not be overwritten with custom
                         description/damage/etc.. from the Roll20 data
-  --add-walls-around-map
-                        Add 4 walls to enclose the map and cut off
-                        view/movement to the side table
+  --use-original-image-urls
+                        Do not copy images to the world folder but use Roll20
+                        URL instead. (NOT recommended)
 
-Convert Roll20 campaigns into Foundry VTT worlds.
-
+Convert Roll20 campaigns into Foundry VTT worlds or modules.
 ```
 
 ## Final steps
 
-When the script is done, copy the new directory to the resources/app/public/worlds directory in your FVTT installation and load the world in FVTT. 
+When the script is done, if you hadn't converted the campaign into the appropriate folder (`worlds` or `modules`) of your FVTT public directory, then copy the generated directory to the resources/app/public/worlds directory in your FVTT installation and load the world in FVTT. 
 
 And you're done!
+
+The converted world will automatically enable the [entityorder](https://github.com/kakaroto/fvtt-module-entityorder) and [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) FVTT modules in the generated world. The `entityorder` FVTT module is required in order to see the journals appearing in the correct order. 
 
 If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info), another project of mine which lets you roll from monster stat blocks and character sheets directly in D&D Beyond and get the result in your VTT application.
