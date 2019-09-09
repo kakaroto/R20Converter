@@ -122,7 +122,7 @@ class GUI(object):
             "--campaign-title": "Campaign Title (leave empty to use exported title)",
             "--gm-password": "GM Password",
             "--npc-source": "NPC Source",
-            "--no-compendium-overwrite": "Overwrite actor items with data from SRD Compendium",
+            "--no-compendium-overwrite": "Overwrite actor items and feats with data from SRD Compendium",
             "--use-original-image-urls": "Use Roll 20 Image URLs (NOT Recommended)"
         }
         name = " ".join(map(lambda x: x.capitalize(), argument[2:].split("-")))
@@ -157,7 +157,20 @@ class GUI(object):
                     directory = "modules"
                 else:
                     directory = "worlds"
-                path = os.path.join(values["--fvtt-public-path"], directory, values["world-name"])
+                fvtt_path = values["--fvtt-public-path"]
+                if not os.path.exists(fvtt_path):
+                    sg.Popup(self.parser.description, "Specified FVTT directory does not exist : ", fvtt_path)
+                    continue
+                    
+                if not os.path.exists(os.path.join(fvtt_path, "worlds")):
+                    if os.path.exists(os.path.join(fvtt_path, "public", "worlds")):
+                        fvtt_path = os.path.join(fvtt_path, "public")
+                    elif os.path.exists(os.path.join(fvtt_path, "resources", "app", "public")):
+                        fvtt_path = os.path.join(fvtt_path, "resources", "app", "public")
+                    else:
+                        sg.Popup(self.parser.description, "Specified FVTT directory does not seem to be a valid FVTT installation : ", fvtt_path)
+                        continue
+                path = os.path.join(fvtt_path, directory, values["world-name"])
                 args = [path, values["zip_file"]]
                 for option in self.options:
                     value = values[option]
