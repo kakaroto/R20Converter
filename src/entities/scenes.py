@@ -278,8 +278,9 @@ class Scene(Entity):
                     # Store the token id mapping for the Combat database
                     page_tokens = self.token_ids.setdefault(page["id"], {})
                     page_tokens[graphic["id"]] = token_id
-                    token_id += 1
-                    tokens.append(token)
+                    if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
+                        token_id += 1
+                        tokens.append(token)
                 else:
                     if self.getArgument("use_original_image_urls", False):
                         tile_image = graphic["imgsrc"]
@@ -299,14 +300,18 @@ class Scene(Entity):
                     light = {"id": light_id,
                              "flags": {},
                              "t": "l",
-                             # light object get placed at the center of the graphic, so no need to calculate upper-left corner position
+                             # light object get placed at the center of the graphic
                              "x": margin_left + left * grid_multiplier,
                              "y": margin_top + top * grid_multiplier,
                              "dim": dim,
                              "bright": bright
                              }
-                    light_id += 1
-                    lights.append(light)
+                    x = (left - (tile_width / 2))
+                    y = (top - (tile_height / 2))
+                    # Check if light spills into the scene even if the graphic itself is outside of it
+                    if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
+                        light_id += 1
+                        lights.append(light)
             elif text and text["text"] != "":
                 # NOTE: We ignore text items without any text.. there's a lot of those...
                 dest = os.path.join("scenes", "tiles", name, "text_" + str(tile_id) + ".png")
@@ -360,13 +365,17 @@ class Scene(Entity):
                             if min(angles) >= min_angle:
                                 continue
                     door_type = 1 if path["stroke"] == door_color else (2 if path["stroke"] == secret_door_color else 0)
+                    wall_a = [left + previous_point[0],
+                                top + previous_point[1]]
+                    wall_b = [left + point[0],
+                                top + point[1]]
                     wall = {"id": wall_id,
                             "flags": {},
                             "c": [
-                                    margin_left + (left + previous_point[0]) * grid_multiplier,
-                                    margin_top + (top + previous_point[1]) * grid_multiplier,
-                                    margin_left + (left + point[0]) * grid_multiplier,
-                                    margin_top + (top + point[1]) * grid_multiplier,
+                                    margin_left + wall_a[0] * grid_multiplier,
+                                    margin_top + wall_a[1] * grid_multiplier,
+                                    margin_left + wall_b[0] * grid_multiplier,
+                                    margin_top + wall_b[1] * grid_multiplier,
                             ],
                             "move": 1 if page["lightrestrictmove"] or self.getArgument("restrict_movement", False) else 0,
                             "sense": 1,
@@ -376,8 +385,13 @@ class Scene(Entity):
                             }
                     if door_type != 0:
                         wall["ds"] = 0
-                    wall_id += 1
-                    walls.append(wall)
+                    wall_x = min(wall_a[0], wall_b[0])
+                    wall_y = min(wall_a[1], wall_b[1])
+                    wall_width = max(wall_a[0], wall_b[0]) - wall_x
+                    wall_height = max(wall_a[1], wall_b[1]) - wall_y
+                    if not self._needsCleanup(wall_x, wall_y, wall_width, wall_height, width, height):
+                        wall_id += 1
+                        walls.append(wall)
                     previous_point = point
                     previous_point_idx = point_idx
                 
@@ -398,8 +412,9 @@ class Scene(Entity):
                         "rotation": rotation,
                         "hidden": layer == "gmlayer" or layer == "walls"
                         }
-                tile_id += 1
-                (map_tiles if layer == "map" else objects_tiles).append(tile)
+                if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
+                    tile_id += 1
+                    (map_tiles if layer == "map" else objects_tiles).append(tile)
                 
                     
         if len(walls) != total_walls:
@@ -456,6 +471,14 @@ class Scene(Entity):
                 return g
         return None
 
+    def _needsCleanup(self, x, y, obj_width, obj_height, width, height):
+        if not self.getArgument("cleanup_scenes", False):
+            return False
+        if x + obj_width < 0 or x > width:
+            return True
+        if y + obj_height < 0 or y > height:
+            return True
+        return False
     def createTextImage(self, text, font_family, font_size, color, filename):
         rgb = tuple(int(color[i:i+2], 16) for i in (1, 3, 5))
         # Don't know why they added a quote around the font family name for shadows into light

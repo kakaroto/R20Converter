@@ -202,6 +202,7 @@ parser.add_argument("--restrict-movement", action="store_true", help="Force all 
 parser.add_argument("--add-walls-around-map", action="store_true", help="Add 4 walls to enclose the map and cut off view/movement to the side table")
 parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
 parser.add_argument("--disable-fog", action="store_true", help="Disable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
+parser.add_argument("--cleanup-scenes", action="store_true", help="Remove any tiles, tokens or walls that are outside of a scene's boundary")
 parser.add_argument("--interactive", action="store_true", help="Ask questions about decisions to be made during the conversion process.")
 parser.add_argument("--auto-doors", action="store_true", help="Automatically detect doors and set them as such.")
 parser.add_argument("--door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into doors. For example, set it to '#ff0000' for Red walls.")
