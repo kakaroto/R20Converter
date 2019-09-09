@@ -474,9 +474,7 @@ class Scene(Entity):
     def _needsCleanup(self, x, y, obj_width, obj_height, width, height):
         if not self.getArgument("cleanup_scenes", False):
             return False
-        if x + obj_width < 0 or x > width:
-            return True
-        if y + obj_height < 0 or y > height:
+        if x + obj_width < 0 or x > width or y + obj_height < 0 or y > height:
             return True
         return False
     def createTextImage(self, text, font_family, font_size, color, filename):

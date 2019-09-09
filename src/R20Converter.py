@@ -13,9 +13,9 @@ try:
     import PySimpleGUIQt as sg
     line_height = 0.5
 except:
+    line_height = 1
     try:
         import PySimpleGUI as sg
-        line_height = 1
     except:
         sg = None
 
