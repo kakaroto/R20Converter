@@ -94,19 +94,20 @@ class R20Converter(object):
             self.items.save()
             self.world = World(self).save()
 
-
 class GUI(object):
+    LABEL_SIZE = (40, 0.5)
+    BIG_LABEL_SIZE = (70, 0.5)
     def __init__(self, *args, **kwargs):
         self.parser = argparse.ArgumentParser(*args, **kwargs)
         sg.ChangeLookAndFeel('Reddit')
         self.layout = [[sg.Text(self.parser.description, justification="center", font=("Helvetica", 15), text_color="blue")],
                         [sg.Text(self.parser.epilog, font=("Helvetica", 12))],
-                        [sg.Text('Use campaign.json as input instead of a ZIP file', key="--json_help", size=(30, 1)), sg.Checkbox('', key="--json")],
-                        [sg.Text("ZIP File (or JSON file) export by R20Exporter", size=(30, 1)), sg.Input('Campaign.zip', key="zip_file", tooltip='The exported ZIP file (or campaign.json) exported by R20Exporter'), sg.FileBrowse()],
-                        [sg.Text("FVTT Public Directory", size=(30, 1)), sg.Input('C:\\FVTT\\resources\\app\\public', key="--fvtt-public-path", tooltip='Path to the Foundry VTT public directory'), sg.FolderBrowse()],
-                        [sg.Text("Export as a Module instead of a World", size=(30, 1), tooltip='Export the campaign as a module (instead of a world) with Compendium packs for all handouts/characters/scenes/playlists', key="--export-as-module_help"), sg.Checkbox('', key="--export-as-module")],
-                        [sg.Text("World or Module URL name", size=(30, 1), tooltip='Name of the directory in which to convert the campaign. Must be URL-safe (Destination directory will be based on the FVTT public directory and this name)'), sg.Input('your-world-url', key="world-name")],
-                        [sg.HorizontalSeparator()],
+                        [sg.Text('Use campaign.json as input instead of a ZIP file', key="--json_help", size=self.BIG_LABEL_SIZE), sg.Checkbox('', key="--json")],
+                        [sg.Text("ZIP File (or JSON file) export by R20Exporter", size=self.LABEL_SIZE), sg.Input('Campaign.zip', key="zip_file", tooltip='The exported ZIP file (or campaign.json) exported by R20Exporter'), sg.FileBrowse()],
+                        [sg.Text("FVTT Public Directory", size=self.LABEL_SIZE), sg.Input('C:\\FVTT\\resources\\app\\public', key="--fvtt-public-path", tooltip='Path to the Foundry VTT public directory'), sg.FolderBrowse()],
+                        [sg.Text("Export as a Module instead of a World", size=self.BIG_LABEL_SIZE, tooltip='Export the campaign as a module (instead of a world) with Compendium packs for all handouts/characters/scenes/playlists', key="--export-as-module_help"), sg.Checkbox('', key="--export-as-module")],
+                        [sg.Text("World or Module URL name", size=self.LABEL_SIZE, tooltip='Name of the directory in which to convert the campaign. Must be URL-safe (Destination directory will be based on the FVTT public directory and this name)'), sg.Input('your-world-url', key="world-name")],
+                        [sg.Text("_"*100)],
                         ]
         self.options = {}
 
@@ -117,23 +118,32 @@ class GUI(object):
         self.options[argument] = kwargs
         if argument in ["--json", "--export-as-module"]:
             return
+        argument_labels = {
+            "--campaign-title": "Campaign Title (leave empty to use exported title)",
+            "--gm-password": "GM Password",
+            "--npc-source": "NPC Source",
+            "--no-compendium-overwrite": "Overwrite actor items with data from SRD Compendium",
+            "--use-original-image-urls": "Use Roll 20 Image URLs (NOT Recommended)"
+        }
         name = " ".join(map(lambda x: x.capitalize(), argument[2:].split("-")))
+        name = argument_labels.get(argument, name)
         default = kwargs.get("default", None) if kwargs.get("default", None) is not None else ""
+        size = self.LABEL_SIZE
         if argument == "--description":
             widget = sg.Multiline(default, key=argument)
         elif argument in ["--enable-fog", "--disable-fog"]:
+            size = self.BIG_LABEL_SIZE
             enabled = False
             if argument == "--enable-fog":
-                self.layout.append([sg.Text("Do not modify Fog", tooltip="Sets Fog Exploration on all Scenes according to Advanced Fog of war setting", size=(30, 1)), sg.Radio("", "fog")])
+                self.layout.append([sg.Text("Do not modify Fog", tooltip="Sets Fog Exploration on all Scenes according to Advanced Fog of war setting", size=size), sg.Radio("", "fog")])
                 enabled = True
             widget = sg.Radio(default, "fog", key=argument, default=enabled)
         elif kwargs.get("action", "") == "store_true":
-            if argument == "--use-original-image-urls":
-                default = "(NOT Recommended)"
+            size = self.BIG_LABEL_SIZE
             widget = sg.Checkbox(default, key=argument, default=argument in ["--add-walls-around-map", "--restrict-movement"])
         else:   
             widget = sg.Input(default, key=argument)
-        self.layout.append([sg.Text(name, tooltip=kwargs.get("help", ""), size=(30, 0.5)), widget])
+        self.layout.append([sg.Text(name, tooltip=kwargs.get("help", ""), size=size), widget])
 
     def parse_args(self):
         self.layout.append([sg.Button("Convert Campaign")])
@@ -166,7 +176,7 @@ class GUI(object):
                     continue
             break
         window.close()
-        print("Running with args : ", args)
+        print("Running with arguments : ", args)
         return self.parser.parse_args(args)
 
     def done(self, message):
@@ -183,18 +193,19 @@ parser = ArgumentParser(description="R20Converter v{}".format(version), epilog="
 parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/")
 parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
 parser.add_argument("--json", action="store_true", help="Use campaign.json as input instead of a ZIP file (playlist will be empty due to audio tracks being accessible only when logged into Roll20)")
+parser.add_argument("--export-as-module", action="store_true", help="Export the campaign as a module (instead of a world) with Compendium packs for all handouts/characters/scenes/playlists")
 parser.add_argument("--campaign-title", default=None, help="Override the Campaign title")
 parser.add_argument("--description", default="Imported from Roll20 using R20Converter", help="World Desription")
+parser.add_argument("--gm-password", default="", help="Default GM password")
+parser.add_argument("--player-password", default="", help="Default player password")
 parser.add_argument("--restrict-movement", action="store_true", help="Force all walls to restrict movement")
+parser.add_argument("--add-walls-around-map", action="store_true", help="Add 4 walls to enclose the map and cut off view/movement to the side table")
 parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
 parser.add_argument("--disable-fog", action="store_true", help="Disable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
 parser.add_argument("--interactive", action="store_true", help="Ask questions about decisions to be made during the conversion process.")
-parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
 parser.add_argument("--auto-doors", action="store_true", help="Automatically detect doors and set them as such.")
 parser.add_argument("--door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into doors. For example, set it to '#ff0000' for Red walls.")
 parser.add_argument("--secret-door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into secret doors")
-parser.add_argument("--player-password", default="", help="Default player password")
-parser.add_argument("--gm-password", default="", help="Default GM password")
 parser.add_argument("--disable-archived", action="store_true", help="Disable the automatic move of archived scenes/handouts/characters to an Archived folder.")
 parser.add_argument("--minimum-wall-length", default=0, type=float, help="Minimum distance for walls (in pixels).\n"
                     "If a wall is smaller and part of a longer chain of walls, it will get merged with the adjacent wall.\n"
@@ -205,10 +216,9 @@ parser.add_argument("--maximum-wall-angle", default=30, type=float, help="Maximu
                     "Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points (Default: 30)")
 parser.add_argument("--debug-page", default=None, help="Only convert a specific page. Useful for debugging")
 parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT public directory (used for importing items and spells from dnd5e system)")
-parser.add_argument("--npc-source", default="Roll 20", help="Source location for NPC actors (displayed in the character sheet)")
+parser.add_argument("--npc-source", default="Roll 20", help="Source reference for NPC actors (displayed in the character sheet)")
 parser.add_argument("--no-compendium-overwrite", action="store_true", help="If enabled, items, feats and spells found in the Compendium will not be overwritten with custom description/damage/etc.. from the Roll20 data")
-parser.add_argument("--add-walls-around-map", action="store_true", help="Add 4 walls to enclose the map and cut off view/movement to the side table")
-parser.add_argument("--export-as-module", action="store_true", help="Export the campaign as a module (instead of a world) with Compendium packs for all handouts/characters/scenes/playlists")
+parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
 
 if __name__ == "__main__":
     args = parser.parse_args()
