@@ -249,13 +249,28 @@ if __name__ == "__main__":
         print("This is NOT recommended, as you are still dependent on the assets being available on Roll 20")
         print("Also, you'd be using the servers of Roll20 but not playing on their platform which is not ethically correct")
         print("Use only this option for testing purposes for examples.")
-        
-    converter = R20Converter(args)
-    converter.convert()
-    message = "\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\n\n"
-    message += "It is strongly suggested to check the sheets of the player characters for any errors or missing information, or for adding special traits.\n"
-    message += "Some things may not have been carried over, especially to-hit, damage, AC or saving throw modifiers or more complicated weapon or spell macros\n"
-    message += "\nThank you for your support!"
+    
+    error = None
+    try:
+        converter = R20Converter(args)
+        converter.convert()
+    except Exception as e:
+        error = e
+        print(e)
+        try:
+            import traceback
+            traceback.print_exc()
+        except:
+            pass
+
+    if error:
+        message = "Error converting campaign : \n" + str(error)
+        message += "\nPlease contact the author with the log of the error from the console window"
+    else:
+        message = "\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'entityorder' (see README file for more information)\n\n"
+        message += "It is strongly suggested to check the sheets of the player characters for any errors or missing information, or for adding special traits.\n"
+        message += "Some things may not have been carried over, especially to-hit, damage, AC or saving throw modifiers or more complicated weapon or spell macros\n"
+        message += "\nThank you for your support!"
     if use_gui:
         parser.done(message)
     else:
