@@ -5,6 +5,7 @@ import re
 import urllib
 import errno
 import hashlib
+import requests
 
 class DatabaseFile(object):
     def __init__(self, converter, filename):
