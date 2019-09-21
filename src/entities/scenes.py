@@ -58,7 +58,7 @@ class Scene(Entity):
             print("Your scene has a size of over 10k pixels in one dimension")
             print("It will most probably not work properly in FVTT until 0.3.1 is released")
             print("")
-
+            
         margin_left = math.ceil(width * grid_multiplier / grid_size * 0.25) * grid_size
         margin_top = math.ceil(height * grid_multiplier / grid_size * 0.25) * grid_size
         grid_type = self.GRID_TYPES[page["grid_type"]]
@@ -312,7 +312,7 @@ class Scene(Entity):
                     if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
                         light_id += 1
                         lights.append(light)
-            elif text and text["text"] != "":
+            elif text and text["text"].strip() != "":
                 # NOTE: We ignore text items without any text.. there's a lot of those...
                 dest = os.path.join("scenes", "tiles", name, "text_" + str(tile_id) + ".png")
                 (dest_filename, tile_image) = self.getDestinationPaths(dest)
