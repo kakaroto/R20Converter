@@ -26,7 +26,7 @@ class R20Converter(object):
         self.args = args
         self.path = args.path
         if args.json:
-            with open(args.zip_file, "r") as f:
+            with open(args.zip_file, "r", encoding='utf-8') as f:
                 self.campaign = json.load(f)
             self.campaign["jukeboxfolder"] = ""
         else:

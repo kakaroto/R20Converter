@@ -49,6 +49,6 @@ class Module(object):
 
     def save(self):
         filename = os.path.join(self._path, "module.json")
-        with open(filename, "w") as f:
+        with open(filename, "w", encoding='utf-8') as f:
             f.write(str(self))
         return self

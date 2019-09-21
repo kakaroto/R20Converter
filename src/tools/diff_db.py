@@ -17,7 +17,7 @@ class DatabaseFile(object):
         else:
             full_path = self._path
         self.entities = {}
-        with open(full_path, "r") as f:
+        with open(full_path, "r", encoding='utf-8') as f:
             lines = f.readlines()
             for line in lines:
                 new_entity = json.loads(line)
@@ -32,9 +32,9 @@ class Differ(object):
             worlds = [self.load_world(args.left), self.load_world(args.right)]
             self.diff_json("", worlds[0], worlds[1])
         elif args.json:
-            with open(os.path.join(args.left), "r") as f:
+            with open(os.path.join(args.left), "r", encoding='utf-8') as f:
                 left = json.load(f)
-            with open(os.path.join(args.right), "r") as f:
+            with open(os.path.join(args.right), "r", encoding='utf-8') as f:
                 right = json.load(f)
             self.diff_json("", left, right)
         else:
@@ -43,7 +43,7 @@ class Differ(object):
             self.diff_json("", left, right)
 
     def load_world(self, path):
-        with open(os.path.join(path, "world.json"), "r") as f:
+        with open(os.path.join(path, "world.json"), "r", encoding='utf-8') as f:
             world = {"world": json.load(f)}
         for db in ["users", "sessions", "folders", "items", "scenes", "journal", "actors", "playlists", "combat", "settings", "chat"]:
             print("Loading %s" % db)
