@@ -53,12 +53,6 @@ class Scene(Entity):
             grid_multiplier = 50.0 / orig_grid_size
             grid_size = 50
 
-        if grid_multiplier * width > 10000 or grid_multiplier * height > 10000:
-            print("******** WARNING ***********")
-            print("Your scene has a size of over 10k pixels in one dimension")
-            print("It will most probably not work properly in FVTT until 0.3.1 is released")
-            print("")
-            
         margin_left = math.ceil(width * grid_multiplier / grid_size * 0.25) * grid_size
         margin_top = math.ceil(height * grid_multiplier / grid_size * 0.25) * grid_size
         grid_type = self.GRID_TYPES[page["grid_type"]]
