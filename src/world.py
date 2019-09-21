@@ -4,13 +4,15 @@ import os
 class World(object):
     def __init__(self, converter):
         self._path = converter.path
+        self._name = os.path.basename(os.path.dirname(os.path.join(self._path, ".")))
         self._title = converter.getArgument("campaign_title")
         if self._title is None:
             self._title = converter.campaign["campaign_title"]
         self._description = converter.getArgument("description")
 
     def toDict(self):
-        return {"name": self._title,
+        return {"name": self._name,
+                "title": self._title,
                 "description": self._description,
                 "system": "dnd5e",
                 "coreVersion": "0.3.5",
