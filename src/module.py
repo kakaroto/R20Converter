@@ -29,7 +29,7 @@ class Module(object):
     def _newPack(self, name, label, entity, filename):
 	    return {"name": name,
                 "label": label + " (" + self._title + ")",
-                "path": os.path.join("packs", filename),
+                "path": os.path.join("packs", filename).replace(os.path.sep, "/"),
                 "module": self._name,
                 "entity": entity
             }
