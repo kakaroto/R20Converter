@@ -1,7 +1,11 @@
 from .base import DatabaseFile, Entity
 from .actors import Token
 
-from PIL import Image
+try:
+    from PIL import Image
+except:
+    pass
+
 import os
 import math
 
@@ -190,10 +194,10 @@ class Scene(Entity):
                 wall = {"id": wall_id,
                         "flags": {},
                         "c": [
-                                margin_left + x0[0] * grid_multiplier,
-                                margin_top + x0[1] * grid_multiplier,
-                                margin_left + x1[0] * grid_multiplier,
-                                margin_top + x1[1] * grid_multiplier,
+                                int(margin_left + x0[0] * grid_multiplier),
+                                int(margin_top + x0[1] * grid_multiplier),
+                                int(margin_left + x1[0] * grid_multiplier),
+                                int(margin_top + x1[1] * grid_multiplier),
                         ],
                         "move": 1,
                         "sense": 1,
@@ -301,8 +305,8 @@ class Scene(Entity):
                              "flags": {},
                              "t": "l",
                              # light object get placed at the center of the graphic
-                             "x": margin_left + left * grid_multiplier,
-                             "y": margin_top + top * grid_multiplier,
+                             "x": int(margin_left + left * grid_multiplier),
+                             "y": int(margin_top + top * grid_multiplier),
                              "dim": dim,
                              "bright": bright
                              }
@@ -319,11 +323,11 @@ class Scene(Entity):
                 y = (top - (tile_height / 2))
                 drawing = {"id": drawing_id,
                             "flags": {},
-                            "x": margin_left + x * grid_multiplier,
-                            "y": margin_top + y * grid_multiplier,
+                            "x": int(margin_left + x * grid_multiplier),
+                            "y": int(margin_top + y * grid_multiplier),
                             "z": 10 * drawing_id,
-                            "width": tile_width * grid_multiplier,
-                            "height": tile_height * grid_multiplier,
+                            "width": int(tile_width * grid_multiplier),
+                            "height": int(tile_height * grid_multiplier),
                             "rotation": rotation,
                             "hidden": layer == "gmlayer" or layer == "walls",
                             "locked": False,
@@ -339,11 +343,11 @@ class Scene(Entity):
                 y = (top - (tile_height / 2))
                 drawing = {"id": drawing_id,
                             "flags": {},
-                            "x": margin_left + x * grid_multiplier,
-                            "y": margin_top + y * grid_multiplier,
+                            "x": int(margin_left + x * grid_multiplier),
+                            "y": int(margin_top + y * grid_multiplier),
                             "z": 10 * drawing_id,
-                            "width": tile_width * grid_multiplier,
-                            "height": tile_height * grid_multiplier,
+                            "width": int(tile_width * grid_multiplier),
+                            "height": int(tile_height * grid_multiplier),
                             "rotation": rotation,
                             "hidden": layer == "gmlayer" or layer == "walls",
                             "locked": False,
@@ -396,10 +400,10 @@ class Scene(Entity):
                     wall = {"id": wall_id,
                             "flags": {},
                             "c": [
-                                    margin_left + wall_a[0] * grid_multiplier,
-                                    margin_top + wall_a[1] * grid_multiplier,
-                                    margin_left + wall_b[0] * grid_multiplier,
-                                    margin_top + wall_b[1] * grid_multiplier,
+                                    int(margin_left + wall_a[0] * grid_multiplier),
+                                    int(margin_top + wall_a[1] * grid_multiplier),
+                                    int(margin_left + wall_b[0] * grid_multiplier),
+                                    int(margin_top + wall_b[1] * grid_multiplier),
                             ],
                             "move": 1 if page["lightrestrictmove"] or self.getArgument("restrict_movement", False) else 0,
                             "sense": 1,
@@ -433,11 +437,11 @@ class Scene(Entity):
                                             "textureAlpha": 1
                                         }
                                     },
-                                    "x": margin_left + x * grid_multiplier,
-                                    "y": margin_top + y * grid_multiplier,
+                                    "x": int(margin_left + x * grid_multiplier),
+                                    "y": int(margin_top + y * grid_multiplier),
                                     "z": 10 * drawing_id,
-                                    "width": tile_width * grid_multiplier,
-                                    "height": tile_height * grid_multiplier,
+                                    "width": int(tile_width * grid_multiplier),
+                                    "height": int(tile_height * grid_multiplier),
                                     "rotation": rotation,
                                     "hidden": layer == "gmlayer" or layer == "walls",
                                     "locked": False,
@@ -464,11 +468,11 @@ class Scene(Entity):
                         tile = {"id": tile_id,
                                 "flags": {},
                                 "img": tile_image,
-                                "width": tile_width * grid_multiplier,
-                                "height": tile_height * grid_multiplier,
+                                "width": int(tile_width * grid_multiplier),
+                                "height": int(tile_height * grid_multiplier),
                                 "scale": 1, # Also seems unused
-                                "x": margin_left + x * grid_multiplier,
-                                "y": margin_top + y * grid_multiplier,
+                                "x": int(margin_left + x * grid_multiplier),
+                                "y": int(margin_top + y * grid_multiplier),
                                 "z": 10 * tile_id, # Z is currently unusedm the order in the list is what counts
                                 "rotation": rotation,
                                 "hidden": layer == "gmlayer" or layer == "walls"
