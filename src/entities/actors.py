@@ -431,7 +431,7 @@ class Actor(Entity):
                 if attr["name"] == "character_sheet" and value[0].startswith("Shaped"):
                     self._shaped = True
 
-        self.displayAttributes()
+        #self.displayAttributes()
 
 
     def displayAttributes(self):
@@ -949,8 +949,8 @@ class Actor(Entity):
                 #print("Proficienty : {} = {}".format(id, prof))
                 if self.getAttribute("prof_type", "", from_dict=prof)[0] == "LANGUAGE":
                     language = self.getAttribute("name", "", from_dict=prof)[0]
-                for lang in language.split(","):
-                    self._addKnownToArray(known_languages, lang, languages, custom)
+                    for lang in language.split(","):
+                        self._addKnownToArray(known_languages, lang, languages, custom)
         for lang in character_languages.split(","):
             self._addKnownToArray(known_languages, lang, languages, custom)
 
