@@ -426,10 +426,6 @@ class Scene(Entity):
                 y = (top - (tile_height / 2))
                 if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
                     if self.getArgument("images_as_drawings", False):
-                        if obj["controlledby"] == "":
-                            author = self._database._converter.users.getGM().getID()
-                        else:
-                            author = Entity.normalizeID(obj["controlledby"])
                         drawing = {"id": drawing_id,
                                     "flags": {
                                         "furnace": {
@@ -445,7 +441,7 @@ class Scene(Entity):
                                     "rotation": rotation,
                                     "hidden": layer == "gmlayer" or layer == "walls",
                                     "locked": False,
-                                    "author": author,
+                                    "author": Entity.normalizeID(obj["controlledby"]), # invalid user (or export-as-module) will be invalid author, which means all GM
                                     "type": "r",
                                     "fillType": 2,
                                     "fillColor": "#ffffff",
