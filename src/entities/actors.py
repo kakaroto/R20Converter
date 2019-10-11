@@ -4,6 +4,7 @@ from collections import OrderedDict
 import re
 import os
 import copy
+import math
 
 class Actors(DatabaseFile):
     def __init__(self, converter):
@@ -216,7 +217,6 @@ class Actor(Entity):
                     (_, avatar_filename) = self.downloadResource(character["avatar"], filename)
                 else:
                     (_, avatar_filename) = self.copyZipFile(filename, filename)
-        folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
 
         default_token = character["defaulttoken"] if character["defaulttoken"] != "" else None
         self.token = Token(self._id, character["name"], default_token)
@@ -289,9 +289,6 @@ class Actor(Entity):
         del token["bar2"]["max"]
         del token["actorData"]
 
-        if character["archived"] and not self.getArgument("disable_archived", False):
-            folder = "archived-characters-folder-id"
-
         self._save_bonus = self.calculateSaveBonus()
         actor_data = OrderedDict([
             ("abilities", self.createActorAbilities()),
@@ -309,8 +306,12 @@ class Actor(Entity):
         self.addSpells(owned_items)
         self.addActions(owned_items)
 
+        folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
         if self.getArgument("export_as_module", False):
             folder = None
+        elif character["archived"] and not self.getArgument("disable_archived", False):
+            folder = "archived-characters-folder-id"
+
         self.entity = {"_id": self._id,
                        "name": character["name"],
                        "img": avatar_filename,
@@ -341,14 +342,30 @@ class Actor(Entity):
     def getAttribute(self, key, default=None, from_dict=None):
         if from_dict is None:
             from_dict = self._attributes
+        if self._shaped:
+            shaped_key = self._convertAttributeName(key)
+            if shaped_key != key and shaped_key in from_dict:
+                print("Replacing {} with shaped key {}".format(key, shaped_key))
+                key = shaped_key
         return from_dict.get(key, (default, default, None))
 
-    def getAttributeInt(self, key, default=0, from_dict=None):
-        value = self.getAttribute(key, default, from_dict)[0]
+    def toInt(self, value, default):
         try:
             return int(value)
         except ValueError:
             return int(default)
+
+    def getAttributeInt(self, key, default=0, from_dict=None):
+        value = self.getAttribute(key, default, from_dict)[0]
+        return self.toInt(value, default)
+
+    def getRepeatingAttributes(self, key):
+        if self._shaped:
+            shaped_key = self._convertRepeatingAttributeName(key)
+            if shaped_key != key and shaped_key in self._repeating:
+                print("Replacing Repeating {} with shaped key {}".format(key, shaped_key))
+                key = shaped_key
+        return self._repeating.get(key, {})
 
     def isNPC(self):
         npc = self.getAttributeInt("npc", 0)
@@ -358,15 +375,39 @@ class Actor(Entity):
             return False
 
     def getNPCType(self):
-        npc_type = self.getAttribute("npc_type", "")[0]
-        size = npc_type.split(",", 1)[0].split(" ", 1)[0].strip()
-        creature_type = npc_type.split(",", 1)[0].split(" ", 1)[-1].strip()
-        alignment = npc_type.split(",", 1)[-1].strip()
+        if self._shaped:
+            creature_type = self.getAttribute("type", "")[0]
+            size = self.getAttribute("size", "")[0]
+            alignment = self.getAttribute("alignment", "")[0]
+        else:
+            npc_type = self.getAttribute("npc_type", "")[0]
+            size = npc_type.split(",", 1)[0].split(" ", 1)[0].strip()
+            creature_type = npc_type.split(",", 1)[0].split(" ", 1)[-1].strip()
+            alignment = npc_type.split(",", 1)[-1].strip()
         return (size, creature_type, alignment)
+
+    def getChallengeRating(self):
+        cr = self.getAttribute("npc_challenge", 0)[0]
+        try:
+            cr = int(cr)
+        except ValueError:
+            try:
+                cr = int(cr.split("/")[0]) / int(cr.split("/")[1])
+            except ValueError:
+                cr = 0
+        return cr
+
+    def getProficiencyBonus(self):
+        if self.isNPC():
+            cr = self.getChallengeRating()
+            return int(math.ceil(cr + 7) / 4)
+        else:
+            return self.getAttributeInt("pb", 2)
 
     def parseAttributes(self):
         self._attributes = OrderedDict()
         self._repeating = OrderedDict()
+        self._shaped = False
         for attr in self._character["attributes"]:
             value = (attr["current"], attr["max"], attr["id"])
             if attr["name"].startswith("_reporder_repeating_"):
@@ -387,8 +428,10 @@ class Actor(Entity):
                 rep.setdefault(id, {})[name] = value
             else:
                 self._attributes[attr["name"]] = value
+                if attr["name"] == "character_sheet" and value[0].startswith("Shaped"):
+                    self._shaped = True
 
-        #self.displayAttributes()
+        self.displayAttributes()
 
 
     def displayAttributes(self):
@@ -419,26 +462,27 @@ class Actor(Entity):
         for ability in ["strength", "dexterity", "constitution",
                         "intelligence", "wisdom", "charisma"]:
             mod = self.getAttributeInt(ability + "_mod", 0)
-            save = self.getAttributeInt(ability + "_save_bonus", 0)
+            if self.isNPC():
+                save = self.getAttributeInt(ability + "_save_bonus", 0)
+            else:
+                save = self.getAttributeInt("npc_" + ability[0:3] + "_save", 0)
             bases.append(save - mod)
         return min(bases)
         #min_base = min(bases)
         #max_base = max(bases)
-        #pb = self.getAttributeInt("pb", 2)
+        #pb = self.getProficiencyBonus()
         #if min_base + pb == max_base and bases.count(min_base) == 4 and bases.count(max_base) == 2:
         #    return min_base
-        
 
     def createActorAbility(self, name):
         ability = self.getAttributeInt(name.lower(), 10)
         mod = self.getAttributeInt(name.lower() + "_mod", 0)
-        proficiency_bonus = self.getAttributeInt("pb", 0)
+        proficiency_bonus = self.getProficiencyBonus()
         if self.isNPC():
             save = self.getAttributeInt("npc_" + name.lower()[0:3] + "_save", 0)
-            proficient = (save != 0)
         else:
             save = self.getAttributeInt(name.lower() + "_save_bonus", mod)
-            proficient = (save == mod + proficiency_bonus + self._save_bonus)
+        proficient = (save == mod + proficiency_bonus + self._save_bonus)
         return {"type": "Number",
                 "label": name,
                 "value": ability,
@@ -457,8 +501,8 @@ class Actor(Entity):
                             ("cha", self.createActorAbility("Charisma"))
                             ])
 
-    def createAttributeNumber(self, name, attribute_name, default=0, extra={}):
-        (current, max, _) = self.getAttribute(attribute_name, default)
+    def createAttributeNumber(self, name, attribute_name, default=0, extra={}, from_dict=None):
+        (current, max, _) = self.getAttribute(attribute_name, default, from_dict=from_dict)
         try:
             current = int(current)
         except ValueError:
@@ -483,10 +527,12 @@ class Actor(Entity):
         ret.update(extra)
         return ret
     def createAttributeBoolean(self, name, attribute_name, default=False, extra={}):
+        value = self.getAttribute(attribute_name, "on" if default else "")[0]
+        enabled = (value == "on") or (value == "1")
         ret = {
                 "type": "Boolean",
                 "label": name,
-                "value": self.getAttribute(attribute_name, "on" if default else "")[0] == "on",
+                "value": enabled,
                 }
         ret.update(extra)
         return ret
@@ -557,6 +603,8 @@ class Actor(Entity):
             match = re.search(r"@{(.*)}", attribute)
             if match:
                 spellcasting_ability = match.group(1)[0:3].lower()
+            else:
+                spellcasting_ability = attribute[0:3].lower()
         return {
                 "type": "String",
                 "label": "Spellcasting Ability",
@@ -565,24 +613,52 @@ class Actor(Entity):
     def createAttributeDeath(self):
         success = 0
         failure = 0
-        for i in range(1, 4):
-            if self.getAttribute("deathsave_succ%d" % i, 0)[0] == "on":
-                success += 1
-            if self.getAttribute("deathsave_fail%d" % i, 0)[0] == "on":
-                failure += 1
+        if self._shaped:
+            success = self.getAttributeInt("death_saving_throw_successes", 0)
+            failure = self.getAttributeInt("death_saving_throw_failures", 0)
+        else:
+            for i in range(1, 4):
+                if self.getAttribute("deathsave_succ%d" % i, 0)[0] == "on":
+                    success += 1
+                if self.getAttribute("deathsave_fail%d" % i, 0)[0] == "on":
+                    failure += 1
 
         return {"type": "Number",
                 "label": "Death Saves",
                 "success": success,
                 "failure": failure
                 }
+    def createAttributeHitDice(self):
+        if self._shaped:
+            hd_d4 = self.getAttribute("hd_d4", 0)
+            hd_d6 = self.getAttribute("hd_d6", 0)
+            hd_d8 = self.getAttribute("hd_d8", 0)
+            hd_d10 = self.getAttribute("hd_d10", 0)
+            hd_d12 = self.getAttribute("hd_d12", 0)
+            d4, d4_max = self.toInt(hd_d4[0], 0), self.toInt(hd_d4[1], 0)
+            d6, d6_max = self.toInt(hd_d6[0], 0), self.toInt(hd_d6[1], 0)
+            d8, d8_max = self.toInt(hd_d8[0], 0), self.toInt(hd_d8[1], 0)
+            d10, d10_max = self.toInt(hd_d10[0], 0), self.toInt(hd_d10[1], 0)
+            d12, d12_max = self.toInt(hd_d12[0], 0), self.toInt(hd_d12[1], 0)
+            current = d4 + d6 + d8 + d10 + d12
+            max = d4_max + d6_max + d8_max + d10_max + d12_max
+        else:
+            current, max, _ = self.getAttribute("hit_dice", 0)
+            
+        return {
+                "type": "Number",
+                "label": "Hit Dice",
+                "value": current,
+                "min": 0,
+                "max": max
+        }
 
     def createActorAttributes(self):
         attributes = OrderedDict([
             ("ac", self.createAttributeAC()),
             ("hp", self.createAttributeHP()),
             ("init", self.createAttributeInitiative()),
-            ("prof", self.createAttributeNumber("Proficiency", "pb", 0)),
+            ("prof", self.createAttributeNumber("Proficiency", "R20Converter-attribute-wont-exist", self.getProficiencyBonus())),
             ("speed", self.createAttributeSpeed()),
             ("spellcasting", self.createAttributeSpellcasting()),
             ("spelldc", self.createAttributeString("Spell DC", "npc_spelldc" if self.isNPC() else "spell_save_dc", 10)),
@@ -600,7 +676,7 @@ class Actor(Entity):
         ])
         if not self.isNPC():
             attributes.update([
-                    ("hd", self.createAttributeNumber("Hit Dice", "hit_dice", 0)),
+                    ("hd", self.createAttributeHitDice()),
                     ("death", self.createAttributeDeath()),
                     ("exhaustion", self.createAttributeNumber("Exhaustion Level", "exhaustion_level", 0)),
                     ("inspiration", self.createAttributeBoolean("Inspiration", "inspiration", False)),
@@ -627,11 +703,13 @@ class Actor(Entity):
                                 ("character_backstory", "Character Backstory"),
                                 ("additional_feature_and_traits", "Additional Features and Traits"),
                                 ("allies_and_organizations", "Allies & Organizations"),
-                                ("treasure", "Treasure")]:
+                                ("treasure", "Treasure"),
+                                ("miscellaneous_notes", "Miscellaneous Notes"),
+                                ("miscellaneous_notes_2", "Miscellaneous Notes")]:
             content = self.getAttribute(attrib, "")[0]
-            if content != "":
+            if content.strip() != "":
                 bio += "\n<hr><section><p><strong>" + label + " :</strong> </p>" + self.textToHtml(content) + "</section>"
-        if gmnotes != "":
+        if gmnotes.strip() != "":
             bio += "\n<hr><section class=\"secret\"><p><strong>GM Notes :</strong> </p>" + gmnotes + "</section>"
 
         bio = self.replaceCompendiumLinks(self.replaceEntityLinks(bio))
@@ -654,14 +732,7 @@ class Actor(Entity):
                 "value": self.getNPCType()[1]
                 }
     def createDetailChallengeRating(self):
-        cr = self.getAttribute("npc_challenge", 0)[0]
-        try:
-            cr = int(cr)
-        except ValueError:
-            try:
-                cr = int(cr.split("/")[0]) / int(cr.split("/")[1])
-            except ValueError:
-                cr = 0
+        cr = self.getChallengeRating()
             
         return {
                 "type": "Number",
@@ -701,32 +772,10 @@ class Actor(Entity):
         return details
 
     def createActorSkill(self, label, attribute_name, ability):
-        mod = self.getAttribute("npcd_" + attribute_name if self.isNPC() else attribute_name + "_bonus", "")[0]
         base_mod = self.getAttributeInt(ability + "_mod", 0)
-        if mod == "":
-            mod = base_mod
-        value = 0
-
-        if self.isNPC():
-            prof = self.getAttributeInt("pb", 2)
-            flag = self.getAttributeInt("npc_" + attribute_name + "_flag", 0)
-            #print("Flag : {} - prof {}".format(flag, prof))
-            flag = bool(flag)
-            if flag:
-                if mod == base_mod + prof:
-                    value = 1
-                elif mod == base_mod + prof // 2:
-                    value = 0.5
-                elif mod == base_mod + prof * 2:
-                    value = 2
-                else:
-                    value = (mod - base_mod) / prof
-        else:
-            prof = self.getAttribute(attribute_name + "_prof", "")[0]
-            prof_type = self.getAttribute(attribute_name + "_type", "")[0]
-            #print("Ability : %s - prof '%s' - type : '%s'" % (ability, prof, prof_type))
-            if "pb" in prof:
-                value = int(prof_type) if prof_type != "" else 1
+        mod = self.getAttributeInt("npcd_" + attribute_name if self.isNPC() else attribute_name + "_bonus", base_mod)
+        prof = self.getProficiencyBonus()
+        value = (mod - base_mod) / prof
         #print("Skill %s : %d : %d" % (label, value, mod))
         return {
                 "type": "Number",
@@ -736,7 +785,7 @@ class Actor(Entity):
                 "mod": mod
                 }
     def createActorSkills(self):
-        return OrderedDict([
+        skills = OrderedDict([
             ("acr", self.createActorSkill("Acrobatics", "acrobatics", "dexterity")),
             ("ani", self.createActorSkill("Animal Handling", "animal_handling", "wisdom")),
             ("arc", self.createActorSkill("Arcana", "arcana", "intelligence")),
@@ -744,7 +793,7 @@ class Actor(Entity):
             ("dec", self.createActorSkill("Deception", "deception", "charisma")),
             ("his", self.createActorSkill("History", "history", "intelligence")),
             ("ins", self.createActorSkill("Insight", "insight", "wisdom")),
-            ("itm", self.createActorSkill("Intimidation", "intimitation", "charisma")),
+            ("itm", self.createActorSkill("Intimidation", "intimidation", "charisma")),
             ("inv", self.createActorSkill("Investigation", "investigation", "intelligence")),
             ("med", self.createActorSkill("Medicine", "medicine", "wisdom")),
             ("nat", self.createActorSkill("Nature", "nature", "intelligence")),
@@ -756,15 +805,60 @@ class Actor(Entity):
             ("ste", self.createActorSkill("Stealth", "stealth", "dexterity")),
             ("sur", self.createActorSkill("Survival", "survival", "wisdom"))
         ])
+        if self._shaped:
+            skill_keys = {
+                "acrobatics": "acr",
+                "animalhandling": "ani",
+                "arcana": "arc",
+                "athletics": "ath",
+                "deception": "dec",
+                "history" : "his",
+                "insight" : "ins",
+                "intimidation" : "itm",
+                "investigation" : "inv",
+                "medicine": "med",
+                "nature": "nat",
+                "perception": "prc",
+                "performance": "prf",
+                "persuasion": "per",
+                "religion": "rel",
+                "sleightofhand": "slt",
+                "stealth": "ste",
+                "survival": "sur",
+
+            }
+            abilities = self.createActorAbilities()
+            prof = self.getProficiencyBonus()
+            for skill in self.getRepeatingAttributes("skill").values():
+                storage_name = self.getAttribute("storage_name", None, from_dict=skill)[0]
+                name = self.getAttribute("name", storage_name, from_dict=skill)[0]
+                ability = self.getAttribute("ability", "str", from_dict=skill)[0]
+                ability_key = self.getAttribute("ability_key", ability, from_dict=skill)[0]
+                mod = self.getAttributeInt("total_with_sign", 0, from_dict=skill)
+                base_mod = 0
+                if ability_key:
+                    base_mod = abilities[ability_key.lower()[0:3]]["mod"]
+                value = (mod - base_mod) / prof
+                if name is not None:
+                    key = name.lower()
+                    if type(storage_name) == str:
+                        key = skill_keys.get(storage_name.lower(), key)
+                    skills.update([(key, {"type": "Number",
+                                        "label": name,
+                                        "value": value,
+                                        "ability": ability.lower()[0:3],
+                                        "mod": mod
+                                        })])
+        return skills
         
     def createTraitSize(self):
         dnd5e_sizes = {
-            "Gargantuan": "grg",
-            "Huge": "huge",
-            "Large": "lg",
-            "Medium": "med",
-            "Small": "sm",
-            "Tiny": "tiny"
+            "gargantuan": "grg",
+            "huge": "huge",
+            "large": "lg",
+            "medium": "med",
+            "small": "sm",
+            "tiny": "tiny"
         }
         if self.isNPC():
             size = self.getNPCType()[0]
@@ -774,7 +868,7 @@ class Actor(Entity):
         return {
                 "type": "String",
                 "label": "Size",
-                "value": dnd5e_sizes.get(size, "med")
+                "value": dnd5e_sizes.get(size.lower(), "med")
                 }
 
     def createTraitSenses(self):
@@ -848,14 +942,17 @@ class Actor(Entity):
         languages = []
         custom = []
         if self.isNPC():
-            npc_languages = self.getAttribute("npc_languages", "")[0]
-            for lang in npc_languages.split(","):
-                self._addKnownToArray(known_languages, lang, languages, custom)
+            character_languages = self.getAttribute("npc_languages", "")[0]
         else:
-            for prof in self._repeating.get("proficiencies", {}).values():
+            character_languages = self.getAttribute("languages", "")[0]
+            for prof in self.getRepeatingAttributes("proficiencies").values():
                 #print("Proficienty : {} = {}".format(id, prof))
                 if self.getAttribute("prof_type", "", from_dict=prof)[0] == "LANGUAGE":
-                    self._addKnownToArray(known_languages, self.getAttribute("name", "", from_dict=prof)[0], languages, custom)
+                    language = self.getAttribute("name", "", from_dict=prof)[0]
+                for lang in language.split(","):
+                    self._addKnownToArray(known_languages, lang, languages, custom)
+        for lang in character_languages.split(","):
+            self._addKnownToArray(known_languages, lang, languages, custom)
 
         return {
                 "type": "Array",
@@ -893,8 +990,10 @@ class Actor(Entity):
         immunities = []
         custom = []
         if self.isNPC():
-            npc_immunities = self.getAttribute("npc_immunities", "")[0]
-            self._addDamagesToArray(npc_immunities, immunities, custom)
+            damage_immunities = self.getAttribute("npc_immunities", "")[0]
+        else:
+            damage_immunities = self.getAttribute("damage_immunities", "")[0]
+        self._addDamagesToArray(damage_immunities, immunities, custom)
 
         return {
             "type": "Array",
@@ -907,8 +1006,10 @@ class Actor(Entity):
         resistances = []
         custom = []
         if self.isNPC():
-            npc_resistances = self.getAttribute("npc_resistances", "")[0]
-            self._addDamagesToArray(npc_resistances, resistances, custom)
+            damage_resistances = self.getAttribute("npc_resistances", "")[0]
+        else:
+            damage_resistances = self.getAttribute("damage_resistances", "")[0]
+        self._addDamagesToArray(damage_resistances, resistances, custom)
 
         return {
                 "type": "Array",
@@ -920,8 +1021,10 @@ class Actor(Entity):
         vulnerabilities = []
         custom = []
         if self.isNPC():
-            npc_vulnerabilities = self.getAttribute("npcvulnerabilities", "")[0]
-            self._addDamagesToArray(npc_vulnerabilities, vulnerabilities, custom)
+            damage_vulnerabilities = self.getAttribute("npc_vulnerabilities", "")[0]
+        else:
+            damage_vulnerabilities = self.getAttribute("damage_vulnerabilities", "")[0]
+        self._addDamagesToArray(damage_vulnerabilities, vulnerabilities, custom)
 
         return {
                 "type": "Array",
@@ -952,9 +1055,11 @@ class Actor(Entity):
         immunities = []
         custom = []
         if self.isNPC():
-            npc_immunities = self.getAttribute("npc_condition_immunities", "")[0]
-            for immunity in npc_immunities.split(","):
-                self._addKnownToArray(known_immunities, immunity, immunities, custom)
+            condition_immunities = self.getAttribute("npc_condition_immunities", "")[0]
+        else:
+            condition_immunities = self.getAttribute("condition_immunities", "")[0]
+        for immunity in condition_immunities.split(","):
+            self._addKnownToArray(known_immunities, immunity, immunities, custom)
 
         return {"type": "Array",
                 "label": "Condition Immunities",
@@ -975,12 +1080,22 @@ class Actor(Entity):
         ])
 
     def createActorCurrency(self):
-        return OrderedDict([
-            ("pp", self.createAttributeNumber("Platinum", "pp", 0)),
-            ("gp", self.createAttributeNumber("Gold", "gp", 0)),
-            ("sp", self.createAttributeNumber("Silver", "sp", 0)),
-            ("cp", self.createAttributeNumber("Copper", "cp", 0))
-        ])
+        if self._shaped:
+            currencies = OrderedDict()
+            for currency in self.getRepeatingAttributes("currency").values():
+                acronym = self.getAttribute("acronym", None, from_dict=currency)[0]
+                name = self.getAttribute("name", "", from_dict=currency)[0]
+                # Apparently, you could get a boolean acronym 
+                if type(acronym) == str:
+                    currencies.update([(acronym.lower(), self.createAttributeNumber(name if name != "" else acronym, "quantity", 0, from_dict=currency))])
+            return currencies
+        else:
+            return OrderedDict([
+                ("pp", self.createAttributeNumber("Platinum", "pp", 0)),
+                ("gp", self.createAttributeNumber("Gold", "gp", 0)),
+                ("sp", self.createAttributeNumber("Silver", "sp", 0)),
+                ("cp", self.createAttributeNumber("Copper", "cp", 0))
+            ])
 
     def createActorSpells(self):
         spells = OrderedDict([("spell0", {
@@ -1002,9 +1117,9 @@ class Actor(Entity):
             spells["spell%d" % level]  = spell
         return spells
 
-    def createCharacterResource(self, label, resource):
-        name = self.getAttribute(resource + "_name", label)[0]
-        (current, max, _) = self.getAttribute(resource, 0)
+    def createCharacterResource(self, label, resource, from_dict=None):
+        name = self.getAttribute(resource + "_name", label, from_dict=from_dict)[0]
+        (current, max, _) = self.getAttribute(resource, 0, from_dict=from_dict)
         try:
             current = int(current)
         except ValueError:
@@ -1023,8 +1138,7 @@ class Actor(Entity):
 
     def createResourceLegendaryResistance(self):
         legres = 0
-        for id in self._repeating.get("npctrait", {}):
-            trait = self._repeating["npctrait"][id]
+        for trait in self.getRepeatingAttributes("npctrait").values():
             name = self.getAttribute("name", "", from_dict=trait)[0]
             match = re.search(r"Legendary Resistance \((\d+)/[Dd]ay\)", name)
             if match:
@@ -1036,7 +1150,7 @@ class Actor(Entity):
                 }
                     
     def createResourceLairAction(self):
-        lair_actions = self._repeating.get("npcaction-l", {})
+        lair_actions = self.getRepeatingAttributes("npcaction-l")
         return {"type": "Boolean",
                 "label": "Lair Action",
                 "value": len(lair_actions) > 0
@@ -1050,8 +1164,39 @@ class Actor(Entity):
                 ("lair", self.createResourceLairAction())
             ])
         else:
-            return OrderedDict([("primary", self.createCharacterResource("Primary Resource", "class_resource")),
-                                ("secondary", self.createCharacterResource("Secondary Resource", "other_resource"))])
+            resources = OrderedDict([("primary", self.createCharacterResource("Primary Resource", "class_resource")),
+                                    ("secondary", self.createCharacterResource("Secondary Resource", "other_resource"))])
+            if self._shaped:
+                resources = OrderedDict()
+                index = 0
+                for utility in self.getRepeatingAttributes("utility").values():
+                    if index == 0:
+                        key, name = "primary", "Primary Resource"
+                    elif index == 1:
+                        key, name = "secondary", "Secondary Resource"
+                    else:
+                        key, name = str(index), "Resource " + str(index)
+                    name = self.getAttribute("name", name, from_dict=utility)[0]
+                    recharge = self.getAttribute("recharge", "", from_dict=utility)[0]
+                    resource = self.createCharacterResource(name, "uses", from_dict=utility)
+                    if recharge == "SHORT_REST" or recharge == "SHORT_OR_LONG_REST":
+                        resource["sr"] = True
+                    if recharge == "LONG_REST" or recharge == "SHORT_OR_LONG_REST":
+                        resource["lr"] = True
+                    resources.update([(key, resource)])
+                    index += 1
+                for ammo in self.getRepeatingAttributes("ammo").values():
+                    if index == 0:
+                        key, name = "primary", "Primary Resource"
+                    elif index == 1:
+                        key, name = "secondary", "Secondary Resource"
+                    else:
+                        key, name = str(index), "Resource " + str(index)
+                    name = self.getAttribute("name", name, from_dict=ammo)[0]
+                    resource = self.createCharacterResource(name, "uses", from_dict=ammo)
+                    resources.update([(key, resource)])
+                    index += 1
+            return resources
 
 
     def textToHtml(self, text):
@@ -1131,14 +1276,12 @@ class Actor(Entity):
         return item
 
     def addInventory(self, items):
-        inventory = self._repeating.get("inventory", {})
-        for id in inventory:
-            item = inventory[id]
+        for item in self.getRepeatingAttributes("inventory").values():
             name = self.getAttribute("itemname", "", from_dict=item)[0]
             content = self.getAttribute("itemcontent", "", from_dict=item)[0]
             count = self.getAttributeInt("itemcount", 1, from_dict=item)
             weight = self.getAttributeInt("itemweight", 1, from_dict=item)
-            mods = self.getAttribute("itemmodifiers", "", from_dict=item)[0]
+            mods = self.getAttribute("itemmodifiers", "Item Type: Items", from_dict=item)[0]
             modifiers = {}
             for mod in mods.split(", "):
                 if mod == "":
@@ -1170,7 +1313,7 @@ class Actor(Entity):
                     "equipped": bool(self.getAttributeInt("equipped", 1, from_dict=item)),
                     "proficient": False,
                 }
-                for prof in self._repeating.get("proficiencies", {}).values():
+                for prof in self.getRepeatingAttributes("proficiencies").values():
                     if self.getAttribute("prof_type", "", from_dict=prof)[0] == "ARMOR":
                         prof_name = self.getAttribute("name", "", from_dict=prof)[0]
                         if prof_name.lower() == item_type.lower():
@@ -1193,7 +1336,7 @@ class Actor(Entity):
                 weaponType = item["data"]["weaponType"]["value"]
                 
                 proficient = False
-                for prof in self._repeating.get("proficiencies", {}).values():
+                for prof in self.getRepeatingAttributes("proficiencies").values():
                     if self.getAttribute("prof_type", "", from_dict=prof)[0] == "WEAPON":
                         prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
                         if prof_name == name.lower() or \
@@ -1203,6 +1346,9 @@ class Actor(Entity):
                             break
 
                 item["data"]["proficient"]["value"] = proficient
+            else:
+                print("Unknown item type : ", name, modifiers)
+                item = self.createItemInventory(items, name, content, "backpack", weight=weight, quantity=count)
 
 
     def createItemFeat(self, items, name, description, feat_type, **kwargs):
@@ -1237,19 +1383,19 @@ class Actor(Entity):
 
     def addTraits(self, items):
         if self.isNPC():
-            npc_traits = self._repeating.get("npctrait", {})
+            npc_traits = self.getRepeatingAttributes("npctrait")
             for trait in npc_traits.values():
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("desc", "", from_dict=trait)[0]
                 self.createItemFeat(items, name, description, "passive")
 
-            npc_reactions = self._repeating.get("npcreaction", {})
+            npc_reactions = self.getRepeatingAttributes("npcreaction")
             for trait in npc_reactions.values():
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("desc", "", from_dict=trait)[0]
                 self.createItemFeat(items, "[Reaction] " + name, description, "ability", requirements="Reaction")
         else:
-            traits = self._repeating.get("traits", {})
+            traits = self.getRepeatingAttributes("traits")
             for trait in traits.values():
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("description", "", from_dict=trait)[0]
@@ -1282,7 +1428,7 @@ class Actor(Entity):
         if match:
             save = match.group(2).lower()[0:3]
         atk_ability = "str"
-        proficiency_bonus = self.getAttributeInt("pb", 0)
+        proficiency_bonus = self.getProficiencyBonus()
         for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
             mod = self.getAttributeInt(ability.lower() + "_mod", 0)
             if mod + proficiency_bonus == tohit:
@@ -1319,8 +1465,8 @@ class Actor(Entity):
 
     def addActions(self, items):
         if self.isNPC():
-            npc_actions = self._repeating.get("npcaction", {})
-            npc_legendary_actions = self._repeating.get("npcaction-l", {})
+            npc_actions = self.getRepeatingAttributes("npcaction")
+            npc_legendary_actions = self.getRepeatingAttributes("npcaction-l")
             for action in npc_actions.values():
                 self.addNPCAction(items, action, False)
             for action in npc_legendary_actions.values():
@@ -1329,7 +1475,7 @@ class Actor(Entity):
         # This is mostly for non NPCs if they manually added a custom attack
         # otherwise, most will be filtered out as they'd match existing inventory
         # items or existing spells
-        attacks = self._repeating.get("attack", {})
+        attacks = self.getRepeatingAttributes("attack")
         for attack in attacks.values():
             # Skip existing spells and items
             if "spellid" in attack or "itemid" in attack:
@@ -1416,7 +1562,7 @@ class Actor(Entity):
 
     def addSpells(self, items):
         for level in range(10):
-            spells = self._repeating.get("spell-{}".format(level if level > 0 else "cantrip"), {})
+            spells = self.getRepeatingAttributes("spell-{}".format(level if level > 0 else "cantrip"))
             for spell in spells.values():
                 name = self.getAttribute("spellname", "", from_dict=spell)[0]
                 description = self.getAttribute("spelldescription", "", from_dict=spell)[0]
@@ -1486,3 +1632,179 @@ class Actor(Entity):
                     "prepared": prepared
                 }
                 self.createItemSpell(items, name, description, spell_type, school, level, **kwargs)
+
+
+    def _convertAttributeName(self, name):
+        SHAPED_EQUIVALENCE = {
+            "npc": "is_npc",
+            "npc_challenge": "challenge",
+            "npc_ac": "AC",
+            "npc_actype": "ac_note",
+            "npc_hpbase": "hp_srd",
+            "npc_hpformula": "hp_formula",
+            "ac": "AC",
+            "hp": "HP",
+            "npc_speed": "speed_string",
+            "speed": "speed_string",
+            "spellcasting_ability": "spell_ability",
+            "npc_spelldc": "spell_save_DC",
+            "spell_save_dc": "spell_save_DC",
+            "character_appearance": "appearance",
+            "character_backstory": "backstory",
+            "class_display": "class_and_level",
+            "race_display": "race",
+            "experience": "xp",
+            "npc_xp": "xp",
+            "npc_senses": "senses_string",
+            "npc_languages": "languages",
+            "npc_immunities": "damage_immunities",
+            "npc_resistances": "damage_resistances",
+            "npc_vulnerabilities": "damage_vulnerabilities",
+            "npc_condition_immunities": "condition_immunities",
+
+            "initiative_bonus": "initiative",
+            "strength_save_bonus": "strength_saving_throw_mod_with_sign",
+            "dexterity_save_bonus": "dexterity_saving_throw_mod_with_sign",
+            "constitution_save_bonus": "constitution_saving_throw_mod_with_sign",
+            "intelligence_save_bonus": "intelligence_saving_throw_mod_with_sign",
+            "wisdom_save_bonus": "wisdom_saving_throw_mod_with_sign",
+            "charisma_save_bonus": "charisma_saving_throw_mod_with_sign",
+            "npc_str_save_flag": "strength_saving_throw_proficient",
+            "npc_dex_save_flag": "dexterity_saving_throw_proficient",
+            "npc_con_save_flag": "constitution_saving_throw_proficient",
+            "npc_int_save_flag": "intelligence_saving_throw_proficient",
+            "npc_wis_save_flag": "wisdom_saving_throw_proficient",
+            "npc_cha_save_flag": "charisma_saving_throw_proficient",
+            "npc_str_save": "strength_saving_throw_mod_with_sign",
+            "npc_dex_save": "dexterity_saving_throw_mod_with_sign",
+            "npc_con_save": "constitution_saving_throw_mod_with_sign",
+            "npc_int_save": "intelligence_saving_throw_mod_with_sign",
+            "npc_wis_save": "wisdom_saving_throw_mod_with_sign",
+            "npc_cha_save": "charisma_saving_throw_mod_with_sign",
+
+            "npc_acrobatics_flag": "acrobatics",
+            "npc_acrobatics": "acrobatics",
+            "npcd_acrobatics": "acrobatics",
+            "npc_animal_handling_flag": "animalhandling",
+            "npc_animal_handling": "animalhandling",
+            "npcd_animal_handling": "animalhandling",
+            "npc_arcana_flag": "arcana",
+            "npc_arcana": "arcana",
+            "npcd_arcana": "arcana",
+            "npc_athletics_flag": "athletics",
+            "npc_athletics": "athletics",
+            "npcd_athletics": "athletics",
+            "npc_deception_flag": "deception",
+            "npc_deception": "deception",
+            "npcd_deception": "deception",
+            "npc_history_flag": "history",
+            "npc_history": "history",
+            "npcd_history": "history",
+            "npc_insight_flag": "insight",
+            "npc_insight": "insight",
+            "npcd_insight": "insight",
+            "npc_intimidation_flag": "intimidation",
+            "npc_intimidation": "intimidation",
+            "npcd_intimidation": "intimidation",
+            "npc_investigation_flag": "investigation",
+            "npc_investigation": "investigation",
+            "npcd_investigation": "investigation",
+            "npc_medicine_flag": "medicine",
+            "npc_medicine": "medicine",
+            "npcd_medicine": "medicine",
+            "npc_nature_flag": "nature",
+            "npc_nature": "nature",
+            "npcd_nature": "nature",
+            "npc_perception_flag": "perception",
+            "npc_perception": "perception",
+            "npcd_perception": "perception",
+            "npc_performance_flag": "performance",
+            "npc_performance": "performance",
+            "npcd_performance": "performance",
+            "npc_persuasion_flag": "persuasion",
+            "npc_persuasion": "persuasion",
+            "npcd_persuasion": "persuasion",
+            "npc_religion_flag": "religion",
+            "npc_religion": "religion",
+            "npcd_religion": "religion",
+            "npc_sleight_of_hand_flag": "sleightofhand",
+            "npc_sleight_of_hand": "sleightofhand",
+            "npcd_sleight_of_hand": "sleightofhand",
+            "npc_stealth_flag": "stealth",
+            "npc_stealth": "stealth",
+            "npcd_stealth": "stealth",
+            "npc_survival_flag": "survival",
+            "npc_survival": "survival",
+            "npcd_survival": "survival",
+            "lvl1_slots_total": "spell_level_1_slots",
+            "lvl2_slots_total": "spell_level_2_slots",
+            "lvl3_slots_total": "spell_level_3_slots",
+            "lvl4_slots_total": "spell_level_4_slots",
+            "lvl5_slots_total": "spell_level_5_slots",
+            "lvl6_slots_total": "spell_level_6_slots",
+            "lvl7_slots_total": "spell_level_7_slots",
+            "lvl8_slots_total": "spell_level_8_slots",
+            "lvl9_slots_total": "spell_level_9_slots",
+            "lvl1_slots_expended": "spell_level_1_slots_expended",
+            "lvl2_slots_expended": "spell_level_2_slots_expended",
+            "lvl3_slots_expended": "spell_level_3_slots_expended",
+            "lvl4_slots_expended": "spell_level_4_slots_expended",
+            "lvl5_slots_expended": "spell_level_5_slots_expended",
+            "lvl6_slots_expended": "spell_level_6_slots_expended",
+            "lvl7_slots_expended": "spell_level_7_slots_expended",
+            "lvl8_slots_expended": "spell_level_8_slots_expended",
+            "lvl9_slots_expended": "spell_level_9_slots_expended",
+
+            "npc_legendary_actions": "legendary_action_amount",
+            "legendary_flag": "legendary_action_amount",
+            "spellname": "name",
+            "spellcomp": "components",
+            "spellconcentration": "concentration",
+            "spelldamagetype": "",
+            "spelldescription": "content",
+            "spellathigherlevels": "higherlevel",
+            "spellduration": "duration",
+            "spelllevel": "spelllevel",
+            "spellcompmaterials": "materials",
+            "spellrange": "range",
+            "spellsave": "savingthrowvsability",
+            "spellschool": "school",
+            "spellcastingtime": "castingtime",
+
+            "name": "name",
+            "namedisplay": "name",
+            "description": "content",
+            "desc": "content",
+            "attacktohit": "attackbonus",
+            "attackdamage": "",
+            "attackdamagetype": "attackdamagetype",
+            "attackdamage2": "",
+            "attackdamagetype2": "seconddamageability",
+            "attackrange": "reach",
+
+            "itemname": "name",
+            "itemcontent": "content",
+            "itemcount": "uses",
+            "itemweight": "weight"
+        }
+        return SHAPED_EQUIVALENCE.get(name, name)
+
+    def _convertRepeatingAttributeName(self, name):
+        SHAPED_EQUIVALENCE = {
+            'npctrait': 'trait',
+            'npcaction': 'action',
+            'spell-cantrip': 'spell0',
+            'spell-1':'spell1',
+            'spell-2':'spell2',
+            'spell-3':'spell3',
+            'spell-4':'spell4',
+            'spell-5': 'spell5',
+            'spell-6': 'spell6',
+            'spell-7':'spell7',
+            'spell-8': 'spell8',
+            'spell-9':'spell9',
+            'npcreaction': 'reaction',
+            'inventory': 'equipment',
+            'spell-cantrip': 'spell0',
+        }
+        return SHAPED_EQUIVALENCE.get(name, name)
