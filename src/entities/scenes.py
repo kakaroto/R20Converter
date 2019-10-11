@@ -286,7 +286,7 @@ class Scene(Entity):
                         tile_image = graphic["imgsrc"]
                     else:
                         filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
-                        if self.getArgument("images_as_drawings", False):
+                        if self.isDrawing(graphic):
                             suffix = str(drawing_id)
                         else:
                             suffix = str(tile_id)
@@ -429,12 +429,14 @@ class Scene(Entity):
                 x = (left - (tile_width / 2))
                 y = (top - (tile_height / 2))
                 if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
-                    if self.getArgument("images_as_drawings", False):
+                    if self.isDrawing(graphic):
                         drawing = {"id": drawing_id,
                                     "flags": {
                                         "furnace": {
                                             "fillType": 3,
-                                            "textureAlpha": 1
+                                            "textureAlpha": 1,
+                                            "mirrorVert": obj["flipv"],
+                                            "mirrorHoriz": obj["fliph"],
                                         }
                                     },
                                     "x": int(margin_left + x * grid_multiplier),
@@ -540,6 +542,12 @@ class Scene(Entity):
         if not self.getArgument("cleanup_scenes", False):
             return False
         if x + obj_width < 0 or x > width or y + obj_height < 0 or y > height:
+            return True
+        return False
+
+    def isDrawing(self, graphic):
+        if self.getArgument("images_as_drawings", False) or \
+            graphic["isdrawing"] or graphic["flipv"] or graphic["fliph"]:
             return True
         return False
 
