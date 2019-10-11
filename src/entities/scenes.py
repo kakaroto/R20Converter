@@ -2,11 +2,14 @@ from .base import DatabaseFile, Entity
 from .actors import Token
 
 from PIL import Image
-from PIL import ImageFont
-from PIL import ImageDraw
 import os
 import math
 
+class PATH_TYPE:
+    POLYGON = 0
+    CIRCLE = 1
+    RECTANGLE = 2
+    FREEHAND = 3
 
 
 class Scenes(DatabaseFile):
@@ -59,9 +62,6 @@ class Scene(Entity):
         if not page["showgrid"]:
             grid_type = 0
         map_layer = [g for g in page["graphics"] if g["layer"] == "map"]
-        obj_layer = [g for g in page["graphics"] if g["layer"] == "objects"]
-        gm_layer = [g for g in page["graphics"] if g["layer"] == "gmalyer"]
-        light_layer = [g for g in page["graphics"] if g["layer"] == "walls"]
 
         zip_page_path = os.path.join("pages", "%03d - %s" % (index, name))
         bg = None
@@ -109,6 +109,8 @@ class Scene(Entity):
         walls = []
         light_id = 1
         lights = []
+        drawing_id = 1
+        drawings = []
         # Some graphics/paths/texts don't appear in the zorder (if drawn by other players?),
         # so let's add them at the end in the order they should appear, map, objects, gm and wall layers.
         ids_to_display = page["zorder"]
@@ -280,7 +282,11 @@ class Scene(Entity):
                         tile_image = graphic["imgsrc"]
                     else:
                         filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
-                        dest = os.path.join("scenes", "tiles", name, "tile_" + str(tile_id) + ".png")
+                        if self.getArgument("images_as_drawings", False):
+                            suffix = str(drawing_id)
+                        else:
+                            suffix = str(tile_id)
+                        dest = os.path.join("scenes", "tiles", name, "tile_" + suffix + ".png")
                         if self.getArgument("json", False):
                             (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest)
                         else:
@@ -308,28 +314,52 @@ class Scene(Entity):
                         lights.append(light)
             elif text and text["text"].strip() != "":
                 # NOTE: We ignore text items without any text.. there's a lot of those...
-                dest = os.path.join("scenes", "tiles", name, "text_" + str(tile_id) + ".png")
-                (dest_filename, tile_image) = self.getDestinationPaths(dest)
-                color = self.color(text["color"], "#ffffff", True)
-                self.createTextImage(text["text"], text["font_family"], text["font_size"], color, dest_filename)
+                # graphic's left/top position is for the rotation point (center of image)
+                x = (left - (tile_width / 2))
+                y = (top - (tile_height / 2))
+                drawing = {"id": drawing_id,
+                            "flags": {},
+                            "x": margin_left + x * grid_multiplier,
+                            "y": margin_top + y * grid_multiplier,
+                            "z": 10 * drawing_id,
+                            "width": tile_width * grid_multiplier,
+                            "height": tile_height * grid_multiplier,
+                            "rotation": rotation,
+                            "hidden": layer == "gmlayer" or layer == "walls",
+                            "locked": False,
+                            "author": Entity.normalizeID(text["controlledby"])
+                }
+                drawing = self.createTextDrawing(drawing, text)
+                drawing_id += 1
+                drawings.append(drawing)
             elif path and layer != "walls":
-                dest = os.path.join("scenes", "tiles", name, "path_" + str(tile_id) + ".png")
-                (dest_filename, tile_image) = self.getDestinationPaths(dest)
-                outline = self.color(path["stroke"], "#ffffff", True)
-                fill = self.color(path["fill"], "#ffffff", True)
-                line_width = path["stroke_width"]
-                (drawing_width, drawing_height) = self.createPathImage(tile_width, tile_height, line_width, outline, fill,
-                                                                       path["path"], dest_filename)
-                tile_width = drawing_width * path["scaleX"]
-                tile_height = drawing_height * path["scaleY"]
+                tile_width = tile_width * path["scaleX"]
+                tile_height = tile_height * path["scaleY"]
+                x = (left - (tile_width / 2))
+                y = (top - (tile_height / 2))
+                drawing = {"id": drawing_id,
+                            "flags": {},
+                            "x": margin_left + x * grid_multiplier,
+                            "y": margin_top + y * grid_multiplier,
+                            "z": 10 * drawing_id,
+                            "width": tile_width * grid_multiplier,
+                            "height": tile_height * grid_multiplier,
+                            "rotation": rotation,
+                            "hidden": layer == "gmlayer" or layer == "walls",
+                            "locked": False,
+                            "author": Entity.normalizeID(path["controlledby"])
+                }
+                drawing = self.createPathDrawing(drawing, path)
+                drawing_id += 1
+                drawings.append(drawing)
             elif path and layer == "walls":
                 drawing_width = tile_width * path["scaleX"]
                 drawing_height = tile_height * path["scaleY"]
                 # path's left/top position is for the center of the image
                 left = (left - (drawing_width / 2))
                 top = (top - (drawing_height / 2))
-                (polygon, circle, _, _) = self.pathToPolygonList(path["path"], 0, 0)
-                if circle:
+                (polygon, path_type, _, _) = self.pathToPolygonList(path["path"], 0, 0)
+                if path_type == PATH_TYPE.CIRCLE:
                     print("Circle in the dynamic layer! Not supported!")
                     continue
                 previous_point = None
@@ -394,21 +424,61 @@ class Scene(Entity):
                 # graphic's left/top position is for the rotation point (center of image)
                 x = (left - (tile_width / 2))
                 y = (top - (tile_height / 2))
-                tile = {"id": tile_id,
-                        "flags": {},
-                        "img": tile_image,
-                        "width": tile_width * grid_multiplier,
-                        "height": tile_height * grid_multiplier,
-                        "scale": 1, # Also seems unused
-                        "x": margin_left + x * grid_multiplier,
-                        "y": margin_top + y * grid_multiplier,
-                        "z": 10 * tile_id, # Z is currently unusedm the order in the list is what counts
-                        "rotation": rotation,
-                        "hidden": layer == "gmlayer" or layer == "walls"
-                        }
                 if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
-                    tile_id += 1
-                    (map_tiles if layer == "map" else objects_tiles).append(tile)
+                    if self.getArgument("images_as_drawings", False):
+                        if obj["controlledby"] == "":
+                            author = self._database._converter.users.getGM().getID()
+                        else:
+                            author = Entity.normalizeID(obj["controlledby"])
+                        drawing = {"id": drawing_id,
+                                    "flags": {
+                                        "furnace": {
+                                            "fillType": 3,
+                                            "textureAlpha": 1
+                                        }
+                                    },
+                                    "x": margin_left + x * grid_multiplier,
+                                    "y": margin_top + y * grid_multiplier,
+                                    "z": 10 * drawing_id,
+                                    "width": tile_width * grid_multiplier,
+                                    "height": tile_height * grid_multiplier,
+                                    "rotation": rotation,
+                                    "hidden": layer == "gmlayer" or layer == "walls",
+                                    "locked": False,
+                                    "author": author,
+                                    "type": "r",
+                                    "fillType": 2,
+                                    "fillColor": "#ffffff",
+                                    "fillAlpha": 0,
+                                    "strokeColor": "#ffffff",
+                                    "strokeAlpha": 0,
+                                    "strokeWidth": 0,
+                                    "texture": tile_image,
+                                    "fontFamily": "Signika",
+                                    "fontSize": 45,
+                                    "text": "",
+                                    "textAlpha": 1,
+                                    "textColor": "#ffffff",
+                                    "bezierFactor": 0,
+                                    "points": [],
+                                }
+                        drawing_id += 1
+                        drawings.append(drawing)
+                    else:
+                        tile = {"id": tile_id,
+                                "flags": {},
+                                "img": tile_image,
+                                "width": tile_width * grid_multiplier,
+                                "height": tile_height * grid_multiplier,
+                                "scale": 1, # Also seems unused
+                                "x": margin_left + x * grid_multiplier,
+                                "y": margin_top + y * grid_multiplier,
+                                "z": 10 * tile_id, # Z is currently unusedm the order in the list is what counts
+                                "rotation": rotation,
+                                "hidden": layer == "gmlayer" or layer == "walls"
+                                }
+                        tile_id += 1
+                        (map_tiles if layer == "map" else objects_tiles).append(tile)
                 
                     
         if len(walls) != total_walls:
@@ -450,6 +520,7 @@ class Scene(Entity):
                        "tokens": tokens,
                        "walls": walls,
                        "lights": lights,
+                       "drawings": drawings,
                        "sounds": [],
                        "templates": [],
                        "notes": []
@@ -471,69 +542,6 @@ class Scene(Entity):
         if x + obj_width < 0 or x > width or y + obj_height < 0 or y > height:
             return True
         return False
-    def createTextImage(self, text, font_family, font_size, color, filename):
-        rgb = tuple(int(color[i:i+2], 16) for i in (1, 3, 5))
-        # Don't know why they added a quote around the font family name for shadows into light
-        font_family = font_family.replace("\"", "")
-        # If running from the windows directory alone, there won't be a 'src' directory anymore
-        parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        if not os.path.exists(os.path.join(parent, "fonts")):
-            parent = os.path.abspath(os.path.join(parent, ".."))
-        font_dir = os.path.join(parent, "fonts")
-        try:
-            try:
-                # Check if the text is ASCII, otherwise, if it has unicode characters, default back to LiberationSans
-                text.encode('ascii')
-                is_unicode = False
-            except UnicodeEncodeError:
-                is_unicode = True
-            if font_family == "Arial" or is_unicode:
-                font_family = "LiberationSans-Regular"
-            font = ImageFont.truetype(os.path.join(font_dir, font_family + ".ttf"), font_size)
-            #print("Loaded font ", font_family)
-        except:
-            #print("Error loading font ", font_family)
-            try:
-                font = ImageFont.truetype(os.path.join(font_dir, "LiberationSans-Regular.ttf"), font_size)
-            except:
-                font = ImageFont.load_default()
-                print("Error loading fonts. Loading default font!")
-
-        size = font.getsize(text)
-        img = Image.new("RGBA", size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        draw_size = draw.textsize(text, font=font)
-        if draw_size != size:
-            img = Image.new("RGBA", draw_size, (0, 0, 0, 0))
-            draw = ImageDraw.Draw(img)
-
-        draw.text((0, 0), text, rgb, font=font)
-        img.save(filename)
-        return img.size
-
-    # Taken from https://stackoverflow.com/questions/32504246/draw-ellipse-in-python-pil-with-line-thickness
-    def draw_ellipse(self, image, bounds, width=1, outline='white', antialias=4):
-        """Improved ellipse drawing function, based on PIL.ImageDraw."""
-
-        # Use a single channel image (mode='L') as mask.
-        # The size of the mask can be increased relative to the imput image
-        # to get smoother looking results. 
-        mask = Image.new(
-            size=[int(dim * antialias) for dim in image.size],
-            mode='L', color='black')
-        draw = ImageDraw.Draw(mask)
-
-        # draw outer shape in white (color) and inner shape in black (transparent)
-        for offset, fill in (width/-2.0, 'white'), (width/2.0, 'black'):
-            left, top = [(value + offset) * antialias for value in bounds[:2]]
-            right, bottom = [(value - offset) * antialias for value in bounds[2:]]
-            draw.ellipse((left, top, right, bottom), fill=fill)
-
-        # downsample the mask using PIL.Image.LANCZOS 
-        # (a high-quality downsampling filter).
-        mask = mask.resize(image.size, Image.LANCZOS)
-        # paste outline color to input image through the mask
-        image.paste(outline, mask=mask)
 
     def pathToPolygonList(self, path, width, height):
         polygon = []
@@ -543,7 +551,7 @@ class Scene(Entity):
             h = h if h > y else math.ceil(y)
             polygon.append((x, y))
             return (int(w), int(h))
-        circle = False
+        path_type = PATH_TYPE.POLYGON
         for point in path:
             if point[0] == "M": # First Point
                 (w, h) = add_point(point[1], point[2], w, h)
@@ -552,11 +560,19 @@ class Scene(Entity):
             elif point[0] == "Q": # Freehand
                 (w, h) = add_point(point[1], point[2], w, h)
                 (w, h) = add_point(point[3], point[4], w, h)
+                path_type = PATH_TYPE.FREEHAND
             elif point[0] == "C": # Circle
-                circle = True
+                path_type = PATH_TYPE.CIRCLE
             else:
                 print("Unknown path type: %s" % str(point))
-        return (polygon, circle, w, h)
+        if path_type == PATH_TYPE.POLYGON and len(path) == 5 and \
+            path[0][1] == 0 and path[0][2] == 0 and \
+            path[1][1] == width and path[1][2] == 0 and \
+            path[2][1] == width and path[2][2] == height and \
+            path[3][1] == 0 and path[3][2] == height and \
+            path[4][1] == 0 and path[4][2] == 0:
+            path_type = PATH_TYPE.RECTANGLE
+        return (polygon, path_type, w, h)
 
     # Get angle between points P1, P2, P3 with the angle at P2 being returned in degrees
     def getPointsAngle(self, p1, p2, p3):
@@ -578,21 +594,61 @@ class Scene(Entity):
         #print("Angle is : %.2f" % angle )
         return angle
 
-    def createPathImage(self, width, height, line_width, outline, fill, path, filename):
-        (polygon, circle, w, h) = self.pathToPolygonList(path, width, height)
-        polygon = [(x + self.PAD_X, y + self.PAD_Y) for (x, y) in polygon]
-        width = w + line_width + self.PAD_X * 2
-        height = h + line_width + self.PAD_Y * 2
-        img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-        if circle:
-            draw.ellipse((self.PAD_X, self.PAD_Y, w, h), fill, outline)
-            if outline:
-                self.draw_ellipse(img, (self.PAD_X, self.PAD_Y, w, h), line_width, outline)
+    def createTextDrawing(self, drawing, text):
+        color = self.color(text["color"], "#ffffff", True)
+        drawing.update({"type": "t",
+                        "fillType": 1,
+                        "fillColor": color,
+                        "fillAlpha": 1.0,
+                        "strokeColor": "#000000",
+                        "strokeAlpha": 1.0,
+                        "strokeWidth": 1,
+                        "texture": None,
+                        "fontFamily": text["font_family"],
+                        "fontSize": text["font_size"],
+                        "text": text["text"],
+                        "textAlpha": 1,
+                        "textColor": color,
+                        "bezierFactor": 0,
+                        "points": [],
+                    })
+        return drawing
+
+    def createPathDrawing(self, drawing, path):
+        outline = self.color(path["stroke"], "#ffffff", True)
+        fill = self.color(path["fill"], "#ffffff", True)
+        line_width = path["stroke_width"]
+        scaleX = path["scaleX"]
+        scaleY = path["scaleY"]
+        (points, path_type, _, _) = self.pathToPolygonList(path["path"], path["width"], path["height"])
+        if path_type == PATH_TYPE.CIRCLE:
+            drawing_type = "e"
+            points = []
+        elif path_type == PATH_TYPE.RECTANGLE:
+            drawing_type = "r"
+            points = []
+        elif path_type == PATH_TYPE.FREEHAND:
+            drawing_type = "f"
         else:
-            if fill:
-                draw.polygon(polygon, fill)
-            if outline:
-                draw.line(polygon, outline, line_width)
-        img.save(filename)
-        return img.size
+            drawing_type = "p"
+
+        if scaleX != 1 or scaleY != 1:
+            points = [(x * scaleX, y * scaleY) for (x, y) in points]
+
+        drawing.update({"type": drawing_type,
+                        "fillType": 0 if fill is None else 1,
+                        "fillColor": fill,
+                        "fillAlpha": 1.0,
+                        "strokeColor": outline,
+                        "strokeAlpha": 1.0,
+                        "strokeWidth": line_width,
+                        "texture": None,
+                        "fontFamily": "Signika",
+                        "fontSize": 45,
+                        "text": "",
+                        "textAlpha": 1,
+                        "textColor": "#ffffff",
+                        "bezierFactor": 0.5 if drawing_type == "f" else 0,
+                        "points": points,
+                    })
+        return drawing

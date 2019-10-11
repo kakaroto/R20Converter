@@ -234,6 +234,7 @@ parser.add_argument("--debug-page", default=None, help="Only convert a specific 
 parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT public directory (used for importing items and spells from dnd5e system)")
 parser.add_argument("--npc-source", default="Roll 20", help="Source reference for NPC actors (displayed in the character sheet)")
 parser.add_argument("--no-compendium-overwrite", action="store_true", help="If enabled, items, feats and spells found in the Compendium will not be overwritten with custom description/damage/etc.. from the Roll20 data")
+parser.add_argument("--images-as-drawings", action="store_true", help="Set all images on the scene as textured drawings instead of tiles (requires Furnace to function properly)")
 parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
 
 if __name__ == "__main__":

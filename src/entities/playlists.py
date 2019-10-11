@@ -7,24 +7,6 @@ class Playlists(DatabaseFile):
         DatabaseFile.__init__(self, converter, "playlists.db")
         self.entities = self.genEntities()
 
-    def addToFolder(self, folder_id, folder, folder_path):
-        handouts = []
-        index = 0
-        for item in folder:
-            if type(item) == dict:
-                dirname = "%03d - %s" % (index, item["n"])
-                handouts.extend(self.addToFolder("handout" + item["id"], item["i"], os.path.join(folder_path, dirname)))
-                index += 1
-            else:
-                handout = self.findID(item, "handout")
-                if handout != None:
-                    handouts.append(Handout(self, handout, index, folder_id, folder_path))
-                    index += 1
-                elif self.findID(item, "character") != None:
-                    index += 1
-                    
-        return handouts
-
     def genEntities(self):
         playlists = []
         root_playlist = {"id": "root-playlist",

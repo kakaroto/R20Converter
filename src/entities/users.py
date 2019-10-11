@@ -18,6 +18,12 @@ class Users(DatabaseFile):
             users.append(User(self, player, is_gm, scene))
         return users
 
+    def getGM(self):
+        for user in self.entities:
+            if user.entity["permission"] == 4:
+                return user
+        return self.entities[0]
+
 class User(Entity):
     def __init__(self, database, player, is_gm=False, scene=None):
         Entity.__init__(self, database, player["id"])
