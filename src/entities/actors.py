@@ -605,6 +605,8 @@ class Actor(Entity):
                 spellcasting_ability = match.group(1)[0:3].lower()
             else:
                 spellcasting_ability = attribute[0:3].lower()
+        if spellcasting_ability not in ["str", "dex", "con", "int", "wis", "cha"]:
+            spellcasting_ability = ""
         return {
                 "type": "String",
                 "label": "Spellcasting Ability",
