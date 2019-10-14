@@ -45,6 +45,12 @@ class Scene(Entity):
         self._page = page
 
         name = page["name"] if page["name"] != "" else "Untitled"
+        # Replace / path characters in the name to avoid issues with os.path.join
+        safe_name = name.replace("/", "_").replace(os.path.sep, "_")
+        # On windows, if second letter is ':' then it thinks it's a path and os.path.join will ignore the first paths
+        # so os.path.join("scenes", "backgrounds", "c:my scene", "image.png") gets written in the root
+        if safe_name[1:2] == ":":
+            safe_name = safe_name[0] + "_" + safe_name[2:]
         print("Creating Scene : %s" % name)
         # Snapping increment gets set to 0 if grid is disabled
         orig_grid_size = 70 * (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
@@ -77,7 +83,7 @@ class Scene(Entity):
                     bg_image = bg["imgsrc"]
                 else:
                     filename = os.path.join(zip_page_path, "graphics", bg["id"] + ".png")
-                    dest = os.path.join("scenes", "backgrounds", name + ".png")
+                    dest = os.path.join("scenes", "backgrounds", safe_name + ".png")
                     if self.getArgument("json", False):
                         (_, bg_image) = self.downloadResource(bg["imgsrc"], dest)
                     else:
@@ -92,7 +98,7 @@ class Scene(Entity):
             thumb_image = page["thumbnail"]
         else:
             filename = os.path.join(zip_page_path, "thumbnail.png")
-            dest = os.path.join("scenes", "thumbs", name + ".png")
+            dest = os.path.join("scenes", "thumbs", safe_name + ".png")
             if self.getArgument("json", False):
                 (thumb_filename, thumb_image) = self.downloadResource(page["thumbnail"], dest)
             else:
@@ -241,7 +247,7 @@ class Scene(Entity):
                         token_image = graphic["imgsrc"]
                     else:
                         filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
-                        dest = os.path.join("scenes", "tokens", name, "token_" + str(token_id) + ".png")
+                        dest = os.path.join("scenes", "tokens", safe_name, "token_" + str(token_id) + ".png")
                         if self.getArgument("json", False):
                             (_, token_image) = self.downloadResource(graphic["imgsrc"], dest)
                         else:
@@ -290,7 +296,7 @@ class Scene(Entity):
                             suffix = str(drawing_id)
                         else:
                             suffix = str(tile_id)
-                        dest = os.path.join("scenes", "tiles", name, "tile_" + suffix + ".png")
+                        dest = os.path.join("scenes", "tiles", safe_name, "tile_" + suffix + ".png")
                         if self.getArgument("json", False):
                             (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest)
                         else:
