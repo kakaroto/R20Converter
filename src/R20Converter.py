@@ -70,10 +70,22 @@ class R20Converter(object):
         if self.getArgument("export_as_module", False):
             os.makedirs(os.path.join(self.path, "packs"))
 
-            self.journal = Journal(self)
-            self.actors = Actors(self)
-            self.scenes = Scenes(self)
-            self.playlists = Playlists(self)
+            if self.getArgument("disable_module_journal", False):
+                self.journal = EmptyDB(self, "journal")
+            else:
+                self.journal = Journal(self)
+            if self.getArgument("disable_module_actors", False):
+                self.actors = EmptyDB(self, "actors")
+            else:
+                self.actors = Actors(self)
+            if self.getArgument("disable_module_scenes", False):
+                self.scenes = EmptyDB(self, "scenes")
+            else:
+                self.scenes = Scenes(self)
+            if self.getArgument("disable_module_playlists", False):
+                self.playlists = EmptyDB(self, "playlists")
+            else:
+                self.playlists = Playlists(self)
             # Module will add the packs that are not empty and save them to file
             self.module = Module(self).save()
         else:
@@ -236,6 +248,10 @@ parser.add_argument("--npc-source", default="Roll 20", help="Source reference fo
 parser.add_argument("--no-compendium-overwrite", action="store_true", help="If enabled, items, feats and spells found in the Compendium will not be overwritten with custom description/damage/etc.. from the Roll20 data")
 parser.add_argument("--images-as-drawings", action="store_true", help="Set all images on the scene as textured drawings instead of tiles (requires Furnace to function properly)")
 parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
+parser.add_argument("--disable-module-journal", action="store_true", help="Disable conversion of Journal entries in the module (requires --export-as-module)")
+parser.add_argument("--disable-module-actors", action="store_true", help="Disable conversion of Actors in the module (requires --export-as-module)")
+parser.add_argument("--disable-module-scenes", action="store_true", help="Disable conversion of Scenes in the module (requires --export-as-module)")
+parser.add_argument("--disable-module-playlists", action="store_true", help="Disable conversion of Playlists in the module (requires --export-as-module)")
 
 if __name__ == "__main__":
     args = parser.parse_args()
