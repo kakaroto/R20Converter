@@ -8,8 +8,11 @@ class Folders(DatabaseFile):
         
     def addJournalFolder(self, folder, parent, index, depth=0):
         folders = []
+        is_items_folder = folder["n"].strip() in self.getArgument("folder_as_items", [])
         has_characters = False
         has_handouts = False
+        has_items = is_items_folder
+            
         for item in folder["i"]:
             if type(item) == dict:
                 # Found a folder
@@ -17,10 +20,11 @@ class Folders(DatabaseFile):
                 if depth >= 2:
                     print("Folder '%s' has a depth of %d. Dropping it to parent" % (item["n"], depth))
                     folder_id = parent
-                (children, child_handouts, child_characters) = self.addJournalFolder(item, folder_id, index + 1 + len(folders), depth + 1)
+                (children, child_handouts, child_characters, child_items) = self.addJournalFolder(item, folder_id, index + 1 + len(folders), depth + 1)
                 folders.extend(children)
                 has_characters |= child_characters
                 has_handouts |= child_handouts
+                has_items |= child_items
             else:
                 if self.findID(item, "character") != None:
                     has_characters = True
@@ -30,12 +34,14 @@ class Folders(DatabaseFile):
                     print("Unknown ID in Journal folder: %s"  % item)
 
         # By default, an empty folder would appear in the journal
-        if has_handouts or not has_characters:
+        if has_handouts or (not has_characters and not has_items):
             has_handouts = True
             folders.append(Folder(self, "handout" + folder["id"], folder["n"], "JournalEntry", ("handout" + parent) if parent else None, index))
         if has_characters:
             folders.append(Folder(self, "character" + folder["id"], folder["n"], "Actor", ("character" + parent) if parent else None, index))
-        return (folders, has_handouts, has_characters)
+        if has_items:
+            folders.append(Folder(self, "item" + folder["id"], folder["n"], "Item", ("item" + parent) if parent else None, index))
+        return (folders, has_handouts, has_characters, has_items)
 
     def ensureFolder(self, id, name, folder_type, parent=None):
         for folder in self.entities:
@@ -52,7 +58,7 @@ class Folders(DatabaseFile):
         folders = []
         for item in self._campaign["journalfolder"]:
             if type(item) == dict:
-                (children, _, _) = self.addJournalFolder(item, None, len(folders))
+                (children, _, _, _) = self.addJournalFolder(item, None, len(folders))
                 folders.extend(children)
 
         if not self.getArgument("disable_archived", False):

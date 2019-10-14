@@ -8,7 +8,7 @@ import sys
 import os
 from world import World
 from module import Module
-from entities import DatabaseFile, EmptyDB, Actors, Combat, Folders, Journal, Playlists, Scenes, SettingsDB, Users
+from entities import DatabaseFile, EmptyDB, Actors, Items, Combat, Folders, Journal, Playlists, Scenes, SettingsDB, Users
 try:
     import PySimpleGUIQt as sg
     line_height = 0.5
@@ -78,6 +78,11 @@ class R20Converter(object):
                 self.actors = EmptyDB(self, "actors")
             else:
                 self.actors = Actors(self)
+            if self.getArgument("disable_module_items", False):
+                self.items = EmptyDB(self, "items")
+            else:
+                self.items = Items(self)
+                self.items.createEntities()
             if self.getArgument("disable_module_scenes", False):
                 self.scenes = EmptyDB(self, "scenes")
             else:
@@ -94,7 +99,9 @@ class R20Converter(object):
             self.settings = SettingsDB(self).save()
             self.users = Users(self).save()
             self.folders = Folders(self)
-            self.items = EmptyDB(self, "items")
+            # Items DB needs to happen as two separate calls due to cross links
+            self.items = Items(self)
+            self.items.createEntities()
             self.journal = Journal(self).save()
             self.actors = Actors(self).save()
             self.scenes = Scenes(self).save()
@@ -252,6 +259,7 @@ parser.add_argument("--disable-module-journal", action="store_true", help="Disab
 parser.add_argument("--disable-module-actors", action="store_true", help="Disable conversion of Actors in the module (requires --export-as-module)")
 parser.add_argument("--disable-module-scenes", action="store_true", help="Disable conversion of Scenes in the module (requires --export-as-module)")
 parser.add_argument("--disable-module-playlists", action="store_true", help="Disable conversion of Playlists in the module (requires --export-as-module)")
+parser.add_argument("--folder-as-items", action="append", default=["Magic Items"], help="Converts each entry in a journal folder into items. Useful for 'Magic Items' folders. Can be passed multiple times to convert more than one folder.")
 
 if __name__ == "__main__":
     args = parser.parse_args()

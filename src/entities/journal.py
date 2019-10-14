@@ -31,18 +31,13 @@ class Journal(DatabaseFile):
 
 # TODO: handle Archived handouts differently?
 class Handout(Entity):
-    PERMISSION_NONE = 0
-    PERMISSION_DEFAULT = -1
-    PERMISSION_LIMITED = 1
-    PERMISSION_OBSERVER = 2
-    PERMISSION_OWNER = 3
     def __init__(self, database, handout, index, parent, path):
         Entity.__init__(self, database, handout["id"])
         print("Creating Handout : %s" % handout["name"])
         # TODO: Replace cross-link journals with @Journal...
         content = handout["notes"]
         gmnotes = handout["gmnotes"]
-        if gmnotes != "":
+        if gmnotes.strip() != "":
             content += "\n<section class=\"secret\"><p>GM Notes : </p>" + gmnotes + "</section>"
         content = self.replaceCompendiumLinks(self.replaceEntityLinks(content))
         permissions = {"default": Handout.PERMISSION_NONE}

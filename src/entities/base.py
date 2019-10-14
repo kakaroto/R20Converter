@@ -68,6 +68,11 @@ class DatabaseFile(object):
 
 
 class Entity(object):
+    PERMISSION_NONE = 0
+    PERMISSION_DEFAULT = -1
+    PERMISSION_LIMITED = 1
+    PERMISSION_OBSERVER = 2
+    PERMISSION_OWNER = 3
     # Ensures ids are unique accross all entities
     id_database = {}
     resource_cache = {}
@@ -142,7 +147,7 @@ class Entity(object):
             entity.entity = item
             entity.entity["_id"] = entity.getID()
             entity.entity["folder"] = Entity.normalizeID(folder_id)
-            converter.items.entities.append(entity)
+            converter.items.addEntity(entity)
         if item_id:
             return self.replaceEntityLinks('<a %shref="http://journal.roll20.net/item/%s"%s>%s</a>' % (before_href, item_id, after_href, text))
         else:

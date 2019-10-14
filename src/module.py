@@ -18,6 +18,9 @@ class Module(object):
         if len(converter.actors.entities) > 0:
             converter.actors.save()
             self._packs.append(self._newPack("actors", "Actors", "Actor", "actors.db"))
+        if len(converter.items.entities) > 0:
+            converter.items.save()
+            self._packs.append(self._newPack("items", "Items", "Item", "items.db"))
         if len(converter.scenes.entities) > 0:
             converter.scenes.save()
             self._packs.append(self._newPack("scenes", "Scenes", "Scene", "scenes.db"))
