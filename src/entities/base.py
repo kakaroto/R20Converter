@@ -6,6 +6,7 @@ import urllib
 import errno
 import hashlib
 import requests
+import uuid
 
 class DatabaseFile(object):
     def __init__(self, converter, filename):
@@ -38,6 +39,32 @@ class DatabaseFile(object):
                 return matches[0]
         return None
 
+    def getBy(self, field, value):
+        for entity in self.entities:
+            if field in entity and entity[field] == value:
+                return entity
+        return None
+
+    def getById(self, id):
+        return self.getBy("id", id)
+    def getByName(self, name):
+        return self.getBy("name", name)
+
+    def findCompendiumItem(self, compendium, item_name):
+        converter = self._converter
+        if converter.hasSystemPacks():
+            db = None
+            if compendium == "Spells":
+                db = converter.packs.get("spells", None)
+            elif compendium == "Items":
+                db = converter.packs.get("items", None)
+            elif compendium == "Classes":
+                db = converter.packs.get("classes", None)
+            elif compendium == "Class Features":
+                db = converter.packs.get("classfeatures", None)
+            if db:
+                return db.getByName(item_name)
+        return None
 
     def getArgument(self, name, default=None):
         return self._converter.getArgument(name, default)
@@ -79,14 +106,18 @@ class Entity(object):
 
     def __init__(self, database, id):
         self._database = database
-        self._original_id = id
-        self._id = self.normalizeID(id)
+        self._converter = database._converter
+        self._original_id = id if id else self.genID()
+        self._id = self.normalizeID(self._original_id)
 
     def getID(self, normalized=True):
         return self._id if normalized else self._original_id
 
     def findID(self, id, where=None):
         return self._database.findID(id, where)
+
+    def findCompendiumItem(self, compendium, item_name):
+        return self._database.findCompendiumItem(compendium, item_name)
 
     def getArgument(self, name, default=None):
         return self._database.getArgument(name, default)
@@ -97,34 +128,8 @@ class Entity(object):
     def replaceCompendiumLinks(self, content):
         return re.sub('<a ([^>]*)href=[\'"]https?://roll20.net/compendium/dnd5e/([^\'"]+)(?:(?:%3[aA])|:)([^\'"]+)[\'"]([^>]*)>(.*?)</a>', self._foundCompendium, content)
 
-    def findCompendiumItem(self, compendium, item_name):
-        converter = self._database._converter
-        if converter.hasSystemPacks():
-            items = []
-            if compendium == "Spells":
-                db = converter.packs.get("spells", None)
-                if db:
-                    items = db.entities
-            elif compendium == "Items":
-                db = converter.packs.get("items", None)
-                if db:
-                    items = db.entities
-            elif compendium == "Classes":
-                db = converter.packs.get("classes", None)
-                if db:
-                    items = db.entities
-            elif compendium == "Class Features":
-                db = converter.packs.get("classfeatures", None)
-                if db:
-                    items = db.entities
-            for item in items:
-                if "name" in item and item["name"] == item_name:
-                    return item
-        return None
-
     def _foundCompendium(self, match):
-        converter = self._database._converter
-        item_id = None
+        converter = self._converter
         before_href = match.group(1)
         compendium = match.group(2)
         name = urllib.parse.unquote(match.group(3))
@@ -133,23 +138,22 @@ class Entity(object):
         text = match.group(5)
         if self.getArgument("export_as_module", False):
             return "@Item[" + name + "]"
-        if compendium == "Spells":
-            folder = "D&D 5e Spells (SRD)"
-            folder_id = "r20converter-dnd5e-spells"
-        elif compendium == "Items":
-            folder = "D&D 5e Items (SRD)"
-            folder_id = "r20converter-dnd5e-items"
-        item = self.findCompendiumItem(compendium, name)
+        item = converter.items.getByName(name)
+        if item is None:
+            if compendium == "Spells":
+                folder = "D&D 5e Spells (SRD)"
+                folder_id = "r20converter-dnd5e-spells"
+            elif compendium == "Items":
+                folder = "D&D 5e Items (SRD)"
+                folder_id = "r20converter-dnd5e-items"
+            compendium_item = self.findCompendiumItem(compendium, name)
+            if compendium_item:
+                converter.folders.ensureFolder(folder_id, folder, "Item")
+                item = converter.items.createItemFromCompendium(compendium_item)
+                item.entity["folder"] = Entity.normalizeID(folder_id)
+                converter.items.addEntity(item)
         if item:
-            item_id = name
-            converter.folders.ensureFolder(folder_id, folder, "Item")
-            entity = Entity(converter.items, item_id)
-            entity.entity = item
-            entity.entity["_id"] = entity.getID()
-            entity.entity["folder"] = Entity.normalizeID(folder_id)
-            converter.items.addEntity(entity)
-        if item_id:
-            return self.replaceEntityLinks('<a %shref="http://journal.roll20.net/item/%s"%s>%s</a>' % (before_href, item_id, after_href, text))
+            return self.replaceEntityLinks('<a %shref="http://journal.roll20.net/item/%s"%s>%s</a>' % (before_href, item.getID(), after_href, text))
         else:
             print("Could not find compendium item of type '%s' and name '%s'" % (compendium, name))
             return match.group(0)
@@ -167,6 +171,11 @@ class Entity(object):
             return '<a class="entity-link" data-entity=%s data-id=%s %s%s><i class="fas %s"></i>%s</a>' % (entity, self.normalizeID(id), before_href, after_href, icon, text)
         else:
             return match.group(0)
+
+    @staticmethod
+    def textToHtml(text):
+        # Replace each line with <p>line</p>
+        return "".join(list(map(lambda l: "<p>" + l + "</p>", text.split("\n"))))
 
     @staticmethod
     def strToID(id_str):
@@ -188,6 +197,10 @@ class Entity(object):
             index += 1
         Entity.id_database[id] = normalized_id
         return normalized_id
+
+    @staticmethod
+    def genID():
+        return Entity.normalizeID(str(uuid.uuid4()))
 
     # Used to fix the sometimes broken color codes in R20
     @staticmethod
