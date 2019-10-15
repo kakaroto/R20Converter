@@ -54,15 +54,15 @@ class Token(Entity):
             self.token_filename = token.get("imgsrc", self.token_filename)
             show_name = token.get("showname", show_name)
             all_see_name = token.get("showplayers_name", all_see_name)
-            self.width = token.get("width", self.width)
-            self.height = token.get("height", self.height)
-            self.rotation = token.get("rotation", self.rotation)
             def parseInt(name, default):
                 try:
                     val = token.get(name, default)
                     return int(val)
                 except ValueError:
                     return default
+            self.width = parseInt("width", self.width)
+            self.height = parseInt("height", self.height)
+            self.rotation = parseInt("rotation", self.rotation)
             self.bar1_val = parseInt("bar1_value", self.bar1_val)
             self.bar1_max = parseInt("bar1_max", self.bar1_max)
             self.bar2_val = parseInt("bar2_value", self.bar2_val)
