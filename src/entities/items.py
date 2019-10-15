@@ -70,13 +70,8 @@ class Item(Entity):
                 "data": data
                 }
 
-    def addToOwnedList(self, items):
-        del self.entity["_id"]
-        del self.entity["permission"]
-        del self.entity["folder"]
-        self.entity["id"] = len(items) + 1
-        items.append(self.entity)
-
+    def getName(self):
+        return self.entity["name"]
 
     @staticmethod
     def createItemFromHandout(database, handout, index, parent, path):
@@ -131,8 +126,8 @@ class Item(Entity):
 
     @staticmethod
     def createItemFromCompendium(database, compendium_item, **kwargs):
-        item = Item(database, None, compendium_item["name"])
-        item.entity = copy.deepcopy(compendium_item)
+        item = Item(database, None, compendium_item.entity["name"])
+        item.entity = copy.deepcopy(compendium_item.entity)
         item.entity["_id"] = item.getID()
         item.entity["permission"] = {"default": Item.PERMISSION_NONE}
         item.entity["folder"] = None

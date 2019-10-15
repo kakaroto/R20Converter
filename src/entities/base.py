@@ -7,6 +7,7 @@ import errno
 import hashlib
 import requests
 import uuid
+import copy
 
 class DatabaseFile(object):
     def __init__(self, converter, filename):
@@ -41,7 +42,7 @@ class DatabaseFile(object):
 
     def getBy(self, field, value):
         for entity in self.entities:
-            if field in entity and entity[field] == value:
+            if field in entity.entity and entity.entity[field] == value:
                 return entity
         return None
 
@@ -91,7 +92,7 @@ class DatabaseFile(object):
         with open(full_path, "r", encoding='utf-8') as f:
             lines = f.readlines()
             for line in lines:
-                self.entities.append(json.loads(line))
+                self.entities.append(Entity.createFromData(self, json.loads(line)))
 
 
 class Entity(object):
@@ -109,12 +110,31 @@ class Entity(object):
         self._converter = database._converter
         self._original_id = id if id else self.genID()
         self._id = self.normalizeID(self._original_id)
+        self.entity = {"_id": self._id}
+
+    @staticmethod
+    def createFromData(database, data):
+        entity = Entity(database, data["_id"])
+        entity._id = entity._original_id
+        entity.entity = data
+        return entity
 
     def getID(self, normalized=True):
         return self._id if normalized else self._original_id
 
     def findID(self, id, where=None):
         return self._database.findID(id, where)
+
+    def addToOwnedList(self, parent_list):
+        entity = copy.deepcopy(self.entity)
+        try:
+            del entity["_id"]
+            del entity["permission"]
+            del entity["folder"]
+        except:
+            pass
+        entity["id"] = len(parent_list) + 1
+        parent_list.append(entity)
 
     def findCompendiumItem(self, compendium, item_name):
         return self._database.findCompendiumItem(compendium, item_name)

@@ -325,6 +325,9 @@ class Actor(Entity):
                        "items": owned_items
                        }
 
+    def getName(self):
+        return self._character["name"]
+
     def findFolder(self, id, folder, folder_id=None):
         for item in folder:
             if type(item) == dict:
@@ -1200,6 +1203,21 @@ class Actor(Entity):
                     index += 1
             return resources
 
+    def exportItem(self, item, folder_prefix, force=False):
+        if not force and self.getArgument("dont_export_actor_items", False):
+            return
+        folder_id = "%s (%s)" % (folder_prefix, "NPC" if self.isNPC() else "PC")
+        folder = self._converter.folders.ensureFolder(folder_id, folder_id, "Item")
+        name = item.getName()
+        if self.getArgument("no_duplicate_actor_items", False):
+            for i in self._converter.items.entities:
+                if i.entity["folder"] == folder.getID() and i.entity["name"] == name:
+                    return
+        else:
+            item.entity["name"] = "%s (%s)" % (name, self.getName())
+        item.entity["folder"] = folder.getID()
+        self._converter.items.addEntity(item)
+
     def createItemInventory(self, items, name, description, inventory_type, **kwargs):
         name = name if name != "" else "<no name>"
         description = Entity.textToHtml(description)
@@ -1211,6 +1229,20 @@ class Actor(Entity):
             item = self._converter.items.createItemInventory(name, description, inventory_type, **kwargs)
             item.entity["img"] = self.token.token_filename
         item.addToOwnedList(items)
+        
+        if inventory_type == "backpack":
+            folder_prefix = "Backpack"
+        elif inventory_type == "equipment":
+            folder_prefix = "Equipment"
+        elif inventory_type == "consumable":
+            folder_prefix = "Comsumables"
+        elif inventory_type == "tool":
+            folder_prefix = "Tools"
+        elif inventory_type == "weapon":
+            folder_prefix = "Weapons"
+        else:
+            folder_prefix = "Inventory"
+        self.exportItem(item, folder_prefix)
         return item
 
     def addInventory(self, items):
@@ -1299,6 +1331,7 @@ class Actor(Entity):
             item = self._converter.items.createItemFeat(name, description, feat_type, **kwargs)
             item.entity["img"] = self.token.token_filename
         item.addToOwnedList(items)
+        self.exportItem(item, "Abilities & Feats")
         return item
 
     def addTraits(self, items):
@@ -1355,7 +1388,7 @@ class Actor(Entity):
                 atk_ability = ability[0:3]
                 break
         compendium_item = self.findCompendiumItem("Items", name)
-        if (compendium_item is not None and "weaponType" in compendium_item["data"]) or (dmg2 != "" and save == ""):
+        if (compendium_item is not None and "weaponType" in compendium_item.entity["data"]) or (dmg2 != "" and save == ""):
             # Let's make this into a weapon attack due to alternate damage
             kwargs = {
                     "weaponType": "natural",
@@ -1448,14 +1481,15 @@ class Actor(Entity):
         compendium_item = self.findCompendiumItem("Spells", name)
         if compendium_item:
             # Some spells don't have the 'prepared' 
-            if "prepared" not in compendium_item["data"]:
-                compendium_item["data"]["prepared"] = {"type": "String", "label": "Prepared Spell", "value": False}
+            if "prepared" not in compendium_item.entity["data"]:
+                compendium_item.entity["data"]["prepared"] = {"type": "String", "label": "Prepared Spell", "value": False}
             kwargs["description"] = description
             item = self._converter.items.createItemFromCompendium(compendium_item, **kwargs)
         else:
             item = self._converter.items.createItemSpell(name, description, spell_type, school, level, **kwargs)
             item.entity["img"] = self.token.token_filename
         item.addToOwnedList(items)
+        self.exportItem(item, "Spells")
         return item
 
     def addSpells(self, items):
