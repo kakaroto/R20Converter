@@ -267,11 +267,36 @@ class Entity(object):
             # Check for conflicts
             if os.path.exists(dest_filename):
                 splitext = os.path.splitext(destination)
-                new_destination = "".join([splitext[0], "_%d_" % index, splitext[1]])
+                new_destination = "%s_%d%s" % (splitext[0], index, splitext[1])
                 destination_safe = self.urlsafe(new_destination)
                 index += 1
             else:
                 break
+
+        # Check if the destination path we found is longer than the max path and replace it with an assets directory instead
+        max_path = self.getArgument("max_path", 256)
+        abspath = os.path.abspath(os.path.join(self._database._path, destination_safe))
+        if len(abspath) >= max_path:
+            base = os.path.basename(destination)
+            new_destination = os.path.join("assets", base)
+            # Try with 'assets/${basename}" first, then try with incremental numbers if that's still too long.
+            if new_destination != destination:
+                return self.getDestinationPaths(new_destination)
+            else:
+                # We already tried 'assets/$basename' and it's still too long, let's try numbers now, but don't check for length anymore
+                index = 1
+                splitext = os.path.splitext(destination)
+                new_destination = os.path.join("assets", "%d%s" % (index, splitext[1]))
+                destination_safe = self.urlsafe(new_destination)
+                while True:
+                    dest_filename = os.path.join(self._database._path, destination_safe)
+                    # Check for conflicts
+                    if os.path.exists(dest_filename):
+                        index += 1
+                        new_destination = os.path.join("assets", "%d%s" % (index, splitext[1]))
+                        destination_safe = self.urlsafe(new_destination)
+                    else:
+                        break
 
         try:
             os.makedirs(os.path.dirname(dest_filename))
