@@ -1206,8 +1206,12 @@ class Actor(Entity):
     def exportItem(self, item, folder_prefix, force=False):
         if not force and self.getArgument("dont_export_actor_items", False):
             return
-        folder_id = "%s (%s)" % (folder_prefix, "NPC" if self.isNPC() else "PC")
-        folder = self._converter.folders.ensureFolder(folder_id, folder_id, "Item")
+        if self.getArgument("export_as_module", False):
+            folder_id = None
+        else:
+            folder_name = "%s (%s)" % (folder_prefix, "NPC" if self.isNPC() else "PC")
+            folder = self._converter.folders.ensureFolder(folder_name, folder_name, "Item")
+            folder_id = folder.getID()
         name = item.getName()
         if self.getArgument("no_duplicate_actor_items", False):
             for i in self._converter.items.entities:
@@ -1215,7 +1219,7 @@ class Actor(Entity):
                     return
         else:
             item.entity["name"] = "%s (%s)" % (name, self.getName())
-        item.entity["folder"] = folder.getID()
+        item.entity["folder"] = folder_id
         self._converter.items.addEntity(item)
 
     def createItemInventory(self, items, name, description, inventory_type, **kwargs):

@@ -74,15 +74,15 @@ class R20Converter(object):
                 self.journal = EmptyDB(self, "journal")
             else:
                 self.journal = Journal(self)
-            if self.getArgument("disable_module_actors", False):
-                self.actors = EmptyDB(self, "actors")
-            else:
-                self.actors = Actors(self)
             if self.getArgument("disable_module_items", False):
                 self.items = EmptyDB(self, "items")
             else:
                 self.items = Items(self)
                 self.items.createEntities()
+            if self.getArgument("disable_module_actors", False):
+                self.actors = EmptyDB(self, "actors")
+            else:
+                self.actors = Actors(self)
             if self.getArgument("disable_module_scenes", False):
                 self.scenes = EmptyDB(self, "scenes")
             else:
