@@ -24,6 +24,18 @@ class Journal(DatabaseFile):
                 elif self.findID(item, "character") != None:
                     index += 1
                     
+        # Look for orphan handouts and add them to the root folder
+        if folder_id is None:
+            handout_ids = [h.getID(False) for h in handouts]
+            zip_index = 0
+            zip_path = os.path.join(folder_path, "Orphaned Handouts")
+            for handout in self._handouts:
+                if handout["id"] not in handout_ids:
+                    print("Found Orphaned handout, adding to root; ", end='')
+                    handouts.append(Handout(self, handout, index, folder_id, folder_path, zip_path, zip_index))
+                    index += 1
+                    zip_index += 1
+
         return handouts
 
     def genEntities(self):
@@ -31,10 +43,11 @@ class Journal(DatabaseFile):
 
 # TODO: handle Archived handouts differently?
 class Handout(Entity):
-    def __init__(self, database, handout, index, parent, path):
+    def __init__(self, database, handout, index, parent, path, zip_path=None, zip_index=None):
         Entity.__init__(self, database, handout["id"])
         print("Creating Handout : %s" % handout["name"])
-        # TODO: Replace cross-link journals with @Journal...
+        zip_path = path if zip_path is None else zip_path
+        zip_index = index if zip_index is None else zip_index
         content = handout["notes"]
         gmnotes = handout["gmnotes"]
         if gmnotes.strip() != "":
@@ -62,7 +75,8 @@ class Handout(Entity):
                 if self.getArgument("json", False):
                     (_, avatar_filename) = self.downloadResource(handout["avatar"], filename)
                 else:
-                    (_, avatar_filename) = self.copyZipFile(filename, filename)
+                    zip_filename = os.path.join(zip_path, "%03d - %s" % (zip_index, handout["name"]), "avatar.png")
+                    (_, avatar_filename) = self.copyZipFile(zip_filename, filename)
         if handout["archived"] and not self.getArgument("disable_archived", False):
             parent = "archived-handouts-folder-id"
         if self.getArgument("export_as_module", False):
