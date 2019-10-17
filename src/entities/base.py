@@ -138,6 +138,7 @@ class Entity(object):
             pass
         entity["id"] = len(parent_list) + 1
         parent_list.append(entity)
+        return entity
 
     def findCompendiumItem(self, compendium, item_name):
         return self._database.findCompendiumItem(compendium, item_name)

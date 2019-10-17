@@ -1259,8 +1259,8 @@ class Actor(Entity):
         else:
             item = self._converter.items.createItemInventory(None, name, description, inventory_type, **kwargs)
             item.entity["img"] = self.token.token_filename
-        item.addToOwnedList(items)
-        
+        owned_item = item.addToOwnedList(items)
+
         if inventory_type == "backpack":
             folder_prefix = "Backpack"
         elif inventory_type == "equipment":
@@ -1274,7 +1274,7 @@ class Actor(Entity):
         else:
             folder_prefix = "Inventory"
         self.exportItem(item, folder_prefix)
-        return item
+        return owned_item
 
     def addInventory(self, items):
         for item in self.getRepeatingAttributes("inventory").values():
@@ -1325,9 +1325,10 @@ class Actor(Entity):
                 }
                 for prof in self.getRepeatingAttributes("proficiencies").values():
                     if self.getAttribute("prof_type", "", from_dict=prof)[0] == "ARMOR":
-                        prof_name = self.getAttribute("name", "", from_dict=prof)[0]
-                        if prof_name.lower() == item_type.lower():
-                            kwargs["proficient"] = True
+                        prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
+                        for proficiency in prof_name.split(","):
+                            if proficiency == item_type.lower() or proficiency == armor_type:
+                                kwargs["proficient"] = True
                 self.createItemInventory(items, name, content, "equipment", weight=weight, quantity=count, **kwargs)
             elif item_type in ["Melee Weapon", "Ranged Weapon", "Ammunition"] or damage != "":
                 kwargs = {
@@ -1336,32 +1337,39 @@ class Actor(Entity):
                     "damageType": damage_type,
                     "damage2": damage2,
                     "damage2Type": damage2_type,
-                    "range": weapon_range
+                    "range": weapon_range,
+                    "ability": "dex" if item_type == "Ranged Weapon" else "str"
                 }
                 item = self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, **kwargs)
-                if item.entity["data"]["weaponType"]["value"] == "":
+                if item["data"]["weaponType"]["value"] == "":
                     # Don't override the weapon type if taken from compendium, set it otherwise
                     if item_type == "Ammunition":
                         weaponType="ammo"
+                    elif item_type == "Melee Weapon":
+                        weaponType = "simpleM"
+                    elif item_type == "Ranged Weapon":
+                        weaponType = "simpleR"
                     else:
-                        weaponType = "simpleM" if item_type == "Melee Weapon" else "simpleR"
-                    item.entity["data"]["weaponType"]["value"] = weaponType
-                weaponType = item.entity["data"]["weaponType"]["value"]
+                        weaponType = "improv"
+
+                    item["data"]["weaponType"]["value"] = weaponType
+                weaponType = item["data"]["weaponType"]["value"]
                 
                 proficient = False
                 for prof in self.getRepeatingAttributes("proficiencies").values():
                     if self.getAttribute("prof_type", "", from_dict=prof)[0] == "WEAPON":
                         prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
-                        if prof_name == name.lower() or \
-                            (prof_name.startswith("simple") and weaponType.startswith("simple")) or \
-                            (prof_name.startswith("martial") and weaponType.startswith("martial")):
-                            proficient = True
-                            break
+                        for proficiency in prof_name.split(","):
+                            if proficiency.startswith(name.lower()) or \
+                                (proficiency.startswith("simple") and weaponType.startswith("simple")) or \
+                                (proficiency.startswith("martial") and weaponType.startswith("martial")):
+                                proficient = True
+                                break
 
-                item.entity["data"]["proficient"]["value"] = proficient
+                item["data"]["proficient"]["value"] = proficient
             else:
                 if item_type not in ["Adventuring Gear", "Items", "Gear"]:
-                    print("Unknown item type : ", name, modifiers)
+                    print("Unknown item properties : ", name, modifiers)
                 self.createItemInventory(items, name, content, "backpack", weight=weight, quantity=count)
 
 
@@ -1375,9 +1383,9 @@ class Actor(Entity):
         else:
             item = self._converter.items.createItemFeat(None, name, description, feat_type, **kwargs)
             item.entity["img"] = self.token.token_filename
-        item.addToOwnedList(items)
+        owned_item = item.addToOwnedList(items)
         self.exportItem(item, "Abilities & Feats")
-        return item
+        return owned_item
 
     def addTraits(self, items):
         if self.isNPC():
@@ -1410,9 +1418,8 @@ class Actor(Entity):
         tohitrange = self.getAttribute("attack_tohitrange", "", from_dict=action)[0]
         onhit = self.getAttribute("attack_onhit", "", from_dict=action)[0]
         description = self.getAttribute("description", "", from_dict=action)[0]
-        # FIXME: might not be always correct... but using attack_damage includes the modifier which FVTT adds twice
-        dmg = self.getAttribute("attack_crit", "", from_dict=action)[0]
-        dmg2 = self.getAttribute("attack_crit2", "", from_dict=action)[0]
+        dmg = self.getAttribute("attack_damage", "", from_dict=action)[0]
+        dmg2 = self.getAttribute("attack_damage2", "", from_dict=action)[0]
         dmg_type = self.getAttribute("attack_damagetype", "", from_dict=action)[0]
         dmg2_type = self.getAttribute("attack_damagetype2", "", from_dict=action)[0]
         tohit = self.getAttributeInt("attack_tohit", 0, from_dict=action)
@@ -1436,6 +1443,9 @@ class Actor(Entity):
         compendium_item = self.findCompendiumItem("Items", name)
         if (compendium_item is not None and "weaponType" in compendium_item.entity["data"]) or (dmg2 != "" and save == ""):
             # Let's make this into a weapon attack due to alternate damage
+            # using attack_damage includes the modifier which FVTT adds already for weapon attacks
+            dmg = self.getAttribute("attack_crit", "", from_dict=action)[0]
+            dmg2 = self.getAttribute("attack_crit2", "", from_dict=action)[0]
             kwargs = {
                     "weaponType": "natural",
                     "damage": dmg,
@@ -1443,9 +1453,10 @@ class Actor(Entity):
                     "damage2": dmg2,
                     "damage2Type": dmg2_type.lower(),
                     "range": atk_range,
-                    "ability": atk_ability
+                    "ability": atk_ability,
+                    "proficient": True
             }
-            self.createItemInventory(items, name, description, "weapon", **kwargs)
+            self.createItemInventory(items, name, description_block, "weapon", **kwargs)
         else:
             kwargs = {
                     "ability": atk_ability,
@@ -1481,15 +1492,18 @@ class Actor(Entity):
                 continue
             name = self.getAttribute("atkname", "", from_dict=attack)[0]
             description = self.getAttribute("atk_desc", "", from_dict=attack)[0]
-            dmg = dmg_type = dmg2 = dmg2_type = atk_attr = atk_range = saveattr = ""
+            dmg = dmg_type = dmg_attr = dmg2 = dmg2_type = dmg2_attr = atk_attr = atk_range = saveattr = ""
             if self.getAttribute("dmgflag", "1", from_dict=attack)[0] != "0":
                 dmg = self.getAttribute("dmgbase", "", from_dict=attack)[0]
                 dmg_type = self.getAttribute("dmgtype", "", from_dict=attack)[0]
+                dmg_attr = self.getAttribute("dmgattr", "strength", from_dict=attack)[0]
             if self.getAttribute("dmg2flag", "0", from_dict=attack)[0] != "0":
                 dmg2 = self.getAttribute("dmg2base", "", from_dict=attack)[0]
                 dmg2_type = self.getAttribute("dmg2type", "", from_dict=attack)[0]
+                dmg2_attr = self.getAttribute("dmg2attr", "", from_dict=attack)[0]
             if self.getAttribute("atkflag", "1", from_dict=attack)[0] != "0":
                 atk_attr = self.getAttribute("atkattr_base", "strength", from_dict=attack)[0]
+            proficient = str(self.getAttribute("atkprofflag", "1", from_dict=attack)[0]) != "0"
             atk_range = self.getAttribute("atkrange", "", from_dict=attack)[0]
             atkmagic = self.getAttribute("atkmagic", "", from_dict=attack)[0]
             if atkmagic != "" and dmg != "":
@@ -1497,14 +1511,25 @@ class Actor(Entity):
             if self.getAttribute("saveflag", "0", from_dict=attack)[0] != "0":
                 saveattr = self.getAttribute("saveattr", "", from_dict=attack)[0]
 
-            atk_ability = "str"
+            atk_ability = ""
+            dmg_ability = ""
+            dmg2_ability = ""
             for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
-                if ability in atk_attr:
+                if ability in str(atk_attr):
                     atk_ability = ability[0:3]
-                    break
+                if ability in str(dmg_attr):
+                    dmg_ability = ability[0:3]
+                if ability in str(dmg2_attr):
+                    dmg2_ability = ability[0:3]
             save = saveattr.lower()[0:3]
-            if (dmg2 != "" or atkmagic != "") and save == "":
-                # Let's make this into a weapon attack due to alternate damage
+            if dmg2_ability != "":
+                dmg2 += " + {}".format(self._actor_abilities[dmg2_ability]["mod"])
+            # If second damage but no ability for the first damage, then it can't be a weapon attack
+            if dmg2 != "" and dmg_ability == "":
+                dmg += " + " + dmg2
+                dmg2 = ""
+            if (dmg2 != "" or atkmagic != "" or "itemid" in attack) and (save == "" or not proficient):
+                # Let's make this into a weapon attack due to alternate damage, or if not proficient
                 kwargs = {
                         "weaponType": "simpleM",
                         "bonus": atkmagic,
@@ -1513,10 +1538,13 @@ class Actor(Entity):
                         "damage2": dmg2,
                         "damage2Type": dmg2_type.lower(),
                         "range": atk_range,
-                        "ability": atk_ability
+                        "ability": atk_ability,
+                        "proficient": proficient
                 }
                 self.createItemInventory(items, name, description, "weapon", **kwargs)
             else:
+                if dmg_ability != "":
+                    dmg += " + {}".format(self._actor_abilities[dmg_ability]["mod"])
                 kwargs = {
                         "ability": atk_ability,
                         "target": "",
@@ -1525,7 +1553,7 @@ class Actor(Entity):
                         "damageType": dmg_type.lower(),
                         "save": save
                 }
-                self.createItemFeat(items, name, description, "attack", **kwargs)
+                self.createItemFeat(items, name, description, "attack" if atk_ability != "" else "passive", **kwargs)
 
 
     def createItemSpell(self, items, name, description, spell_type, school, level, **kwargs):
@@ -1541,9 +1569,9 @@ class Actor(Entity):
         else:
             item = self._converter.items.createItemSpell(None, name, description, spell_type, school, level, **kwargs)
             item.entity["img"] = self.token.token_filename
-        item.addToOwnedList(items)
+        owned_item = item.addToOwnedList(items)
         self.exportItem(item, "Spells")
-        return item
+        return owned_item
 
     def addSpells(self, items):
         for level in range(10):
@@ -1627,8 +1655,7 @@ class Actor(Entity):
         else:
             item = self._converter.items.createItemClass(None, name, name, level, **kwargs)
             item.entity["img"] = self.token.token_filename
-        item.addToOwnedList(items)
-        return item
+        return item.addToOwnedList(items)
 
     def addClasses(self, items):
         if not self.isNPC():
