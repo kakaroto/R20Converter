@@ -1410,8 +1410,9 @@ class Actor(Entity):
         tohitrange = self.getAttribute("attack_tohitrange", "", from_dict=action)[0]
         onhit = self.getAttribute("attack_onhit", "", from_dict=action)[0]
         description = self.getAttribute("description", "", from_dict=action)[0]
-        dmg = self.getAttribute("attack_damage", "", from_dict=action)[0]
-        dmg2 = self.getAttribute("attack_damage2", "", from_dict=action)[0]
+        # FIXME: might not be always correct... but using attack_damage includes the modifier which FVTT adds twice
+        dmg = self.getAttribute("attack_crit", "", from_dict=action)[0]
+        dmg2 = self.getAttribute("attack_crit2", "", from_dict=action)[0]
         dmg_type = self.getAttribute("attack_damagetype", "", from_dict=action)[0]
         dmg2_type = self.getAttribute("attack_damagetype2", "", from_dict=action)[0]
         tohit = self.getAttributeInt("attack_tohit", 0, from_dict=action)
