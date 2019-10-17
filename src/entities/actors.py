@@ -705,7 +705,11 @@ class Actor(Entity):
     def createDetailBio(self):
         bio = self._character["bio"]
         gmnotes = self._character["gmnotes"]
-        for (attrib, label) in [("character_appearance", "Character Appearance"),
+        for (attrib, label) in [("personality_traits", "Personality Traits"),
+                                ("ideals", "Ideals"),
+                                ("bonds", "Bonds"),
+                                ("flaws", "Flaws"),
+                                ("character_appearance", "Character Appearance"),
                                 ("character_backstory", "Character Backstory"),
                                 ("additional_feature_and_traits", "Additional Features and Traits"),
                                 ("allies_and_organizations", "Allies & Organizations"),
