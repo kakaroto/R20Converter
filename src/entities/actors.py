@@ -467,9 +467,9 @@ class Actor(Entity):
                         "intelligence", "wisdom", "charisma"]:
             mod = self.getAttributeInt(ability + "_mod", 0)
             if self.isNPC():
-                save = self.getAttributeInt(ability + "_save_bonus", 0)
-            else:
                 save = self.getAttributeInt("npc_" + ability[0:3] + "_save", 0)
+            else:
+                save = self.getAttributeInt(ability + "_save_bonus", 0)
             bases.append(save - mod)
         return min(bases)
         #min_base = min(bases)
@@ -915,6 +915,8 @@ class Actor(Entity):
 
     def _addKnownToArray(self, known_list, name, array, custom):
         name = self._capitalizeAll(name.strip())
+        if name == "":
+            return
         known = known_list.get(name, None)
         if known:
             array.append(known)
@@ -1596,15 +1598,15 @@ class Actor(Entity):
                     self.createItemClass(items, name, level)
             else:
                 pc_class = self.getAttribute("class", "")[0]
-                base_level = self.getAttributeInt("base_level", 1)
+                base_level = self.getAttribute("base_level", "1")[0]
                 subclass = self.getAttribute("subclass", "")[0]
                 self.createItemClass(items, pc_class, base_level, subclass)
                 for i in range(3):
                     flag = self.getAttributeInt("multiclass%d_flag" % (i + 1), 0)
                     if bool(flag):
                         pc_class = self.getAttribute("multiclass%d" % (i + 1), "")[0]
-                        level = self.getAttributeInt("multiclass%d_lvl" % (i + 1), 1)
-                        subclass = self.getAttribute("mutliclass%d_subclass" % (i + 1), "")[0]
+                        level = self.getAttribute("multiclass%d_lvl" % (i + 1), "1")[0]
+                        subclass = self.getAttribute("multiclass%d_subclass" % (i + 1), "")[0]
                         self.createItemClass(items, pc_class, level, subclass)
 
     def _convertAttributeName(self, name):

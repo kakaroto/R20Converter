@@ -240,6 +240,6 @@ class Item(Entity):
             "description": {"type": "String", "label": "Description", "value": description},
             "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
             "levels": {"type": "String", "label": "Class Levels", "value": level},
-            "sublclass": {"type": "String", "label": "Subclass", "value": kwargs.get("subclass", "")},
+            "subclass": {"type": "String", "label": "Subclass", "value": kwargs.get("subclass", "")},
         }
         return Item(database, None, name, "class", None, data)
