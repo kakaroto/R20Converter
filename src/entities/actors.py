@@ -6,7 +6,7 @@ import os
 import copy
 import math
 
-DISPLAY_ATTRIBUTES = True
+DISPLAY_ATTRIBUTES = False
 
 class Actors(DatabaseFile):
     def __init__(self, converter):
