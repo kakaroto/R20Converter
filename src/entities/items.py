@@ -55,10 +55,14 @@ class Items(DatabaseFile):
     def createItemSpell(self, name, description, spell_type, school, level, **kwargs):
         return Item.createItemSpell(self, name, description, spell_type, school, level, **kwargs)
 
+    def createItemClass(self, name, description, level, **kwargs):
+        return Item.createItemClass(self, name, description, level, **kwargs)
+
 class Item(Entity):
     def __init__(self, database, item_id, name, item_type="backpack", img=None, data={}):
         Entity.__init__(self, database, item_id)
-        print("Creating %s Item : %s" % (item_type, name))
+        # Don't want to print for every item created in a character sheet
+        #print("Creating %s Item : %s" % (item_type, name))
         
         self.entity = {"_id": self._id,
                 "name":  name,
@@ -77,6 +81,8 @@ class Item(Entity):
     def createItemFromHandout(database, handout, index, parent, path):
         item = Item(database, handout["id"], handout["name"], "backpack")
         
+        print("Creating Item from Handout : %s" % item.getName())
+
         content = handout["notes"]
         gmnotes = handout["gmnotes"]
         if gmnotes.strip() != "":
@@ -226,3 +232,14 @@ class Item(Entity):
             "prepared": {"type": "Boolean", "label": "Prepared Spell", "value": kwargs.get("prepared", False)}
         }
         return Item(database, None, name, "spell", None, data)
+
+        
+    @staticmethod
+    def createItemClass(database, name, description, level, **kwargs):
+        data = {
+            "description": {"type": "String", "label": "Description", "value": description},
+            "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
+            "levels": {"type": "String", "label": "Class Levels", "value": level},
+            "sublclass": {"type": "String", "label": "Subclass", "value": kwargs.get("subclass", "")},
+        }
+        return Item(database, None, name, "class", None, data)

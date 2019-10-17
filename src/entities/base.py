@@ -40,16 +40,19 @@ class DatabaseFile(object):
                 return matches[0]
         return None
 
-    def getBy(self, field, value):
+    def getBy(self, field, value, respect_case=True):
+        value = value if respect_case else value.lower()
         for entity in self.entities:
-            if field in entity.entity and entity.entity[field] == value:
-                return entity
+            if field in entity.entity:
+                ent_value = entity.entity[field] if respect_case else entity.entity[field].lower()
+                if value == ent_value:
+                    return entity
         return None
 
-    def getById(self, id):
-        return self.getBy("id", id)
-    def getByName(self, name):
-        return self.getBy("name", name)
+    def getById(self, id, respect_case=True):
+        return self.getBy("id", id, respect_case)
+    def getByName(self, name, respect_case=True):
+        return self.getBy("name", name, respect_case)
 
     def findCompendiumItem(self, compendium, item_name):
         converter = self._converter
@@ -64,7 +67,7 @@ class DatabaseFile(object):
             elif compendium == "Class Features":
                 db = converter.packs.get("classfeatures", None)
             if db:
-                return db.getByName(item_name)
+                return db.getByName(item_name, False)
         return None
 
     def getArgument(self, name, default=None):

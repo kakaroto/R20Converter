@@ -305,6 +305,7 @@ class Actor(Entity):
         self.addTraits(owned_items)
         self.addSpells(owned_items)
         self.addActions(owned_items)
+        self.addClasses(owned_items)
 
         folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
         if self.getArgument("export_as_module", False):
@@ -348,7 +349,7 @@ class Actor(Entity):
         if self._shaped:
             shaped_key = self._convertAttributeName(key)
             if shaped_key != key and shaped_key in from_dict:
-                print("Replacing {} with shaped key {}".format(key, shaped_key))
+                #print("Replacing {} with shaped key {}".format(key, shaped_key))
                 key = shaped_key
         return from_dict.get(key, (default, default, None))
 
@@ -366,7 +367,7 @@ class Actor(Entity):
         if self._shaped:
             shaped_key = self._convertRepeatingAttributeName(key)
             if shaped_key != key and shaped_key in self._repeating:
-                print("Replacing Repeating {} with shaped key {}".format(key, shaped_key))
+                #print("Replacing Repeating {} with shaped key {}".format(key, shaped_key))
                 key = shaped_key
         return self._repeating.get(key, {})
 
@@ -1569,6 +1570,38 @@ class Actor(Entity):
                 }
                 self.createItemSpell(items, name, description, spell_type, school, level, **kwargs)
 
+    def createItemClass(self, items, name, level, subclass=""):
+        compendium_item = self.findCompendiumItem("Classes", name)
+        kwargs = {"subclass": subclass}
+        if compendium_item:
+            kwargs["levels"] = level
+            item = self._converter.items.createItemFromCompendium(compendium_item, **kwargs)
+        else:
+            item = self._converter.items.createItemClass(name, name, level, **kwargs)
+            item.entity["img"] = self.token.token_filename
+        item.addToOwnedList(items)
+        return item
+
+    def addClasses(self, items):
+        if not self.isNPC():
+            if self._shaped:
+                classes = self.getRepeatingAttributes("class")
+                for pc_class in classes.values():
+                    name = self.getAttribute("name", "", from_dict=pc_class)[0]
+                    level = self.getAttributeInt("level", "", from_dict=pc_class)
+                    self.createItemClass(items, name, level)
+            else:
+                pc_class = self.getAttribute("class", "")[0]
+                base_level = self.getAttributeInt("base_level", 1)
+                subclass = self.getAttribute("subclass", "")[0]
+                self.createItemClass(items, pc_class, base_level, subclass)
+                for i in range(3):
+                    flag = self.getAttributeInt("multiclass%d_flag" % (i + 1), 0)
+                    if bool(flag):
+                        pc_class = self.getAttribute("multiclass%d" % (i + 1), "")[0]
+                        level = self.getAttributeInt("multiclass%d_lvl" % (i + 1), 1)
+                        subclass = self.getAttribute("mutliclass%d_subclass" % (i + 1), "")[0]
+                        self.createItemClass(items, pc_class, level, subclass)
 
     def _convertAttributeName(self, name):
         SHAPED_EQUIVALENCE = {
