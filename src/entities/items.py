@@ -43,20 +43,20 @@ class Items(DatabaseFile):
     def addEntity(self, entity):
         self.entities.append(entity)
         
-    def createItemFromCompendium(self, compendium_item, **kwargs):
-        return Item.createItemFromCompendium(self, compendium_item, **kwargs)
+    def createItemFromCompendium(self, id, compendium_item, **kwargs):
+        return Item.createItemFromCompendium(self, id, compendium_item, **kwargs)
 
-    def createItemInventory(self, name, description, inventory_type, **kwargs):
-        return Item.createItemInventory(self, name, description, inventory_type, **kwargs)
+    def createItemInventory(self, id, name, description, inventory_type, **kwargs):
+        return Item.createItemInventory(self, id, name, description, inventory_type, **kwargs)
 
-    def createItemFeat(self, name, description, feat_type, **kwargs):
-        return Item.createItemFeat(self, name, description, feat_type, **kwargs)
+    def createItemFeat(self, id, name, description, feat_type, **kwargs):
+        return Item.createItemFeat(self, id, name, description, feat_type, **kwargs)
 
-    def createItemSpell(self, name, description, spell_type, school, level, **kwargs):
-        return Item.createItemSpell(self, name, description, spell_type, school, level, **kwargs)
+    def createItemSpell(self, id, name, description, spell_type, school, level, **kwargs):
+        return Item.createItemSpell(self, id, name, description, spell_type, school, level, **kwargs)
 
-    def createItemClass(self, name, description, level, **kwargs):
-        return Item.createItemClass(self, name, description, level, **kwargs)
+    def createItemClass(self, id, name, description, level, **kwargs):
+        return Item.createItemClass(self, id, name, description, level, **kwargs)
 
 class Item(Entity):
     def __init__(self, database, item_id, name, item_type="backpack", img=None, data={}):
@@ -131,8 +131,8 @@ class Item(Entity):
         return item
 
     @staticmethod
-    def createItemFromCompendium(database, compendium_item, **kwargs):
-        item = Item(database, None, compendium_item.entity["name"])
+    def createItemFromCompendium(database, id, compendium_item, **kwargs):
+        item = Item(database, id, compendium_item.entity["name"])
         item.entity = copy.deepcopy(compendium_item.entity)
         item.entity["_id"] = item.getID()
         item.entity["permission"] = {"default": Item.PERMISSION_NONE}
@@ -140,13 +140,16 @@ class Item(Entity):
         if item.getArgument("no_compendium_overwrite", False) is False:
             for key in kwargs:
                 valueKey = "max" if key.endswith("_max") else "value"
-                item.entity["data"][key][valueKey] = kwargs[key]
+                if key in item.entity["data"]: 
+                    item.entity["data"][key][valueKey] = kwargs[key]
+                else:
+                    item.entity["data"][key] = {"type": "String", "label": key, "value": kwargs[key]},
 
         return item
 
 
     @staticmethod
-    def createItemInventory(database, name, description, inventory_type, **kwargs):
+    def createItemInventory(database, id, name, description, inventory_type, **kwargs):
         data = {"description": {"type": "String", "label": "Description", "value": description},
                 "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
                 "quantity": {"type": "Number", "label": "Quantity", "value": kwargs.get("quantity", 1)},
@@ -188,10 +191,10 @@ class Item(Entity):
                         "attuned": {"type": "Boolean", "label": "Attuned", "value": kwargs.get("attuned", False)},
                         "ability": {"type": "String", "label": "Offensive Ability", "value": kwargs.get("ability", "str")}
                         })
-        return Item(database, None, name, inventory_type, None, data)
+        return Item(database, id, name, inventory_type, None, data)
 
     @staticmethod
-    def createItemFeat(database, name, description, feat_type, **kwargs):
+    def createItemFeat(database, id, name, description, feat_type, **kwargs):
         data = {
             "description": {"type": "String", "label": "Description", "value": description},
             "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
@@ -207,10 +210,10 @@ class Item(Entity):
             "save": {"type": "String", "label": "Saving Throw", "value": kwargs.get("save", "")},
             "uses": {"type": "", "label": "Limited Uses", "value": kwargs.get("uses", 0), "max": kwargs.get("uses_max", 0)}
         }
-        return Item(database, None, name, "feat", None, data)
+        return Item(database, id, name, "feat", None, data)
 
     @staticmethod
-    def createItemSpell(database, name, description, spell_type, school, level, **kwargs):
+    def createItemSpell(database, id, name, description, spell_type, school, level, **kwargs):
         data = {
             "description": {"type": "String", "label": "Description", "value": description},
             "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
@@ -231,15 +234,15 @@ class Item(Entity):
             "ability": {"type": "String", "label": "Spellcasting Ability", "value": kwargs.get("ability", "")},
             "prepared": {"type": "Boolean", "label": "Prepared Spell", "value": kwargs.get("prepared", False)}
         }
-        return Item(database, None, name, "spell", None, data)
+        return Item(database, id, name, "spell", None, data)
 
         
     @staticmethod
-    def createItemClass(database, name, description, level, **kwargs):
+    def createItemClass(database, id, name, description, level, **kwargs):
         data = {
             "description": {"type": "String", "label": "Description", "value": description},
             "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
             "levels": {"type": "String", "label": "Class Levels", "value": level},
             "subclass": {"type": "String", "label": "Subclass", "value": kwargs.get("subclass", "")},
         }
-        return Item(database, None, name, "class", None, data)
+        return Item(database, id, name, "class", None, data)

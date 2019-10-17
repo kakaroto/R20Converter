@@ -6,6 +6,8 @@ import os
 import copy
 import math
 
+DISPLAY_ATTRIBUTES = True
+
 class Actors(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "actors.db")
@@ -290,8 +292,9 @@ class Actor(Entity):
         del token["actorData"]
 
         self._save_bonus = self.calculateSaveBonus()
+        self._actor_abilities = self.createActorAbilities()
         actor_data = OrderedDict([
-            ("abilities", self.createActorAbilities()),
+            ("abilities", self._actor_abilities),
             ("attributes", self.createActorAttributes()),
             ("details", self.createActorDetails()),
             ("skills", self.createActorSkills()),
@@ -301,11 +304,12 @@ class Actor(Entity):
             ("resources", self.createActorResources()),
         ])
         owned_items = []
-        self.addInventory(owned_items)
+        self.addClasses(owned_items)
         self.addTraits(owned_items)
         self.addSpells(owned_items)
+        # Add actions before inventory so attack items get added first
         self.addActions(owned_items)
-        self.addClasses(owned_items)
+        self.addInventory(owned_items)
 
         folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
         if self.getArgument("export_as_module", False):
@@ -435,7 +439,8 @@ class Actor(Entity):
                 if attr["name"] == "character_sheet" and value[0].startswith("Shaped"):
                     self._shaped = True
 
-        #self.displayAttributes()
+        if DISPLAY_ATTRIBUTES:
+            self.displayAttributes()
 
 
     def displayAttributes(self):
@@ -751,6 +756,22 @@ class Actor(Entity):
                 "min": 0
                 }
 
+    def createDetailXP(self):                
+        (current, max, _) = self.getAttribute("experience", 0)
+        try:
+            current = int(current)
+        except ValueError:
+            if "/" in current:
+                try:
+                    current = int(current.split("/")[0].replace(",", "").replace(".", ""))
+                except:
+                    pass
+        return {
+            "type": "Number",
+            "label": "Experience Points",
+            "value": current,
+        }
+
     def createActorDetails(self):
         details =  OrderedDict([
             ("alignment", self.createDetailAlignment()),
@@ -773,7 +794,7 @@ class Actor(Entity):
             details.update([
                     ("background", self.createAttributeString("Background", "background", "")),
                     ("level", self.createAttributeNumber("Character Level", "level", 1, {"min": 1})),
-                    ("xp", self.createAttributeNumber("Experience Points", "experience", 0)),
+                    ("xp", self.createDetailXP()),
                     ("trait", self.createAttributeString("Trait", "personality_traits", "")),
                     ("ideal", self.createAttributeString("Ideal", "ideals", "")),
                     ("bond", self.createAttributeString("Bond", "bonds", "")),
@@ -837,7 +858,6 @@ class Actor(Entity):
                 "survival": "sur",
 
             }
-            abilities = self.createActorAbilities()
             prof = self.getProficiencyBonus()
             for skill in self.getRepeatingAttributes("skill").values():
                 storage_name = self.getAttribute("storage_name", None, from_dict=skill)[0]
@@ -847,7 +867,7 @@ class Actor(Entity):
                 mod = self.getAttributeInt("total_with_sign", 0, from_dict=skill)
                 base_mod = 0
                 if ability_key:
-                    base_mod = abilities[ability_key.lower()[0:3]]["mod"]
+                    base_mod = self._actor_abilities[ability_key.lower()[0:3]]["mod"]
                 value = (mod - base_mod) / prof
                 if name is not None:
                     key = name.lower()
@@ -1233,11 +1253,11 @@ class Actor(Entity):
         name = name if name != "" else "<no name>"
         description = Entity.textToHtml(description)
         compendium_item = self.findCompendiumItem("Items", name)
-        if compendium_item:
+        if compendium_item and compendium_item.entity["type"] == inventory_type:
             kwargs["description"] = description
-            item = self._converter.items.createItemFromCompendium(compendium_item, **kwargs)
+            item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
-            item = self._converter.items.createItemInventory(name, description, inventory_type, **kwargs)
+            item = self._converter.items.createItemInventory(None, name, description, inventory_type, **kwargs)
             item.entity["img"] = self.token.token_filename
         item.addToOwnedList(items)
         
@@ -1258,18 +1278,20 @@ class Actor(Entity):
 
     def addInventory(self, items):
         for item in self.getRepeatingAttributes("inventory").values():
+            if self.getAttributeInt("hasattack", 0, from_dict=item) == 1:
+                continue
             name = self.getAttribute("itemname", "", from_dict=item)[0]
             content = self.getAttribute("itemcontent", "", from_dict=item)[0]
             count = self.getAttributeInt("itemcount", 1, from_dict=item)
             weight = self.getAttributeInt("itemweight", 1, from_dict=item)
             mods = self.getAttribute("itemmodifiers", "Item Type: Items", from_dict=item)[0]
             modifiers = {}
-            for mod in mods.split(", "):
+            for mod in mods.split(","):
                 if mod == "":
                     continue
                 if ":" in mod:
-                    key, value = mod.split(": ", 1)
-                    modifiers[key.strip()] = value
+                    key, value = mod.split(":", 1)
+                    modifiers[key.strip()] = value.strip()
                 elif "+" in mod:
                     key, value = mod.split(" +", 1)
                     modifiers[key.strip()] = "+" + value
@@ -1277,19 +1299,27 @@ class Actor(Entity):
                     key, value = mod.split(" -", 1)
                     modifiers[key.strip()] = "-" + value
             item_type = modifiers.get("Item Type", "")
-            if item_type in ["Adventuring Gear", "Items"]:
-                self.createItemInventory(items, name, content, "backpack", weight=weight, quantity=count)
-            elif item_type == "Ammunition":
-                self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, weaponType="ammo")
-            elif item_type in ["Light Armor", "Medium Armor", "Heavy Armor", "Shield"]:
-                armor = modifiers.get("AC", 0)
+            armor = modifiers.get("AC", 0)
+            damage = modifiers.get("Damage", "")
+            damage_type = modifiers.get("Damage Type", "").lower()
+            damage2 = modifiers.get("Alternate Damage", "")
+            damage2_type = modifiers.get("Altermate Damage Type", "").lower()
+            if damage2 == "":
+                damage2 = modifiers.get("Secondary Damage", "")
+                damage2_type = modifiers.get("Secondary Damage Type", "").lower()
+            weapon_range = modifiers.get("Range", "")
+
+            if item_type in ["Light Armor", "Medium Armor", "Heavy Armor", "Shield"] or armor != 0:
                 try:
                     armor = int(armor)
                 except ValueError:
                     pass
+                armor_type = item_type.split(" ")[0].lower()
+                if armor_type not in ["light", "medium", "heavy", "shielf"]:
+                    armor_type = "bonus"
                 kwargs = {
                     "armor": armor,
-                    "armorType": item_type.split(" ")[0].lower(),
+                    "armorType": armor_type,
                     "equipped": bool(self.getAttributeInt("equipped", 1, from_dict=item)),
                     "proficient": False,
                 }
@@ -1299,19 +1329,22 @@ class Actor(Entity):
                         if prof_name.lower() == item_type.lower():
                             kwargs["proficient"] = True
                 self.createItemInventory(items, name, content, "equipment", weight=weight, quantity=count, **kwargs)
-            elif item_type in ["Melee Weapon", "Ranged Weapon"]:
+            elif item_type in ["Melee Weapon", "Ranged Weapon", "Ammunition"] or damage != "":
                 kwargs = {
                     "properties": self.getAttribute("itemproperties", "", from_dict=item)[0],
-                    "damage": modifiers.get("Damage", ""),
-                    "damageType": modifiers.get("Damage Type", "").lower(),
-                    "damage2": modifiers.get("Alternate Damage", ""),
-                    "damage2Type": modifiers.get("Altermate Damage Type", "").lower(),
-                    "range": modifiers.get("Range", "")
+                    "damage": damage,
+                    "damageType": damage_type,
+                    "damage2": damage2,
+                    "damage2Type": damage2_type,
+                    "range": weapon_range
                 }
                 item = self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, **kwargs)
                 if item.entity["data"]["weaponType"]["value"] == "":
                     # Don't override the weapon type if taken from compendium, set it otherwise
-                    weaponType = "simpleM" if item_type == "Melee Weapon" else "simpleR"
+                    if item_type == "Ammunition":
+                        weaponType="ammo"
+                    else:
+                        weaponType = "simpleM" if item_type == "Melee Weapon" else "simpleR"
                     item.entity["data"]["weaponType"]["value"] = weaponType
                 weaponType = item.entity["data"]["weaponType"]["value"]
                 
@@ -1327,7 +1360,8 @@ class Actor(Entity):
 
                 item.entity["data"]["proficient"]["value"] = proficient
             else:
-                print("Unknown item type : ", name, modifiers)
+                if item_type not in ["Adventuring Gear", "Items", "Gear"]:
+                    print("Unknown item type : ", name, modifiers)
                 self.createItemInventory(items, name, content, "backpack", weight=weight, quantity=count)
 
 
@@ -1337,9 +1371,9 @@ class Actor(Entity):
         compendium_item = self.findCompendiumItem("Class Features", name)
         if compendium_item:
             kwargs["description"] = description
-            item = self._converter.items.createItemFromCompendium(compendium_item, **kwargs)
+            item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
-            item = self._converter.items.createItemFeat(name, description, feat_type, **kwargs)
+            item = self._converter.items.createItemFeat(None, name, description, feat_type, **kwargs)
             item.entity["img"] = self.token.token_filename
         item.addToOwnedList(items)
         self.exportItem(item, "Abilities & Feats")
@@ -1442,19 +1476,25 @@ class Actor(Entity):
         attacks = self.getRepeatingAttributes("attack")
         for attack in attacks.values():
             # Skip existing spells and items
-            if "spellid" in attack or "itemid" in attack:
+            if "spellid" in attack:
                 continue
             name = self.getAttribute("atkname", "", from_dict=attack)[0]
             description = self.getAttribute("atk_desc", "", from_dict=attack)[0]
-            dmg = self.getAttribute("dmgbase", "", from_dict=attack)[0]
-            dmg2 = self.getAttribute("dmg2base", "", from_dict=attack)[0]
-            dmg_type = self.getAttribute("dmgtype", "", from_dict=attack)[0]
-            dmg2_type = self.getAttribute("dmg2type", "", from_dict=attack)[0]
-            atk_attr = self.getAttribute("atkattr_base", "", from_dict=attack)[0]
+            dmg = dmg_type = dmg2 = dmg2_type = atk_attr = atk_range = saveattr = ""
+            if self.getAttribute("dmgflag", "1", from_dict=attack)[0] != "0":
+                dmg = self.getAttribute("dmgbase", "", from_dict=attack)[0]
+                dmg_type = self.getAttribute("dmgtype", "", from_dict=attack)[0]
+            if self.getAttribute("dmg2flag", "0", from_dict=attack)[0] != "0":
+                dmg2 = self.getAttribute("dmg2base", "", from_dict=attack)[0]
+                dmg2_type = self.getAttribute("dmg2type", "", from_dict=attack)[0]
+            if self.getAttribute("atkflag", "1", from_dict=attack)[0] != "0":
+                atk_attr = self.getAttribute("atkattr_base", "strength", from_dict=attack)[0]
             atk_range = self.getAttribute("atkrange", "", from_dict=attack)[0]
-            saveattr = self.getAttribute("saveattr", "", from_dict=attack)[0]
-            if self.getAttributeInt("dmg2flag", 0, from_dict=attack) == 0:
-                dmg2 = ""
+            atkmagic = self.getAttribute("atkmagic", "", from_dict=attack)[0]
+            if atkmagic != "" and dmg != "":
+                dmg = "%s + %s" % (dmg, atkmagic)
+            if self.getAttribute("saveflag", "0", from_dict=attack)[0] != "0":
+                saveattr = self.getAttribute("saveattr", "", from_dict=attack)[0]
 
             atk_ability = "str"
             for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
@@ -1462,10 +1502,11 @@ class Actor(Entity):
                     atk_ability = ability[0:3]
                     break
             save = saveattr.lower()[0:3]
-            if dmg2 != "" and save == "":
+            if (dmg2 != "" or atkmagic != "") and save == "":
                 # Let's make this into a weapon attack due to alternate damage
                 kwargs = {
                         "weaponType": "simpleM",
+                        "bonus": atkmagic,
                         "damage": dmg,
                         "damageType": dmg_type.lower(),
                         "damage2": dmg2,
@@ -1495,9 +1536,9 @@ class Actor(Entity):
             if "prepared" not in compendium_item.entity["data"]:
                 compendium_item.entity["data"]["prepared"] = {"type": "String", "label": "Prepared Spell", "value": False}
             kwargs["description"] = description
-            item = self._converter.items.createItemFromCompendium(compendium_item, **kwargs)
+            item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
-            item = self._converter.items.createItemSpell(name, description, spell_type, school, level, **kwargs)
+            item = self._converter.items.createItemSpell(None, name, description, spell_type, school, level, **kwargs)
             item.entity["img"] = self.token.token_filename
         item.addToOwnedList(items)
         self.exportItem(item, "Spells")
@@ -1581,9 +1622,9 @@ class Actor(Entity):
         kwargs = {"subclass": subclass}
         if compendium_item:
             kwargs["levels"] = level
-            item = self._converter.items.createItemFromCompendium(compendium_item, **kwargs)
+            item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
-            item = self._converter.items.createItemClass(name, name, level, **kwargs)
+            item = self._converter.items.createItemClass(None, name, name, level, **kwargs)
             item.entity["img"] = self.token.token_filename
         item.addToOwnedList(items)
         return item
