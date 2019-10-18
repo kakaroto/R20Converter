@@ -75,7 +75,9 @@ class R20Converter(object):
             else:
                 self.journal = Journal(self)
             if self.getArgument("disable_module_items", False):
-                self.items = EmptyDB(self, "items")
+                # actors can modify the items list, so create the correct class
+                # and overwrite it with an emptyDB later
+                self.items = Items(self)
             else:
                 self.items = Items(self)
                 self.items.createEntities()
@@ -91,6 +93,8 @@ class R20Converter(object):
                 self.playlists = EmptyDB(self, "playlists")
             else:
                 self.playlists = Playlists(self)
+            if self.getArgument("disable_module_items", False):
+                self.items = EmptyDB(self, "items")
             # Module will add the packs that are not empty and save them to file
             self.module = Module(self).save()
         else:

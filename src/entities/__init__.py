@@ -1,5 +1,5 @@
 from .base import DatabaseFile, Entity, EmptyDB
-from .actors import Actors, Actor
+from .actors import Actors, Actor, DISPLAY_ATTRIBUTES
 from .items import Items, Item
 from .combat import Combat, Encounter
 from .folders import Folders, Folder

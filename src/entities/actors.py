@@ -311,11 +311,12 @@ class Actor(Entity):
         self.addActions(owned_items)
         self.addInventory(owned_items)
 
-        folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
         if self.getArgument("export_as_module", False):
             folder = None
         elif character["archived"] and not self.getArgument("disable_archived", False):
             folder = "archived-characters-folder-id"
+        else:
+            folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
 
         self.entity = {"_id": self._id,
                        "name": character["name"],
@@ -1428,7 +1429,8 @@ class Actor(Entity):
         description_block = "<strong>" + name_display + "</strong>"
         if dmg != "":
             description_block += "<em>" + attack_type + " </em>" + tohitrange + ". <em>Hit : </em>" + onhit
-        description_block += description
+        if description != "":
+            description_block += ". " + description
         match = re.search(r"DC (\d+) (.*?) saving throw", description)
         save = ""
         if match:
@@ -1473,26 +1475,48 @@ class Actor(Entity):
                 name = "[Legendary]" + name
             self.createItemFeat(items, name, description_block, feat_type, **kwargs)
 
-    def addActions(self, items):
-        if self.isNPC():
-            npc_actions = self.getRepeatingAttributes("npcaction")
-            npc_legendary_actions = self.getRepeatingAttributes("npcaction-l")
-            for action in npc_actions.values():
-                self.addNPCAction(items, action, False)
-            for action in npc_legendary_actions.values():
-                self.addNPCAction(items, action, True)
-        
-        # This is mostly for non NPCs if they manually added a custom attack
-        # otherwise, most will be filtered out as they'd match existing inventory
-        # items or existing spells
-        attacks = self.getRepeatingAttributes("attack")
-        for attack in attacks.values():
-            # Skip existing spells and items
-            if "spellid" in attack:
-                continue
-            name = self.getAttribute("atkname", "", from_dict=attack)[0]
-            description = self.getAttribute("atk_desc", "", from_dict=attack)[0]
-            dmg = dmg_type = dmg_attr = dmg2 = dmg2_type = dmg2_attr = atk_attr = atk_range = saveattr = ""
+    def addPCAction(self, items, attack):
+        name = self.getAttribute("atkname", "", from_dict=attack)[0]
+        description = self.getAttribute("atk_desc", "", from_dict=attack)[0]
+        dmg = dmg_type = dmg_attr = dmg2 = dmg2_type = dmg2_attr = atk_attr = atk_range = saveattr = ""
+
+        if self._shaped:
+            atkmagic = ""
+            if self.getAttributeInt("attack_toggle", 1, from_dict=attack) != 0:
+                atk_attr = self.getAttribute("attack_ability", "strength", from_dict=attack)[0].lower()
+            atk_range = self.getAttribute("range", "", from_dict=attack)[0]
+            if atk_range == "":
+                atk_range = self.getAttribute("reach", "", from_dict=attack)[0]
+            for prefix in ["attack", "attack_second", "other", "heal", "saving_throw"]:
+                toggle_name = "attack_toggle" if prefix.startswith("attack") else (prefix + "_damage_toggle")
+                toggle = bool(self.getAttributeInt(toggle_name, 0, from_dict=attack))
+                if not toggle:
+                    continue
+                dice = self.getAttribute(prefix + "_damage_dice", "", from_dict=attack)[0]
+                die = self.getAttribute(prefix + "_damage_die", "", from_dict=attack)[0]
+                bonus = self.getAttribute(prefix + "_damage_bonus", "", from_dict=attack)[0]
+                ab = self.getAttribute(prefix + "_damage_ability", "", from_dict=attack)[0]
+                dtype = self.getAttribute(prefix + "_damage_type", "", from_dict=attack)[0]
+                mod = 0
+                try:
+                    if ab != "":
+                        mod = self._actor_abilities[ab.lower()[0:3]]["mod"]
+                except:
+                    pass
+                value = "{}{}{}{}".format(dice, die, "" if mod == 0 else " + {}".format(mod), "" if bonus else " + {}".format(bonus))
+                if prefix == "attack" or prefix == "saving_throw":
+                    dmg = value
+                    dmg_type = dtype
+                    dmg_attr = ab
+                elif prefix == "other" or prefix == "attack_second":
+                    dmg2 = value
+                    dmg2_type = dtype
+                    dmg2_attr = ab
+                elif prefix == "heal":
+                    dmg = value
+                    dmg_type = "healing"
+                    dmg_attr = ab
+        else:
             if self.getAttribute("dmgflag", "1", from_dict=attack)[0] != "0":
                 dmg = self.getAttribute("dmgbase", "", from_dict=attack)[0]
                 dmg_type = self.getAttribute("dmgtype", "", from_dict=attack)[0]
@@ -1510,50 +1534,75 @@ class Actor(Entity):
                 dmg = "%s + %s" % (dmg, atkmagic)
             if self.getAttribute("saveflag", "0", from_dict=attack)[0] != "0":
                 saveattr = self.getAttribute("saveattr", "", from_dict=attack)[0]
+        atk_ability = ""
+        dmg_ability = ""
+        dmg2_ability = ""
+        for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
+            if ability in str(atk_attr):
+                atk_ability = ability[0:3]
+            if ability in str(dmg_attr):
+                dmg_ability = ability[0:3]
+            if ability in str(dmg2_attr):
+                dmg2_ability = ability[0:3]
+        save = saveattr.lower()[0:3]
+        if dmg2_ability != "":
+            dmg2 += " + {}".format(self._actor_abilities[dmg2_ability]["mod"])
+        # If second damage but no ability for the first damage, then it can't be a weapon attack
+        if dmg2 != "" and dmg_ability == "":
+            dmg += " + " + dmg2
+            dmg2 = ""
+        if (dmg2 != "" or atkmagic != "" or "itemid" in attack) and (save == "" or not proficient):
+            # Let's make this into a weapon attack due to alternate damage, or if not proficient
+            kwargs = {
+                    "weaponType": "simpleM",
+                    "bonus": atkmagic,
+                    "damage": dmg,
+                    "damageType": dmg_type.lower(),
+                    "damage2": dmg2,
+                    "damage2Type": dmg2_type.lower(),
+                    "range": atk_range,
+                    "ability": atk_ability,
+                    "proficient": proficient
+            }
+            self.createItemInventory(items, name, description, "weapon", **kwargs)
+        else:
+            if dmg_ability != "":
+                dmg += " + {}".format(self._actor_abilities[dmg_ability]["mod"])
+            kwargs = {
+                    "ability": atk_ability,
+                    "target": "",
+                    "range": atk_range,
+                    "damage": dmg,
+                    "damageType": dmg_type.lower(),
+                    "save": save
+            }
+            self.createItemFeat(items, name, description, "attack" if atk_ability != "" else "passive", **kwargs)
 
-            atk_ability = ""
-            dmg_ability = ""
-            dmg2_ability = ""
-            for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
-                if ability in str(atk_attr):
-                    atk_ability = ability[0:3]
-                if ability in str(dmg_attr):
-                    dmg_ability = ability[0:3]
-                if ability in str(dmg2_attr):
-                    dmg2_ability = ability[0:3]
-            save = saveattr.lower()[0:3]
-            if dmg2_ability != "":
-                dmg2 += " + {}".format(self._actor_abilities[dmg2_ability]["mod"])
-            # If second damage but no ability for the first damage, then it can't be a weapon attack
-            if dmg2 != "" and dmg_ability == "":
-                dmg += " + " + dmg2
-                dmg2 = ""
-            if (dmg2 != "" or atkmagic != "" or "itemid" in attack) and (save == "" or not proficient):
-                # Let's make this into a weapon attack due to alternate damage, or if not proficient
-                kwargs = {
-                        "weaponType": "simpleM",
-                        "bonus": atkmagic,
-                        "damage": dmg,
-                        "damageType": dmg_type.lower(),
-                        "damage2": dmg2,
-                        "damage2Type": dmg2_type.lower(),
-                        "range": atk_range,
-                        "ability": atk_ability,
-                        "proficient": proficient
-                }
-                self.createItemInventory(items, name, description, "weapon", **kwargs)
-            else:
-                if dmg_ability != "":
-                    dmg += " + {}".format(self._actor_abilities[dmg_ability]["mod"])
-                kwargs = {
-                        "ability": atk_ability,
-                        "target": "",
-                        "range": atk_range,
-                        "damage": dmg,
-                        "damageType": dmg_type.lower(),
-                        "save": save
-                }
-                self.createItemFeat(items, name, description, "attack" if atk_ability != "" else "passive", **kwargs)
+
+    def addActions(self, items):
+        if self.isNPC():
+            npc_actions = self.getRepeatingAttributes("npcaction")
+            npc_legendary_actions = self.getRepeatingAttributes("npcaction-l")
+            for action in npc_actions.values():
+                self.addNPCAction(items, action, False)
+            for action in npc_legendary_actions.values():
+                self.addNPCAction(items, action, True)
+        
+        # This is mostly for non NPCs if they manually added a custom attack
+        # otherwise, most will be filtered out as they'd match existing inventory
+        # items or existing spells
+        attacks = self.getRepeatingAttributes("attack")
+        for attack in attacks.values():
+            # Skip existing spells and items
+            if "spellid" in attack:
+                continue
+            self.addPCAction(items, attack)
+        if self._shaped:
+            attacks = self.getRepeatingAttributes("offense")
+            attacks.update(self.getRepeatingAttributes("attacher"))
+            attacks.update(self.getRepeatingAttributes("classfeature"))
+            for attack in attacks.values():
+                self.addPCAction(items, attack)
 
 
     def createItemSpell(self, items, name, description, spell_type, school, level, **kwargs):
@@ -1580,27 +1629,61 @@ class Actor(Entity):
                 name = self.getAttribute("spellname", "", from_dict=spell)[0]
                 description = self.getAttribute("spelldescription", "", from_dict=spell)[0]
                 higherlevel = self.getAttribute("spellathigherlevels", "", from_dict=spell)[0]
-                school = self.getAttribute("spellschool", "Abjuration", from_dict=spell)[0]
+                school = self.getAttribute("spellschool", "Abjuration", from_dict=spell)[0].lower()
                 save = self.getAttribute("spellsave", "", from_dict=spell)[0]
+
                 dmg = self.getAttribute("spelldamage", "", from_dict=spell)[0]
                 dmg2 = self.getAttribute("spelldamage2", "", from_dict=spell)[0]
                 dmg_type = self.getAttribute("spelldamagetype", "", from_dict=spell)[0]
                 healing = self.getAttribute("spellhealing", "", from_dict=spell)[0]
+                spell_ability = self.getAttribute("spell_ability", "", from_dict=spell)[0]
+
                 output = self.getAttribute("spelloutput", "", from_dict=spell)[0]
                 target = self.getAttribute("spelltarget", "", from_dict=spell)[0]
                 spellrange = self.getAttribute("spellrange", "", from_dict=spell)[0]
                 castingtime = self.getAttribute("spellcastingtime", "", from_dict=spell)[0]
                 duration = self.getAttribute("spellduration", "", from_dict=spell)[0]
-                spell_ability = self.getAttribute("spell_ability", "", from_dict=spell)[0]
                 materials = self.getAttribute("spellcomp_materials", "", from_dict=spell)[0]
                 innate = self.getAttribute("innate", "", from_dict=spell)[0]
                 spell_innate = self.getAttribute("spell_innate", "", from_dict=spell)[0]
                 concentration = self.getAttribute("spellconcentration", "", from_dict=spell)[0] != ""
                 ritual = self.getAttribute("spellritual", "", from_dict=spell)[0] != ""
-                prepared = bool(self.getAttributeInt("spellprepared", 0, from_dict=spell))
+                prepared = self.getAttributeInt("spellprepared", 0, from_dict=spell)
+
+                if self._shaped:
+                    prepared = prepared == "Yes"
+                    castingtime = self._capitalizeAll(castingtime.replace("_", " "))
+                    duration = self._capitalizeAll(duration.replace("_", " "))
+                    dmg = dmg2 = dmg_type = healing = ""
+                    for prefix in ["attack", "attack_second", "other", "heal", "saving_throw"]:
+                        toggle_name = "attack_toggle" if prefix.startswith("attack") else (prefix + "_damage_toggle")
+                        toggle = bool(self.getAttributeInt(toggle_name, 0, from_dict=spell))
+                        if not toggle:
+                            continue
+                        dice = self.getAttribute(prefix + "_damage_dice", "", from_dict=spell)[0]
+                        die = self.getAttribute(prefix + "_damage_die", "", from_dict=spell)[0]
+                        bonus = self.getAttribute(prefix + "_damage_bonus", "", from_dict=spell)[0]
+                        ab = self.getAttribute(prefix + "_damage_ability", "", from_dict=spell)[0]
+                        dtype = self.getAttribute(prefix + "_damage_type", "", from_dict=spell)[0]
+                        mod = 0
+                        try:
+                            if ab != "":
+                                mod = self._actor_abilities[ab.lower()[0:3]]["mod"]
+                        except:
+                            pass
+                        value = "{}{}{}{}".format(dice, die, "" if mod == 0 else " + {}".format(mod), "" if bonus else " + {}".format(bonus))
+                        if prefix == "attack" or prefix == "saving_throw":
+                            dmg = value
+                            dmg_type = dtype
+                        elif prefix == "other" or prefix == "attack_second":
+                            dmg2 = value
+                        elif prefix == "heal":
+                            healing = value
+                else:
+                    prepared = bool(prepared)
 
                 save = save.lower()[0:3]
-                school = "trs" if school == "transmutation" else school.lower()[0:3]
+                school = "trs" if school == "transmutation" else school[0:3]
                 if save != "":
                     spell_type = "save"
                 elif healing != "":
@@ -1621,12 +1704,21 @@ class Actor(Entity):
                         use_ability = ability[0:3]
                         break
                 components = []
-                if self.getAttributeInt("spellcomp_v", 1, from_dict=spell) != 0:
-                    components.append("V")
-                if self.getAttributeInt("spellcomp_s", 1, from_dict=spell) != 0:
-                    components.append("S")
-                if self.getAttributeInt("spellcomp_m", 1, from_dict=spell) != 0:
-                    components.append("M")
+                if self._shaped:
+                    comps = self.getAttribute("components", "", from_dict=spell)[0]
+                    if "_V" in comps:
+                        components.append("V")
+                    if "_S" in comps:
+                        components.append("S")
+                    if "_M" in comps:
+                        components.append("M")
+                else:
+                    if self.getAttributeInt("spellcomp_v", 1, from_dict=spell) != 0:
+                        components.append("V")
+                    if self.getAttributeInt("spellcomp_s", 1, from_dict=spell) != 0:
+                        components.append("S")
+                    if self.getAttributeInt("spellcomp_m", 1, from_dict=spell) != 0:
+                        components.append("M")
                 if innate != "" or spell_innate != "":
                     name += " (" + (innate if innate != "" else spell_innate) + ")"
                 kwargs = {
@@ -1801,19 +1893,21 @@ class Actor(Entity):
 
             "npc_legendary_actions": "legendary_action_amount",
             "legendary_flag": "legendary_action_amount",
+
             "spellname": "name",
             "spellcomp": "components",
             "spellconcentration": "concentration",
-            "spelldamagetype": "",
             "spelldescription": "content",
-            "spellathigherlevels": "higherlevel",
+            "spellathigherlevels": "higher_level",
             "spellduration": "duration",
             "spelllevel": "spelllevel",
-            "spellcompmaterials": "materials",
+            "spellcomp_materials": "materials",
             "spellrange": "range",
-            "spellsave": "savingthrowvsability",
+            "spellsave": "saving_throw_vs_ability",
             "spellschool": "school",
-            "spellcastingtime": "castingtime",
+            "spellcastingtime": "casting_time",
+            "spellprepared": "is_prepared",
+            "spell_ability": "attack_ability",
 
             "name": "name",
             "namedisplay": "name",
@@ -1829,7 +1923,12 @@ class Actor(Entity):
             "itemname": "name",
             "itemcontent": "content",
             "itemcount": "uses",
-            "itemweight": "weight"
+            "itemweight": "weight",
+
+            "atkname": "name",
+            "atk_desc": "content",
+            "atkprofflag": "proficiency",
+            "atkflag": "attack_toggle"
         }
         return SHAPED_EQUIVALENCE.get(name, name)
 
