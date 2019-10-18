@@ -19,7 +19,7 @@ except:
     except:
         sg = None
 
-version = "0.6RC1"
+version = "0.6"
 
 class R20Converter(object):
     def __init__(self, args):
@@ -138,7 +138,8 @@ class GUI(object):
 
     def add_argument(self, argument, **kwargs):
         self.parser.add_argument(argument, **kwargs)
-        if not argument.startswith("--") or argument in ["--interactive", "--debug-page", "--fvtt-public-path"]:
+        if not argument.startswith("--") or argument in ["--interactive", "--debug-page", "--fvtt-public-path", "--max-path", \
+            "--disable-module-journal", "--disable-module-actors", "--disable-module-scenes", "--disable-module-playlists"]:
             return
         self.options[argument] = kwargs
         if argument in ["--json", "--export-as-module"]:
@@ -148,11 +149,14 @@ class GUI(object):
             "--gm-password": "GM Password",
             "--npc-source": "NPC Source",
             "--no-compendium-overwrite": "Overwrite actor items and feats with data from SRD Compendium",
-            "--use-original-image-urls": "Use Roll 20 Image URLs (NOT Recommended)"
+            "--use-original-image-urls": "Use Roll 20 Image URLs (NOT Recommended)",
+            "--folder-as-items": "List of handout folders to convert into items (comma separated)", 
         }
         name = " ".join(map(lambda x: x.capitalize(), argument[2:].split("-")))
         name = argument_labels.get(argument, name)
         default = kwargs.get("default", None) if kwargs.get("default", None) is not None else ""
+        if kwargs.get("action", "") == "append":
+            default = ",".join(default)
         size = self.LABEL_SIZE
         if argument == "--description":
             widget = sg.Multiline(default, key=argument)
@@ -204,6 +208,10 @@ class GUI(object):
                     if self.options[option].get("action", "") == "store_true":
                         if value:
                             args.append(option)
+                    elif self.options[option].get("action", "") == "append":
+                        if value:
+                            for value in value.split(","):
+                                args.extend([option, value])
                     elif self.options[option].get("default", None) is not None or value != "":
                         args.extend([option, value])
                 if os.path.exists(path):
@@ -258,7 +266,6 @@ parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT p
 parser.add_argument("--npc-source", default="Roll 20", help="Source reference for NPC actors (displayed in the character sheet)")
 parser.add_argument("--no-compendium-overwrite", action="store_true", help="If enabled, items, feats and spells found in the Compendium will not be overwritten with custom description/damage/etc.. from the Roll20 data")
 parser.add_argument("--images-as-drawings", action="store_true", help="Set all images on the scene as textured drawings instead of tiles (requires Furnace to function properly)")
-parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
 parser.add_argument("--disable-module-journal", action="store_true", help="Disable conversion of Journal entries in the module (requires --export-as-module)")
 parser.add_argument("--disable-module-actors", action="store_true", help="Disable conversion of Actors in the module (requires --export-as-module)")
 parser.add_argument("--disable-module-scenes", action="store_true", help="Disable conversion of Scenes in the module (requires --export-as-module)")
@@ -266,6 +273,7 @@ parser.add_argument("--disable-module-playlists", action="store_true", help="Dis
 parser.add_argument("--folder-as-items", action="append", default=["Magic Items"], help="Converts each entry in a journal folder into items. Useful for 'Magic Items' folders. Can be passed multiple times to convert more than one folder.")
 parser.add_argument("--dont-export-actor-items", action="store_true", help="Items from actors will be exported as individual Entity Items. This option disables that behavior and no items will be created.")
 parser.add_argument("--no-duplicate-actor-items", action="store_true", help="This option causes items with the same name from different actors to be exported under a single item. The first processed actor with the item of that name gets their item in the item entities.")
+parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
 parser.add_argument("--max-path", default=256, type=int, help="Set the maximum allowed length for the asset's absolute file paths. Most File Systems will have a limit of 256 characters, but you can set it to lower (or higher) if you plan on moving the worlds directory to a different FVTT path. Files that don't fit will be written in an 'assets' directory instead of the usual hierarchy.")
 
 
