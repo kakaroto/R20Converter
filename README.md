@@ -4,7 +4,7 @@ This application converts a Roll20 campaign into a Foundry VTT world or module.
 
 It will automate the entire conversion process and most(*) of your campaign will be setup just the way it was in Roll 20
 
-(*) Your chat log will not be converted (yet) and things such as decks, tables and macros will not be converted either as those features are not yet available in Foundry VTT.
+(*) Your chat log will not be converted (yet) and things such as decks, tables and macros will not be converted either as those features are not yet available in Foundry VTT. You also need to be using the OGL character sheet ("D&D 5e by Roll20") though partial support for the Shaped sheet is available. 
 
 ## How to use
 
@@ -33,6 +33,8 @@ If using the command line interface, to start the conversion, run the R20Convert
 Don't forget that the directory name needs to be url-friendly, so don't use spaces (see [http://foundryvtt.com/pages/hosting.html#where-do-i-put-my-content](http://foundryvtt.com/pages/hosting.html#where-do-i-put-my-content)). Also note that image paths are dependent on the world directory name, so you cannot rename the directory after the conversion is done.
 
 ## Examples
+
+Using the new graphical user interface, these examples have become irrelevant, but for those who want to use the command line interface, here are some examples of use that can be useful. Note that the command line interface does have a few small extra options which are not availabel through the graphical user interface.
 
 Here's the simplest example to convert the campaign from the file "The Lost Mine of Phandelver.zip" into the world directory "lmop"
 
@@ -75,10 +77,16 @@ usage: R20Converter.py [-h] [--json] [--export-as-module]
                        [--debug-page DEBUG_PAGE]
                        [--fvtt-public-path FVTT_PUBLIC_PATH]
                        [--npc-source NPC_SOURCE] [--no-compendium-overwrite]
-                       [--use-original-image-urls]
+                       [--images-as-drawings] [--disable-module-journal]
+                       [--disable-module-actors] [--disable-module-scenes]
+                       [--disable-module-playlists]
+                       [--folder-as-items FOLDER_AS_ITEMS]
+                       [--dont-export-actor-items]
+                       [--no-duplicate-actor-items]
+                       [--use-original-image-urls] [--max-path MAX_PATH]
                        destination-directory exported.zip
 
-R20Converter v0.5
+R20Converter v0.6
 
 positional arguments:
   destination-directory
@@ -154,9 +162,44 @@ optional arguments:
                         If enabled, items, feats and spells found in the
                         Compendium will not be overwritten with custom
                         description/damage/etc.. from the Roll20 data
+  --images-as-drawings  Set all images on the scene as textured drawings
+                        instead of tiles (requires Furnace to function
+                        properly)
+  --disable-module-journal
+                        Disable conversion of Journal entries in the module
+                        (requires --export-as-module)
+  --disable-module-actors
+                        Disable conversion of Actors in the module (requires
+                        --export-as-module)
+  --disable-module-scenes
+                        Disable conversion of Scenes in the module (requires
+                        --export-as-module)
+  --disable-module-playlists
+                        Disable conversion of Playlists in the module
+                        (requires --export-as-module)
+  --folder-as-items FOLDER_AS_ITEMS
+                        Converts each entry in a journal folder into items.
+                        Useful for 'Magic Items' folders. Can be passed
+                        multiple times to convert more than one folder.
+  --dont-export-actor-items
+                        Items from actors will be exported as individual
+                        Entity Items. This option disables that behavior and
+                        no items will be created.
+  --no-duplicate-actor-items
+                        This option causes items with the same name from
+                        different actors to be exported under a single item.
+                        The first processed actor with the item of that name
+                        gets their item in the item entities.
   --use-original-image-urls
                         Do not copy images to the world folder but use Roll20
                         URL instead. (NOT recommended)
+  --max-path MAX_PATH   Set the maximum allowed length for the asset's
+                        absolute file paths. Most File Systems will have a
+                        limit of 256 characters, but you can set it to lower
+                        (or higher) if you plan on moving the worlds directory
+                        to a different FVTT path. Files that don't fit will be
+                        written in an 'assets' directory instead of the usual
+                        hierarchy.
 
 Convert Roll20 campaigns into Foundry VTT worlds or modules.
 ```
@@ -167,6 +210,6 @@ When the script is done, if you hadn't converted the campaign into the appropria
 
 And you're done!
 
-The converted world will automatically enable the [entityorder](https://github.com/kakaroto/fvtt-module-entityorder) and [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) FVTT modules in the generated world. The `entityorder` FVTT module is required in order to see the journals appearing in the correct order. 
+The converted world will automatically enable the [entityorder](https://github.com/kakaroto/fvtt-module-entityorder), [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) and [Furnace](https://github.com/kakaroto/fvtt-module-furnace) FVTT modules in the generated world. The `entityorder` FVTT module is required in order to see the journals appearing in the correct order while the Furnace module is only really required if you use the `--images-as-drawings` option. 
 
 If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info), another project of mine which lets you roll from monster stat blocks and character sheets directly in D&D Beyond and get the result in your VTT application.
