@@ -91,7 +91,7 @@ class Token(Entity):
         # We don't check for light_hassight because R20 has to set it for NPC tokens to False
         # otherwise they get performance issues
         (dim, bright) = self.computeLighting(light_radius, light_dimradius, self.width, self.height)
-        if self._token.get("light_otherplayers", True):
+        if self._token.get("light_otherplayers", False):
             self.emits_light = True
             self.emits_dim_light = dim
             self.emits_bright_light = bright
