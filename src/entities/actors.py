@@ -209,16 +209,16 @@ class Actor(Entity):
 
         npc = self.isNPC()
 
-        avatar_filename = ""
+        self._avatar_filename = ""
         if character["avatar"] != "":
             if self.getArgument("use_original_image_urls", False):
-                avatar_filename = character["avatar"]
+                self._avatar_filename = character["avatar"]
             else:
                 filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "avatar.png")
                 if self.getArgument("json", False):
-                    (_, avatar_filename) = self.downloadResource(character["avatar"], filename)
+                    (_, self._avatar_filename) = self.downloadResource(character["avatar"], filename)
                 else:
-                    (_, avatar_filename) = self.copyZipFile(filename, filename)
+                    (_, self._avatar_filename) = self.copyZipFile(filename, filename)
 
         default_token = character["defaulttoken"] if character["defaulttoken"] != "" else None
         self.token = Token(self._id, character["name"], default_token)
@@ -233,8 +233,8 @@ class Actor(Entity):
                     (_, token_filename) = self.downloadResource(default_token["imgsrc"], filename)
                 else:
                     (_, token_filename) = self.copyZipFile(filename, filename)
-                if avatar_filename == "":
-                    avatar_filename = token_filename
+                if self._avatar_filename == "":
+                    self._avatar_filename = token_filename
                 if "sides" in default_token and len(default_token["sides"]) > 0:
                     randomImg = True
                     for i in range(len(default_token["sides"])):
@@ -244,10 +244,10 @@ class Actor(Entity):
                         else:
                             (_, token_filename) = self.copyZipFile(filename, filename)
                         token_filename = token_filename.replace("side_" + str(i) + ".png", "side_*.png")
-            if avatar_filename == "":
-                avatar_filename = token_filename
+            if self._avatar_filename == "":
+                self._avatar_filename = token_filename
         if token_filename == "":
-            token_filename = avatar_filename
+            token_filename = self._avatar_filename
         self.token.token_filename = token_filename
 
         token = self.token.getDict()
@@ -320,7 +320,7 @@ class Actor(Entity):
 
         self.entity = {"_id": self._id,
                        "name": character["name"],
-                       "img": avatar_filename,
+                       "img": self._avatar_filename,
                        "permission": permissions,
                        "data": actor_data,
                        "folder": Entity.normalizeID(folder),
@@ -1259,7 +1259,7 @@ class Actor(Entity):
             item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
             item = self._converter.items.createItemInventory(None, name, description, inventory_type, **kwargs)
-            item.entity["img"] = self.token.token_filename
+            item.entity["img"] = self._avatar_filename
         owned_item = item.addToOwnedList(items)
 
         if inventory_type == "backpack":
@@ -1290,15 +1290,19 @@ class Actor(Entity):
             for mod in mods.split(","):
                 if mod == "":
                     continue
-                if ":" in mod:
-                    key, value = mod.split(":", 1)
-                    modifiers[key.strip()] = value.strip()
-                elif "+" in mod:
-                    key, value = mod.split(" +", 1)
-                    modifiers[key.strip()] = "+" + value
-                elif "-" in mod:
-                    key, value = mod.split(" -", 1)
-                    modifiers[key.strip()] = "-" + value
+                # In case the mods aren't properly formatted, let's not crash here, kthxbye
+                try:
+                    if ":" in mod:
+                        key, value = mod.split(":", 1)
+                        modifiers[key.strip()] = value.strip()
+                    elif "+" in mod:
+                        key, value = mod.split(" +", 1)
+                        modifiers[key.strip()] = "+" + value
+                    elif "-" in mod:
+                        key, value = mod.split(" -", 1)
+                        modifiers[key.strip()] = "-" + value
+                except:
+                    pass
             item_type = modifiers.get("Item Type", "")
             armor = modifiers.get("AC", 0)
             damage = modifiers.get("Damage", "")
@@ -1383,7 +1387,7 @@ class Actor(Entity):
             item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
             item = self._converter.items.createItemFeat(None, name, description, feat_type, **kwargs)
-            item.entity["img"] = self.token.token_filename
+            item.entity["img"] = self._avatar_filename
         owned_item = item.addToOwnedList(items)
         self.exportItem(item, "Abilities & Feats")
         return owned_item
@@ -1617,7 +1621,7 @@ class Actor(Entity):
             item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
             item = self._converter.items.createItemSpell(None, name, description, spell_type, school, level, **kwargs)
-            item.entity["img"] = self.token.token_filename
+            item.entity["img"] = self._avatar_filename
         owned_item = item.addToOwnedList(items)
         self.exportItem(item, "Spells")
         return owned_item
@@ -1739,6 +1743,7 @@ class Actor(Entity):
                 self.createItemSpell(items, name, description, spell_type, school, level, **kwargs)
 
     def createItemClass(self, items, name, level, subclass=""):
+        name = name if name != "" else "<unknown class>"
         compendium_item = self.findCompendiumItem("Classes", name)
         kwargs = {"subclass": subclass}
         if compendium_item:
@@ -1746,7 +1751,7 @@ class Actor(Entity):
             item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
             item = self._converter.items.createItemClass(None, name, name, level, **kwargs)
-            item.entity["img"] = self.token.token_filename
+            item.entity["img"] = self._avatar_filename
         return item.addToOwnedList(items)
 
     def addClasses(self, items):
