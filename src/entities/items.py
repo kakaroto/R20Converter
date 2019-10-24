@@ -34,7 +34,7 @@ class Items(DatabaseFile):
         return items
 
     def genEntities(self):
-        return self.addToFolder(None, None, self._campaign["journalfolder"], "items")
+        return self.addToFolder(None, None, self._campaign["journalfolder"], "journal")
 
     def createEntities(self):
         new_entities = self.genEntities()
