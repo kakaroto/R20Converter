@@ -1243,7 +1243,7 @@ class Actor(Entity):
         name = item.getName()
         if self.getArgument("no_duplicate_actor_items", False):
             for i in self._converter.items.entities:
-                if i.entity["folder"] == folder.getID() and i.entity["name"] == name:
+                if i.entity["folder"] == folder_id and i.entity["name"] == name:
                     return
         else:
             item.entity["name"] = "%s (%s)" % (name, self.getName())

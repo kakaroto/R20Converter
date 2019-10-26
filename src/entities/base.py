@@ -173,7 +173,7 @@ class Entity(object):
             compendium_item = self.findCompendiumItem(compendium, name)
             if compendium_item:
                 converter.folders.ensureFolder(folder_id, folder, "Item")
-                item = converter.items.createItemFromCompendium(compendium_item)
+                item = converter.items.createItemFromCompendium(None, compendium_item)
                 item.entity["folder"] = Entity.normalizeID(folder_id)
                 converter.items.addEntity(item)
         if item:
