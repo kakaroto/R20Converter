@@ -474,6 +474,12 @@ class Scene(Entity):
                         drawing_id += 1
                         drawings.append(drawing)
                     else:
+                        if graphic["flipv"]:
+                            y = y + height
+                            height *= -1
+                        if graphic["fliph"]:
+                            x = x + width
+                            width *= -1
                         tile = {"id": tile_id,
                                 "flags": {},
                                 "img": tile_image,
@@ -553,8 +559,7 @@ class Scene(Entity):
         return False
 
     def isDrawing(self, graphic):
-        if self.getArgument("images_as_drawings", False) or \
-            graphic["isdrawing"] or graphic["flipv"] or graphic["fliph"]:
+        if self.getArgument("images_as_drawings", False):
             return True
         return False
 
