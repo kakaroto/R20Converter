@@ -293,10 +293,10 @@ class Scene(Entity):
                     else:
                         filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
                         if self.isDrawing(graphic):
-                            suffix = str(drawing_id)
+                            basename = "drawing_" + str(drawing_id)
                         else:
-                            suffix = str(tile_id)
-                        dest = os.path.join("scenes", "tiles", safe_name, "tile_" + suffix + ".png")
+                            basename = "tile_" + str(tile_id)
+                        dest = os.path.join("scenes", "tiles", safe_name, basename + ".png")
                         if self.getArgument("json", False):
                             (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest)
                         else:
@@ -327,6 +327,7 @@ class Scene(Entity):
                 # graphic's left/top position is for the rotation point (center of image)
                 x = (left - (tile_width / 2))
                 y = (top - (tile_height / 2))
+                # Drawing author can't be null or empty string, so give an invalid id instead
                 drawing = {"id": drawing_id,
                             "flags": {},
                             "x": int(margin_left + x * grid_multiplier),
@@ -337,7 +338,7 @@ class Scene(Entity):
                             "rotation": rotation,
                             "hidden": layer == "gmlayer" or layer == "walls",
                             "locked": False,
-                            "author": Entity.normalizeID(text["controlledby"])
+                            "author": Entity.normalizeID(text["controlledby"]) or "GM"
                 }
                 drawing = self.createTextDrawing(drawing, text)
                 drawing_id += 1
@@ -357,7 +358,7 @@ class Scene(Entity):
                             "rotation": rotation,
                             "hidden": layer == "gmlayer" or layer == "walls",
                             "locked": False,
-                            "author": Entity.normalizeID(path["controlledby"])
+                            "author": Entity.normalizeID(path["controlledby"]) or "GM"
                 }
                 drawing = self.createPathDrawing(drawing, path)
                 drawing_id += 1
@@ -453,7 +454,7 @@ class Scene(Entity):
                                     "rotation": rotation,
                                     "hidden": layer == "gmlayer" or layer == "walls",
                                     "locked": False,
-                                    "author": Entity.normalizeID(obj["controlledby"]), # invalid user (or export-as-module) will be invalid author, which means all GM
+                                    "author": Entity.normalizeID(obj["controlledby"]) or "GM", # invalid user (or export-as-module) will be invalid author, which means all GM
                                     "type": "r",
                                     "fillType": 2,
                                     "fillColor": "#ffffff",
