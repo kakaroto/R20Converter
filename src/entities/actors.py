@@ -50,6 +50,8 @@ class Token(Entity):
         self.emits_bright_light = 0
         self.emits_light = False
         self.has_vision = False
+        self.light_angle = 360
+        self.sight_angle = 360
 
         if token:
             self.token_name = token.get("name", self.token_name)
@@ -74,6 +76,8 @@ class Token(Entity):
             lradius = token.get("light_radius", 0)
             ldimradius = token.get("light_dimradius", 0)
             self.has_vision = self._token.get("light_hassight", False)
+            self.light_angle = parseInt("light_angle", self.light_angle)
+            self.sight_angle = parseInt("light_losangle", self.sight_angle)
             self.setupLighting(lradius, ldimradius)
 
         if self.bar1_max > 0 or self.bar2_max > 0:
@@ -145,6 +149,13 @@ class Token(Entity):
         return (0, 0)
 
     def getDict(self):
+        # Roll20 light/sight angles are going downward, FVTT's are going upward... do some magic
+        if self.sight_angle != 360 or self.light_angle != 360:
+            rotation = (self.rotation + 180) % 360
+            lockRotation = (self.rotation == 0)
+        else:
+            rotation = self.rotation
+            lockRotation = False
         return {"flags": {},
                 "name": self.token_name,
                 "displayName": self.display_name,
@@ -153,27 +164,23 @@ class Token(Entity):
                 "height": self.height / 70.0,
                 "scale": 1,
                 "elevation": 0,
-                "rotation": self.rotation,
-                "lockRotation": False,
+                "rotation": rotation,
+                "lockRotation": lockRotation,
                 "effects": [], #TODO : support effects. Format is : ["icons/svg/frozen.svg", "icons/svg/skull.svg"], etc..
                 "hidden": False,
                 "dimLight": self.emits_dim_light,
                 "brightLight": self.emits_bright_light,
                 "dimSight": self.dim_sight,
                 "brightSight": self.bright_sight,
+                "sightAngle": self.sight_angle,
+                "lightAngle": self.light_angle,
                 "vision": self.has_vision,
                 "actorId": self.actor_id,
                 "actorLink": False,
                 "disposition": -1,
                 "displayBars": self.display_bars,
-                "bar1": {"attribute": "attributes.bar1" if self.bar1_max != 0 or self.bar1_val != 0 else None,
-                         "value": self.bar1_val,
-                         "max": self.bar1_max
-                         },
-                "bar2": {"attribute": "attributes.bar2" if self.bar2_max != 0 or self.bar2_val != 0 else None,
-                         "value": self.bar2_val,
-                         "max": self.bar2_max
-                         },
+                "bar1": {"attribute": "attributes.bar1" if self.bar1_max != 0 or self.bar1_val != 0 else None},
+                "bar2": {"attribute": "attributes.bar2" if self.bar2_max != 0 or self.bar2_val != 0 else None},
                 "actorData": {
                     "data": {
                         "attributes": {
@@ -261,7 +268,10 @@ class Actor(Entity):
             (_, _, hp_id) = self.getAttribute("hp")
             # Some NPCs will not have any bar values set, just the bar_link
             for attr in self._character["attributes"]:
-                (current, max, id) = (attr["current"], attr["max"], attr["id"])
+                try:
+                    (current, max, id) = (attr["current"], attr["max"], attr["id"])
+                except:
+                    continue
                 if bar1_link == id:
                     try:
                         self.token.bar1_val = int(current)
@@ -289,11 +299,8 @@ class Actor(Entity):
         token["actorLink"] = not npc
         del token["effects"]
         del token["hidden"]
-        del token["bar1"]["value"]
-        del token["bar1"]["max"]
-        del token["bar2"]["value"]
-        del token["bar2"]["max"]
-        del token["actorData"]
+        if token["actorLink"]:
+            del token["actorData"]["data"]
 
         self._save_bonus = self.calculateSaveBonus()
         self._actor_abilities = self.createActorAbilities()

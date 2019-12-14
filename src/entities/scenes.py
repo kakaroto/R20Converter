@@ -207,9 +207,7 @@ class Scene(Entity):
                         ],
                         "move": 1,
                         "sense": 1,
-                        "door": 0,
-                        "t": "w",
-                        "s": 0
+                        "door": 0
                         }
                 wall_id += 1
                 walls.append(wall)
@@ -307,6 +305,18 @@ class Scene(Entity):
                                                       tile_width, tile_height,
                                                       page["scale_number"], page["scale_units"], orig_grid_size)
                 if dim > 0 or bright > 0:
+                    try:
+                        angle = int(graphic["light_angle"])
+                        if angle == 0:
+                            angle = 360
+                    except:
+                        angle = 360
+                    try:
+                        rotation = graphic["rotation"]
+                    except:
+                        rotation = 0
+                    if angle != 360:
+                        rotation = (rotation + 180) % 360
                     light = {"id": light_id,
                              "flags": {},
                              "t": "l",
@@ -314,7 +324,9 @@ class Scene(Entity):
                              "x": int(margin_left + left * grid_multiplier),
                              "y": int(margin_top + top * grid_multiplier),
                              "dim": dim,
-                             "bright": bright
+                             "bright": bright,
+                             "angle": angle,
+                             "rotation": rotation
                              }
                     x = (left - (tile_width / 2))
                     y = (top - (tile_height / 2))
@@ -414,9 +426,7 @@ class Scene(Entity):
                             ],
                             "move": 1 if page["lightrestrictmove"] or self.getArgument("restrict_movement", False) else 0,
                             "sense": 1,
-                            "door": door_type,
-                            "t": "w",
-                            "s": 0
+                            "door": door_type
                             }
                     if door_type != 0:
                         wall["ds"] = 0
@@ -509,7 +519,9 @@ class Scene(Entity):
                        "name": name,
                        "permission": {"default": 0},
                        "folder": Entity.normalizeID(folder),
+                       "flags": {},
                        "sort": page.get("placement", 0) * Entity.SORT_ORDER,
+                       "navOrder": page.get("placement", 0),
                        "description": "",
                        "navigation": not page["archived"],
                        "active": active_page == page["id"],

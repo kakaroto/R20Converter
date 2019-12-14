@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import os, sys, argparse, json
 
@@ -6,7 +6,10 @@ class DatabaseFile(object):
     def __init__(self, path, filename=None):
         self._path = path
         self._filename = filename
-        self.load()
+        try:
+            self.load()
+        except:
+            pass
 
     def __str__(self):
         return "\n".join(map(str, self.entities))
@@ -45,7 +48,7 @@ class Differ(object):
     def load_world(self, path):
         with open(os.path.join(path, "world.json"), "r", encoding='utf-8') as f:
             world = {"world": json.load(f)}
-        for db in ["users", "sessions", "folders", "items", "scenes", "journal", "actors", "playlists", "combat", "settings", "chat"]:
+        for db in ["users", "tables", "fog", "folders", "items", "scenes", "journal", "actors", "playlists", "combat", "settings", "chat"]:
             print("Loading %s" % db)
             world[db] = DatabaseFile(path, db + ".db").entities
 

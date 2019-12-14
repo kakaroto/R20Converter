@@ -32,6 +32,8 @@ class User(Entity):
                        "flags":{},
                        "color": self.color(player["color"]),
                        "scene": Entity.normalizeID(scene),
+                       "permission": 0,
+                       "permissions": {},
                        "sort": index * Entity.SORT_ORDER
                        }
         print("Creating User : %s (%s)" % (self.entity["name"], "GM" if is_gm else "Player"))
@@ -39,5 +41,5 @@ class User(Entity):
         self.setGM(is_gm)
 
     def setGM(self, gm):
-        self.entity["permission"] = 4 if gm else 1
+        self.entity["role"] = 4 if gm else 1
         self.entity["password"] = self.getArgument("gm_password" if gm else "player_password", "")

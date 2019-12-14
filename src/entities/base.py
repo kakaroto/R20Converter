@@ -50,7 +50,7 @@ class DatabaseFile(object):
         return None
 
     def getById(self, id, respect_case=True):
-        return self.getBy("id", id, respect_case)
+        return self.getBy("_id", id, respect_case)
     def getByName(self, name, respect_case=True):
         return self.getBy("name", name, respect_case)
 
@@ -210,7 +210,7 @@ class Entity(object):
 
     @staticmethod
     def normalizeID(id):
-        if id is None:
+        if id is None or id == "":
             return None
         if id in Entity.id_database:
             return Entity.id_database[id]

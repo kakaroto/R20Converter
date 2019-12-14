@@ -11,15 +11,18 @@ class World(object):
         self._description = converter.getArgument("description")
 
     def toDict(self):
-        return {"name": self._name,
+        return {"id": self._name,
+                "name": self._name,
                 "title": self._title,
                 "description": self._description,
                 "system": "dnd5e",
-                "coreVersion": "0.3.5",
+                "coreVersion": "0.4.2",
                 "systemVersion": 0.61,
                 "packs": [],
                 "scripts": [],
-                "styles": []
+                "styles": [],
+                "unavailable": 0,
+                "languages": []
                 }
 
     # This is a json file, not a db file, so let's override the __str__ method
