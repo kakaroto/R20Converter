@@ -53,11 +53,15 @@ class Playlist(Entity):
                 else:
                     (_, mp3_path) = self.copyZipFile(filename, dest)
                 if mp3_path != "":
+                    try:
+                        volume = float(track["volume"]) / 100.0
+                    except:
+                        volume = 1
                     sounds.append({"id": sound_id,
                                    "flags": {},
                                    "path": mp3_path,
                                    "repeat": track["loop"],
-                                   "volume": track["volume"] / 100.0,
+                                   "volume": volume,
                                    "name": track["title"],
                                    "playing": track["playing"]
                                    })

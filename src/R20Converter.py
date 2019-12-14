@@ -19,7 +19,7 @@ except:
     except:
         sg = None
 
-version = "0.6.3"
+version = "0.6.4"
 
 class R20Converter(object):
     def __init__(self, args):

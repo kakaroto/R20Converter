@@ -21,6 +21,8 @@ If using Linux, you can run it with `python3 src/R20Converter.py` in a terminal.
 
 Dependencies for the GUI, you need to install `pysimplegui`, `pysimpleguiqt` and `pyside2`.
 
+`pip3 install requests pysimplegui pysimpleguiqt pyside2`
+
 
 ## Campaign Conversion
 

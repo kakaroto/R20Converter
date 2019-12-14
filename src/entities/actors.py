@@ -96,6 +96,10 @@ class Token(Entity):
             self.emits_dim_light = dim
             self.emits_bright_light = bright
         multiplier = self._token.get("light_multiplier", 1)
+        try:
+            multiplier = float(multiplier)
+        except:
+            multiplier = 1
         self.dim_sight = dim * multiplier
         self.bright_sight = bright * multiplier
         # But if you have sight but no vision, then FVTT won't show you anything, even if
@@ -418,7 +422,11 @@ class Actor(Entity):
         self._repeating = OrderedDict()
         self._shaped = False
         for attr in self._character["attributes"]:
-            value = (attr["current"], attr["max"], attr["id"])
+            try:
+                value = (attr["current"], attr["max"], attr["id"])
+            except:
+                # Apparently, it's possible to have an attribute with no current value???
+                continue
             if attr["name"].startswith("_reporder_repeating_"):
                 pass
             elif attr["name"].startswith("repeating_"):
@@ -427,10 +435,13 @@ class Actor(Entity):
                 if rep is None:
                     rep = self._repeating[repeating_type] = OrderedDict()
                     order = ""
-                    for a in self._character["attributes"]:
-                        if a["name"] == "_reporder_repeating_%s" % repeating_type:
-                            order = a["current"]
-                            break
+                    try:
+                        for a in self._character["attributes"]:
+                            if a["name"] == "_reporder_repeating_%s" % repeating_type:
+                                order = a["current"]
+                                break
+                    except:
+                        pass
                     for order_id in order.split(","):
                         if order_id != "":
                             rep.setdefault(order_id, {})

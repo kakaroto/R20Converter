@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.6.4
+
+- Fix various small crashes related to character sheets having invalid data
+
+## v0.6.3
+
+- Fix a crash when importing a spell/item from SRD compendiums that are cross linked from a journal entry
+
+## v0.6.2
+
+- Fix a crash when converting with --export-as-module and --no-duplicate-actor-items options together
+
+## v0.6.1
+
+- Fix crash if an Roll 20 item's modifiers is badly formatted
+- Fix error in FVTT if a converted character didn't have a class name set.
+
 ## v0.6
 
 - Add --folder-as-items option to allow conversion of a handouts folder into items
