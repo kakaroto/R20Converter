@@ -87,9 +87,9 @@ class Handout(Entity):
                        "folder": Entity.normalizeID(parent),
                        "flags": {"R20Converter": 
                                  {"handout-order" : index, 
-                                  "handout-archived": handout["archived"]},
-                                 "entityorder": {"order": index}
+                                  "handout-archived": handout["archived"]}
                                  },
+                       "sort": index * Entity.SORT_ORDER,
                        "entryTime": 0,
                        "content": content,
                        "img": avatar_filename

@@ -104,6 +104,7 @@ class Entity(object):
     PERMISSION_LIMITED = 1
     PERMISSION_OBSERVER = 2
     PERMISSION_OWNER = 3
+    SORT_ORDER = 10000
     # Ensures ids are unique accross all entities
     id_database = {}
     resource_cache = {}
@@ -137,6 +138,7 @@ class Entity(object):
         except:
             pass
         entity["id"] = len(parent_list) + 1
+        entity["sort"] = entity["id"] * Entity.SORT_ORDER
         parent_list.append(entity)
         return entity
 

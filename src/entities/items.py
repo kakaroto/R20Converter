@@ -42,6 +42,7 @@ class Items(DatabaseFile):
 
     def addEntity(self, entity):
         self.entities.append(entity)
+        entity.setPosition(len(self.entities))
         
     def createItemFromCompendium(self, id, compendium_item, **kwargs):
         return Item.createItemFromCompendium(self, id, compendium_item, **kwargs)
@@ -71,11 +72,15 @@ class Item(Entity):
                 "flags": {},
                 "type": item_type,
                 "img": img,
-                "data": data
+                "data": data,
+                "sort": 0
                 }
 
     def getName(self):
         return self.entity["name"]
+
+    def setPosition(self, index):
+        self.entity["sort"] = index * Entity.SORT_ORDER
 
     @staticmethod
     def createItemFromHandout(database, handout, index, parent, path):
@@ -121,6 +126,7 @@ class Item(Entity):
                 "flags": {"entityorder": {"order": index}},
                 "type": "backpack",
                 "img": avatar_filename,
+                "sort": index * Entity.SORT_ORDER,
                 "data": {"description": {"type": "String", "label": "Description", "value": content},
                         "source": {"type": "String", "label": "Source", "value": ""},
                         "quantity": {"type": "Number", "label": "Quantity", "value": 1},

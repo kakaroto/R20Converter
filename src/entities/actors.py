@@ -328,8 +328,8 @@ class Actor(Entity):
                        "permission": permissions,
                        "data": actor_data,
                        "folder": Entity.normalizeID(folder),
-                       "flags": {"dnd5e": {"saveBonus": self._save_bonus},
-                                 "entityorder": {"order": index}},
+                       "flags": {"dnd5e": {"saveBonus": self._save_bonus}},
+                       "sort": index * Entity.SORT_ORDER,
                        "type": "npc" if npc else "character",
                        "token": token,
                        "items": owned_items

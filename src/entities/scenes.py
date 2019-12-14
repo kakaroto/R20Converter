@@ -509,9 +509,7 @@ class Scene(Entity):
                        "name": name,
                        "permission": {"default": 0},
                        "folder": Entity.normalizeID(folder),
-                       "flags": {"R20Converter":
-                                     {"page-position": page.get("placement", 0)},
-                                 "entityorder": {"order": page.get("placement", 0)}},
+                       "sort": page.get("placement", 0) * Entity.SORT_ORDER,
                        "description": "",
                        "navigation": not page["archived"],
                        "active": active_page == page["id"],

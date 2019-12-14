@@ -15,7 +15,7 @@ class Users(DatabaseFile):
             else:
                 scene = self._campaign["playerpageid"]
             is_gm = player["d20userid"] == self._known_gm
-            users.append(User(self, player, is_gm, scene))
+            users.append(User(self, player, len(users), is_gm, scene))
         return users
 
     def getGM(self):
@@ -25,13 +25,14 @@ class Users(DatabaseFile):
         return self.entities[0]
 
 class User(Entity):
-    def __init__(self, database, player, is_gm=False, scene=None):
+    def __init__(self, database, player, index, is_gm=False, scene=None):
         Entity.__init__(self, database, player["id"])
         self.entity = {"_id": self._id,
                        "name": player["displayname"],
                        "flags":{},
                        "color": self.color(player["color"]),
                        "scene": Entity.normalizeID(scene),
+                       "sort": index * Entity.SORT_ORDER
                        }
         print("Creating User : %s (%s)" % (self.entity["name"], "GM" if is_gm else "Player"))
         

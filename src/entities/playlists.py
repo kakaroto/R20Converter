@@ -18,7 +18,7 @@ class Playlists(DatabaseFile):
         for index, item in enumerate(self._campaign["jukeboxfolder"]):
             if type(item) == dict:
                 folder = "%03d - %s" % (index, item["n"])
-                playlists.append(Playlist(self, item, folder))
+                playlists.append(Playlist(self, item, folder, index))
                 # Need to add empty items to keep order in the playlist for finding the files in the zip
                 root_playlist["i"].append("")
             else:
@@ -31,7 +31,7 @@ class Playlists(DatabaseFile):
         return playlists
 
 class Playlist(Entity):
-    def __init__(self, database, playlist, folder_name=""):
+    def __init__(self, database, playlist, folder_name="", index=0):
         Entity.__init__(self, database, playlist["id"])
         modes = {"s": 1, # Shuffle
                  "a": 2, # All at once
@@ -73,5 +73,6 @@ class Playlist(Entity):
                        "flags": {},
                        "sounds": sounds,
                        "mode": modes.get(playlist["s"], -1), # Default to soundboard only for the root folder
-                       "playing": False
+                       "playing": False,
+                       "sort": index * Entity.SORT_ORDER
                        }
