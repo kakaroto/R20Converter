@@ -1,5 +1,6 @@
 from .base import DatabaseFile, Entity
 from .journal import Handout
+from .items import *
 from collections import OrderedDict
 import re
 import os
@@ -543,14 +544,7 @@ class Actor(Entity):
             ret["max"] = max
         ret.update(extra)
         return ret
-        
-    def createAttributeString(self, name, attribute_name, default="", extra={}):
-        value = self.getAttribute(attribute_name, default)[0]
-        if len(extra) == 0:
-            return value
-        ret = {"value": value}
-        ret.update(extra)
-        return ret
+
     def createAttributeBoolean(self, name, attribute_name, default=False, extra={}):
         value = self.getAttribute(attribute_name, "on" if default else "")[0]
         enabled = (value == "on") or (value == "1")
@@ -774,8 +768,8 @@ class Actor(Entity):
         details =  OrderedDict([
             ("alignment", self.createDetailAlignment()),
             ("biography", self.createDetailBio()),
-            ("class", self.createAttributeString("Class", "class_display", "")),
-            ("race", self.createAttributeString("Race", "race_display", ""))
+            ("class", self.getAttribute("class_display", "")[0]),
+            ("race", self.getAttribute("race_display", "")[0])
         ])
         if self.isNPC():
             details.update([
@@ -787,13 +781,13 @@ class Actor(Entity):
                     ])
         else:
             details.update([
-                    ("background", self.createAttributeString("Background", "background", "")),
+                    ("background", self.getAttribute("background", "")[0]),
                     ("level", self.createAttributeNumber("Character Level", "level", 1, {"min": 1, "max": 20})),
                     ("xp", self.createDetailXP()),
-                    ("trait", self.createAttributeString("Trait", "personality_traits", "")),
-                    ("ideal", self.createAttributeString("Ideal", "ideals", "")),
-                    ("bond", self.createAttributeString("Bond", "bonds", "")),
-                    ("flaw", self.createAttributeString("Flaw", "flaws", ""))
+                    ("trait", self.getAttribute("personality_traits", "")[0]),
+                    ("ideal", self.getAttribute("ideals", "")[0]),
+                    ("bond", self.getAttribute("bonds", "")[0]),
+                    ("flaw", self.getAttribute("flaws", "")[0])
                     ])
         return details
 
@@ -1352,8 +1346,8 @@ class Actor(Entity):
             item.entity["img"] = self._avatar_filename
         owned_item = item.addToOwnedList(items)
 
-        if inventory_type == "backpack":
-            folder_prefix = "Backpack"
+        if inventory_type == "loot":
+            folder_prefix = "Loot"
         elif inventory_type == "equipment":
             folder_prefix = "Equipment"
         elif inventory_type == "consumable":
@@ -1465,18 +1459,21 @@ class Actor(Entity):
             else:
                 if item_type not in ["Adventuring Gear", "Items", "Gear"]:
                     print("Unknown item properties : ", name, modifiers)
-                self.createItemInventory(items, name, content, "backpack", weight=weight, quantity=count)
+                self.createItemInventory(items, name, content, "loot", weight=weight, quantity=count)
 
 
-    def createItemFeat(self, items, name, description, feat_type, **kwargs):
+    def createItemFeat(self, items, name, description, activation, attack, recharge, **kwargs):
         name = name if name != "" else "<no name>"
         description = self.textToHtml(description)
         compendium_item = self.findCompendiumItem("Class Features", name)
         if compendium_item:
             kwargs["description"] = description
+            kwargs.update(activation.getDict() if activation else {})
+            kwargs.update(attack.getDict() if attack else{})
+            kwargs.update(recharge.getDict() if recharge else {})
             item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
-            item = self._converter.items.createItemFeat(None, name, description, feat_type, **kwargs)
+            item = self._converter.items.createItemFeat(None, name, description, activation, attack, recharge, **kwargs)
             item.entity["img"] = self._avatar_filename
         owned_item = item.addToOwnedList(items)
         self.exportItem(item, "Abilities & Feats")
@@ -1488,23 +1485,22 @@ class Actor(Entity):
             for trait in npc_traits.values():
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("desc", "", from_dict=trait)[0]
-                self.createItemFeat(items, name, description, "passive")
+                self.createItemFeat(items, name, description, None, None, None)
 
             npc_reactions = self.getRepeatingAttributes("npcreaction")
             for trait in npc_reactions.values():
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("desc", "", from_dict=trait)[0]
-                self.createItemFeat(items, "[Reaction] " + name, description, "ability", requirements="Reaction")
+                activation = ItemActivation(ItemActivation.REACTION, 1)
+                self.createItemFeat(items, name, description, activation, None, None)
         else:
             traits = self.getRepeatingAttributes("traits")
             for trait in traits.values():
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("description", "", from_dict=trait)[0]
-                source = self.getAttribute("source", "", from_dict=trait)[0]
+                source = self.getAttribute("source", "Racial", from_dict=trait)[0]
                 source_type = self.getAttribute("source_type", "", from_dict=trait)[0]
-                if source_type != "":
-                    source = (source + ": " + source_type) if source != "" else source_type
-                self.createItemFeat(items, name, description, "passive", source=source, requirements=source)
+                self.createItemFeat(items, name, description, None, None, None, source=source, requirements=source_type)
 
     def addNPCAction(self, items, action, legendary):
         name = self.getAttribute("name", "", from_dict=action)[0]
@@ -1567,7 +1563,7 @@ class Actor(Entity):
             if legendary:
                 feat_type = "legendary"
                 name = "[Legendary]" + name
-            self.createItemFeat(items, name, description_block, feat_type, **kwargs)
+            #self.createItemFeat(items, name, description_block, feat_type, **kwargs)
 
     def addPCAction(self, items, attack):
         name = self.getAttribute("atkname", "", from_dict=attack)[0]
@@ -1670,7 +1666,7 @@ class Actor(Entity):
                     "damageType": dmg_type.lower(),
                     "save": save
             }
-            self.createItemFeat(items, name, description, "attack" if atk_ability != "" else "passive", **kwargs)
+            #self.createItemFeat(items, name, description, "attack" if atk_ability != "" else "passive", **kwargs)
 
 
     def addActions(self, items):
@@ -1704,9 +1700,6 @@ class Actor(Entity):
         description = self.textToHtml(description)
         compendium_item = self.findCompendiumItem("Spells", name)
         if compendium_item:
-            # Some spells don't have the 'prepared' 
-            if "prepared" not in compendium_item.entity["data"]:
-                compendium_item.entity["data"]["prepared"] = {"type": "String", "label": "Prepared Spell", "value": False}
             kwargs["description"] = description
             item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:

@@ -3,7 +3,6 @@ from .base import DatabaseFile, Entity
 import os
 import copy
 
-
 class Items(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "items.db")
@@ -50,8 +49,8 @@ class Items(DatabaseFile):
     def createItemInventory(self, id, name, description, inventory_type, **kwargs):
         return Item.createItemInventory(self, id, name, description, inventory_type, **kwargs)
 
-    def createItemFeat(self, id, name, description, feat_type, **kwargs):
-        return Item.createItemFeat(self, id, name, description, feat_type, **kwargs)
+    def createItemFeat(self, id, name, description, activation, attack, recharge, **kwargs):
+        return Item.createItemFeat(self, id, name, description, activation, attack, recharge, **kwargs)
 
     def createItemSpell(self, id, name, description, spell_type, school, level, **kwargs):
         return Item.createItemSpell(self, id, name, description, spell_type, school, level, **kwargs)
@@ -60,7 +59,7 @@ class Items(DatabaseFile):
         return Item.createItemClass(self, id, name, description, level, **kwargs)
 
 class Item(Entity):
-    def __init__(self, database, item_id, name, item_type="backpack", img=None, data={}):
+    def __init__(self, database, item_id, name, item_type="loot", img=None, data={}):
         Entity.__init__(self, database, item_id)
         # Don't want to print for every item created in a character sheet
         #print("Creating %s Item : %s" % (item_type, name))
@@ -83,8 +82,22 @@ class Item(Entity):
         self.entity["sort"] = index * Entity.SORT_ORDER
 
     @staticmethod
+    def createStandardData(description="", source="", activation=None, attack=None, **kwargs):
+        data = {
+            "description": {"value": description, "chat": "", "unidentified": ""},
+            "source": source,
+        }
+        if activation:
+            data.update(activation.getDict())
+        if attack:
+            data.update(attack.getDict())
+
+        data.update(kwargs)
+        return data
+
+    @staticmethod
     def createItemFromHandout(database, handout, index, parent, path):
-        item = Item(database, handout["id"], handout["name"], "backpack")
+        item = Item(database, handout["id"], handout["name"], "loot")
         
         print("Creating Item from Handout : %s" % item.getName())
 
@@ -119,21 +132,28 @@ class Item(Entity):
         if item.getArgument("export_as_module", False):
             parent = None
 
-        item.entity = {"_id": item._id,
-                "name":  handout["name"],
-                "permission": permissions,
-                "folder": Entity.normalizeID(parent),
-                "flags": {"entityorder": {"order": index}},
-                "type": "backpack",
-                "img": avatar_filename,
-                "sort": index * Entity.SORT_ORDER,
-                "data": {"description": {"type": "String", "label": "Description", "value": content},
-                        "source": {"type": "String", "label": "Source", "value": ""},
-                        "quantity": {"type": "Number", "label": "Quantity", "value": 1},
-                        "weight": {"type": "Number", "label": "Weight", "value": 1},
-                        "price": {"type": "String", "label": "Price", "value": 0}
-                        }
-                }
+        item.entity = {
+            "_id": item._id,
+            "name":  handout["name"],
+            "permission": permissions,
+            "folder": Entity.normalizeID(parent),
+            "flags": {"entityorder": {"order": index}},
+            "type": "loot",
+            "img": avatar_filename,
+            "sort": index * Entity.SORT_ORDER,
+            "data": {
+                "description": {"value": content, "chat": "", "unidentified": ""},
+                "source": "",
+                "rarity": "",
+                "quantity": 1,
+                "weight": 1,
+                "price": 0,
+                "attuned": False,
+                "equipped": False,
+                "identified": True,
+                "damage": {"parts": []},
+            }
+        }
         return item
 
     @staticmethod
@@ -144,25 +164,26 @@ class Item(Entity):
         item.entity["permission"] = {"default": Item.PERMISSION_NONE}
         item.entity["folder"] = None
         if item.getArgument("no_compendium_overwrite", False) is False:
-            for key in kwargs:
-                valueKey = "max" if key.endswith("_max") else "value"
-                if key in item.entity["data"]: 
-                    item.entity["data"][key][valueKey] = kwargs[key]
-                else:
-                    item.entity["data"][key] = {"type": "String", "label": key, "value": kwargs[key]},
+            item.entity["data"].update(kwargs)
 
         return item
 
 
     @staticmethod
     def createItemInventory(database, id, name, description, inventory_type, **kwargs):
-        data = {"description": {"type": "String", "label": "Description", "value": description},
-                "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
-                "quantity": {"type": "Number", "label": "Quantity", "value": kwargs.get("quantity", 1)},
-                "weight": {"type": "Number", "label": "Weight", "value": kwargs.get("weight", 1)},
-                "price": {"type": "String", "label": "Price", "value": kwargs.get("price", 0)}
-                }
-        if inventory_type == "backpack":
+        data = {
+            "description": {"value": description, "chat": "", "unidentified": ""},
+            "source": kwargs.get("source", ""),
+            "rarity": kwargs.get("rarity", ""),
+            "quantity": kwargs.get("quantity", 1),
+            "weight": kwargs.get("weight", 1),
+            "price": kwargs.get("price", 0),
+            "attuned": kwargs.get("attuned", False),
+            "equipped": kwargs.get("equipped", False),
+            "identified": kwargs.get("identified", True),
+            "damage": {"parts": []},
+        }
+        if inventory_type == "loot":
             pass
         elif inventory_type == "equipment":
             data.update({"armor": {"type": "Number", "label": "Armor Value", "value": kwargs.get("armor", 0)},
@@ -200,22 +221,14 @@ class Item(Entity):
         return Item(database, id, name, inventory_type, None, data)
 
     @staticmethod
-    def createItemFeat(database, id, name, description, feat_type, **kwargs):
-        data = {
-            "description": {"type": "String", "label": "Description", "value": description},
-            "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
-            "featType": {"type": "String", "label": "Feat Type", "value": feat_type},
-            "requirements": {"type": "String", "label": "Requirements", "value": kwargs.get("requirements", "")},
-            "ability": {"type": "String", "label": "Ability Modifier", "value": kwargs.get("ability", "")},
-            "target": {"type": "String", "label": "Target", "value": kwargs.get("target", "")},
-            "range": {"type": "String", "label": "Range", "value": kwargs.get("range, """)},
-            "time": {"type": "String", "label": "Casting Time", "value": kwargs.get("time", "")},
-            "duration": {"type": "String", "label": "Duration", "value": kwargs.get("duration", "")},
-            "damage": {"type": "String", "label": "Ability Damage", "value": kwargs.get("damage", "")},
-            "damageType": {"type": "String", "label": "Damage Type", "value": kwargs.get("damageType", "")},
-            "save": {"type": "String", "label": "Saving Throw", "value": kwargs.get("save", "")},
-            "uses": {"type": "", "label": "Limited Uses", "value": kwargs.get("uses", 0), "max": kwargs.get("uses_max", 0)}
-        }
+    def createItemFeat(database, id, name, description, activation, attack, recharge, **kwargs):
+        kwargs.setdefault("requirements", "")
+        source = kwargs.pop("source", "")
+        activation = activation if activation else ItemActivation()
+        attack = attack if attack else ItemAttack()
+        recharge = recharge if recharge else ItemFeatRecharge()
+        kwargs.update(recharge.getDict())
+        data = Item.createStandardData(description, source, activation, attack, **kwargs)
         return Item(database, id, name, "feat", None, data)
 
     @staticmethod
@@ -245,10 +258,234 @@ class Item(Entity):
         
     @staticmethod
     def createItemClass(database, id, name, description, level, **kwargs):
-        data = {
-            "description": {"type": "String", "label": "Description", "value": description},
-            "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
-            "levels": {"type": "String", "label": "Class Levels", "value": level},
-            "subclass": {"type": "String", "label": "Subclass", "value": kwargs.get("subclass", "")},
-        }
+        data = Item.createStandardData(description, levels=level, **kwargs)
         return Item(database, id, name, "class", None, data)
+
+class ItemAbility:
+    NONE = ""
+    STRENGTH = "str"
+    DEXTERITY = "dex"
+    CONSITUTION = "con"
+    INTELLIGENCE = "int"
+    WISDOM = "wis"
+    CHARISMA = "cha"
+
+        
+class ItemDamage:
+    def __init__(self, versatile=""):
+        self.damages = []
+        self.versatile = versatile
+
+    def addDamage(self, formula, type):
+        self.damages.append((formula, type))
+
+    def getDict(self):
+        return {
+            "damage": {
+                "parts": self.damages,
+                "versatile": self.versatile
+            }
+        }
+    
+class ItemSave:
+    def __init__(self, ability=ItemAbility.NONE, dc=None):
+        self.ability = ability
+        self.dc = dc
+
+    def getDict(self):
+        return {
+            "save": {
+                "ability": self.ability,
+                 "dc": self.dc
+            }
+        }
+
+class ItemRange:
+    EMPTY = ""
+    NONE = "none"
+    SELF = "self"
+    TOUCH = "touch"
+    FEET = "ft"
+    MILES = "mi"
+    SPECIAL = "spec"
+    ANY = "any"
+
+    def __init__(self, range="", max="", units=EMPTY):
+        self.range = range
+        self.max = max
+        self.units = units
+
+    def getDict(self):
+        return {
+            "range": {
+                "value": self.range,
+                "long": self.max,
+                "units": self.units
+            }
+        }
+
+class ItemTarget:
+    EMPTY = ""
+    NONE = "none"
+    SELF = "self"
+    CREATURE = "creature"
+    ALLY = "ally"
+    ENEMY = "enemy"
+    OBJECT = "object"
+    SPACE = "space"
+    RADIUS = "radius"
+    SPHERE = "sphere"
+    CYLINDER = "cylinder"
+    CONE = "cone"
+    SQUARE = "square"
+    CUBE = "cube"
+    LINE = "line"
+    WALL = "wall"
+
+    def __init__(self, type=EMPTY, range=None):
+        self.range = range if range else ItemRange()
+        self.type = type
+
+    def getDict(self):
+        range = self.range.getDict()["range"]
+        return {
+            "target": {
+                "value": range["value"],
+                "units": range["units"],
+                "type": self.type
+            }
+        }
+
+
+        
+class ItemDuration:
+    NONE = ""
+    INSTANTANEOUS = "inst"
+    TURN = "turn"
+    ROUND = "round"
+    MINUTE = "minute"
+    HOUR = "hour"
+    DAY = "day"
+    MONTH = "month"
+    YEAR = "year"
+    PERMANENT = "perm"
+    SPECIAL = "spec"
+
+    def __init__(self, duration=0, units=NONE):
+        self.duration = duration
+        self.units = units
+
+    def getDict(self):
+        return {
+            "duration": {
+                "value": self.duration,
+                "units": self.units
+            }
+        }
+        
+class ItemUses:
+    PER_NONE = ""
+    PER_SHORT_REST = "sr"
+    PER_LONG_REST = "lr"
+    PER_DAY = "day"
+    PER_CHARGES = "charges"
+
+    def __init__(self, uses=0, max=0, per=PER_NONE):
+        self.uses = uses
+        self.max = max
+        self.per = per
+
+    def getDict(self):
+        return {
+            "uses": {
+                "value": self.uses,
+                "max": self.max,
+                "per": self.per
+            }
+        }
+
+class ItemActivation:
+    EMPTY = ""
+    NONE = "none"
+    ACTION = "action"
+    BONUS_ACTION = "bonus"
+    REACTION = "reaction"
+    MINUTE = "minute"
+    HOUR = "hour"
+    DAY = "day"
+    SPECIAL = "special"
+    LEGENDARY = "legendary"
+    LAIR = "lair"
+
+    def __init__(self, activation=EMPTY, cost=0, condition="",
+                 target=None, range=None, duration=None, uses=None):
+        self.activation = activation
+        self.cost = cost
+        self.condition = condition
+        self.target = target if target else ItemTarget()
+        self.range = range if range else ItemRange()
+        self.duration = duration if duration else ItemDuration()
+        self.uses = uses if uses else ItemUses()
+
+    def getDict(self):
+        activation = {
+            "activation": {
+                "type": self.activation,
+                "cost": self.cost,
+                "condition": self.condition
+            }
+        }
+        activation.update(self.target.getDict())
+        activation.update(self.range.getDict())
+        activation.update(self.duration.getDict())
+        activation.update(self.uses.getDict())
+        return activation
+
+class ItemAttack:
+    EMPTY = ""
+    MELEE_WEAPON = "mwak"
+    RANGED_WEAPON = "rwak"
+    MELEE_SPELL = "msak"
+    RANGED_SPELL = "rsak"
+    SAVE = "save"
+    HEALING = "heal"
+    ABILITY = "abil"
+    UTILITY = "util"
+    OTHER = "other"
+
+    def __init__(self, type=EMPTY, ability=ItemAbility.NONE, damages=None, save=None,
+                 bonus=0, formula="", critical=None, chatFlavor=""):
+        self.type = type
+        self.ability = ability
+        self.damages = damages if damages else ItemDamage()
+        self.save = save if save else ItemSave()
+        self.bonus = bonus
+        self.formula = formula
+        self.critical = critical
+        self.chatFlavor = chatFlavor
+
+    def getDict(self):
+        attack = {
+            "actionType": self.type,
+            "ability": self.ability,
+            "attackBonus": self.bonus,
+            "critical": self.critical,
+            "formula": self.formula,
+            "chatFlavor": self.chatFlavor
+        }
+        attack.update(self.damages.getDict())
+        attack.update(self.save.getDict())
+        return attack
+
+class ItemFeatRecharge:
+    def __init__(self, recharges=0, charged=False):
+        self.recharges = recharges
+        self.charged = charged
+
+    def getDict(self):
+        return {
+            "recharge": {
+                "value": self.recharges,
+                "charged": self.charged
+            }
+        }
