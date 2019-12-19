@@ -43,11 +43,26 @@ class Items(DatabaseFile):
         self.entities.append(entity)
         entity.setPosition(len(self.entities))
         
-    def createItemFromCompendium(self, id, compendium_item, **kwargs):
-        return Item.createItemFromCompendium(self, id, compendium_item, **kwargs)
+    def createItemFromCompendium(self, id, compendium_item, custom_data):
+        return Item.createItemFromCompendium(self, id, compendium_item, custom_data)
 
-    def createItemInventory(self, id, name, description, inventory_type, **kwargs):
-        return Item.createItemInventory(self, id, name, description, inventory_type, **kwargs)
+    def createItemInventory(self, id, name, description, inventory_type, activation, attack,
+                            attributes, specific, **kwargs):
+        if inventory_type == "loot":
+            return Item.createItemLoot(self, id, name, description, attributes, **kwargs)
+        elif inventory_type == "weapon":
+            return Item.createItemWeapon(self, id, name, description, activation, attack, attributes, specific, **kwargs)
+        elif inventory_type == "equipment":
+            return Item.createItemEquipment(self, id, name, description, activation, attack, attributes, specific, **kwargs)
+        elif inventory_type == "consumable":
+            return Item.createItemWeapon(self, id, name, description, activation, attack, attributes, specific, **kwargs)
+        elif inventory_type == "tool":
+            return Item.createItemTool(self, id, name, description, attributes, specific, **kwargs)
+        elif inventory_type == "backpack":
+            return Item.createItemBackpack(self, id, name, description, attributes, specific, **kwargs)
+        else:
+            raise Exception("Unknown Inventory type")
+        
 
     def createItemFeat(self, id, name, description, activation, attack, recharge, **kwargs):
         return Item.createItemFeat(self, id, name, description, activation, attack, recharge, **kwargs)
@@ -57,8 +72,8 @@ class Items(DatabaseFile):
         return Item.createItemSpell(self, id, name, description, activation, attack,
                         level, school, components, preparation, scaling, **kwargs)
 
-    def createItemClass(self, id, name, description, level, **kwargs):
-        return Item.createItemClass(self, id, name, description, level, **kwargs)
+    def createItemClass(self, id, name, description, level, subclass, **kwargs):
+        return Item.createItemClass(self, id, name, description, level, subclass, **kwargs)
 
 class Item(Entity):
     def __init__(self, database, item_id, name, item_type="loot", img=None, data={}):
@@ -159,68 +174,81 @@ class Item(Entity):
         return item
 
     @staticmethod
-    def createItemFromCompendium(database, id, compendium_item, **kwargs):
+    def createItemFromCompendium(database, id, compendium_item, custom_data):
         item = Item(database, id, compendium_item.entity["name"])
         item.entity = copy.deepcopy(compendium_item.entity)
         item.entity["_id"] = item.getID()
         item.entity["permission"] = {"default": Item.PERMISSION_NONE}
         item.entity["folder"] = None
         if item.getArgument("no_compendium_overwrite", False) is False:
-            item.entity["data"].update(kwargs)
+            item.entity["data"].update(custom_data)
 
         return item
 
 
     @staticmethod
-    def createItemInventory(database, id, name, description, inventory_type, **kwargs):
-        data = {
-            "description": {"value": description, "chat": "", "unidentified": ""},
-            "source": kwargs.get("source", ""),
-            "rarity": kwargs.get("rarity", ""),
-            "quantity": kwargs.get("quantity", 1),
-            "weight": kwargs.get("weight", 1),
-            "price": kwargs.get("price", 0),
-            "attuned": kwargs.get("attuned", False),
-            "equipped": kwargs.get("equipped", False),
-            "identified": kwargs.get("identified", True),
-            "damage": {"parts": []},
-        }
-        if inventory_type == "loot":
-            pass
-        elif inventory_type == "equipment":
-            data.update({"armor": {"type": "Number", "label": "Armor Value", "value": kwargs.get("armor", 0)},
-                        "armorType": {"type": "String", "label": "Armor Type", "value": kwargs.get("armorType", "")},
-                        "strength": {"type": "String", "label": "Required Strength", "value": kwargs.get("strength", "")},
-                        "stealth": {"type": "Boolean", "label": "Stealth Disadvantage", "value": kwargs.get("stealth", False)},
-                        "proficient": {"type": "Boolean", "label": "Proficient", "value": kwargs.get("proficient", False)},
-                        "attuned": {"type": "Boolean", "label": "Attuned", "value": kwargs.get("attuned", False)},
-                        "equipped": {"type": "Boolean", "label": "Equipped", "value": kwargs.get("equipped", True)}
-                        })
-        elif inventory_type == "consumable":
-            data.update({"consumableType": {"type": "String", "label": "Consumable Type", "value": "potion"},
-                        "charges": {"type": "Number", "label": "Charges", "value": kwargs.get("charges", 1), "max": kwargs.get("charges_max", 1)},
-                        "consume": {"type": "String", "label": "Roll on Consume", "value": kwargs.get("consume", "")},
-                        "autoUse": {"type": "Boolean", "label": "Consume on Use", "value": kwargs.get("autoUse", True)},
-                        "autoDestroy": {"type": "Boolean", "label": "Destroy on Empty", "value": kwargs.get("autoDestroy", True)}
-                        })
-        elif inventory_type == "tool":
-            data.update({"ability": {"type": "String", "label": "Default Ability", "value": kwargs.get("ability", "str")},
-                        "proficient": {"type": "Number", "label": "Proficiency", "value": kwargs.get("proficient", 0)}
-                        })
-        elif inventory_type == "weapon":
-            data.update({"weaponType": {"type": "String", "label": "Weapon Type", "value": kwargs.get("weaponType", "")},
-                        "bonus": {"type": "String", "label": "Attack Bonus", "value": kwargs.get("bonus", "")},
-                        "damage": {"type": "String", "label": "Damage Formula", "value": kwargs.get("damage", "")},
-                        "damageType": {"type": "String", "label": "Damage Type", "value": kwargs.get("damageType", "")},
-                        "damage2": {"type": "String", "label": "Alternate Damage", "value": kwargs.get("damage2", "")},
-                        "damage2Type": {"type": "String", "label": "Alternate Type", "value": kwargs.get("damage2Type", "")},
-                        "range": {"type": "String", "label": "Weapon Range", "value": kwargs.get("range", "")},
-                        "properties": {"type": "String", "label": "Weapon Properties", "value": kwargs.get("properties", "")},
-                        "proficient": {"type": "Boolean", "label": "Proficient", "value": kwargs.get("proficient", False)},
-                        "attuned": {"type": "Boolean", "label": "Attuned", "value": kwargs.get("attuned", False)},
-                        "ability": {"type": "String", "label": "Offensive Ability", "value": kwargs.get("ability", "str")}
-                        })
-        return Item(database, id, name, inventory_type, None, data)
+    def createItemLoot(database, id, name, description, attributes, **kwargs):
+        source = kwargs.pop("source", "")
+        attributes = attributes if attributes else ItemInventoryAttributes()
+        kwargs.update(attributes.getDict())
+        data = Item.createStandardData(description, source, **kwargs)
+        return Item(database, id, name, "loot", None, data)
+
+    @staticmethod
+    def createItemWeapon(database, id, name, description, activation, attack, attributes, weapon, **kwargs):
+        source = kwargs.pop("source", "")
+        activation = activation if activation else ItemActivation()
+        attack = attack if attack else ItemAttack()
+        attributes = attributes if attributes else ItemInventoryAttributes()
+        weapon = weapon if weapon else ItemWeapon()
+        kwargs.update(attributes.getDict())
+        kwargs.update(weapon.getDict())
+        data = Item.createStandardData(description, source, activation, attack, **kwargs)
+        return Item(database, id, name, "weapon", None, data)
+
+    @staticmethod
+    def createItemEquipment(database, id, name, description, activation, attack, attributes, equipment, **kwargs):
+        source = kwargs.pop("source", "")
+        activation = activation if activation else ItemActivation()
+        attack = attack if attack else ItemAttack()
+        attributes = attributes if attributes else ItemInventoryAttributes()
+        equipment = equipment if equipment else ItemEquipment()
+        kwargs.update(attributes.getDict())
+        kwargs.update(equipment.getDict())
+        data = Item.createStandardData(description, source, activation, attack, **kwargs)
+        return Item(database, id, name, "equipment", None, data)
+
+    @staticmethod
+    def createItemConsumable(database, id, name, description, activation, attack, attributes, consumable, **kwargs):
+        source = kwargs.pop("source", "")
+        activation = activation if activation else ItemActivation()
+        attack = attack if attack else ItemAttack()
+        attributes = attributes if attributes else ItemInventoryAttributes()
+        consumable = consumable if consumable else ItemConsumable()
+        kwargs.update(attributes.getDict())
+        kwargs.update(consumable.getDict())
+        data = Item.createStandardData(description, source, activation, attack, **kwargs)
+        return Item(database, id, name, "consumable", None, data)
+
+    @staticmethod
+    def createItemTool(database, id, name, description, attributes, tool, **kwargs):
+        source = kwargs.pop("source", "")
+        attributes = attributes if attributes else ItemInventoryAttributes()
+        tool = tool if tool else ItemTool()
+        kwargs.update(attributes.getDict())
+        kwargs.update(tool.getDict())
+        data = Item.createStandardData(description, source, None, None, **kwargs)
+        return Item(database, id, name, "tool", None, data)
+
+    @staticmethod
+    def createItemBackpack(database, id, name, description, attributes, backpack, **kwargs):
+        source = kwargs.pop("source", "")
+        attributes = attributes if attributes else ItemInventoryAttributes()
+        backpack = backpack if backpack else ItemBackpack()
+        kwargs.update(attributes.getDict())
+        kwargs.update(backpack.getDict())
+        data = Item.createStandardData(description, source, None, None, **kwargs)
+        return Item(database, id, name, "backpack", None, data)
 
     @staticmethod
     def createItemFeat(database, id, name, description, activation, attack, recharge, **kwargs):
@@ -252,8 +280,8 @@ class Item(Entity):
 
         
     @staticmethod
-    def createItemClass(database, id, name, description, level, **kwargs):
-        data = Item.createStandardData(description, levels=level, **kwargs)
+    def createItemClass(database, id, name, description, level, subclass, **kwargs):
+        data = Item.createStandardData(description, levels=level, subclass=subclass, **kwargs)
         return Item(database, id, name, "class", None, data)
 
 
@@ -270,9 +298,15 @@ class ItemAbility:
 
     @staticmethod
     def fromString(string):
-        abbr = string.lower()[0:3]
+        string = string.lower()
+        abbr = string[0:3]
         if abbr in ["str", "dex", "con", "wis", "int", "cha"]:
             return abbr
+
+        # Use case of "@{strength_mod}" for example
+        for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
+            if ability in string:
+                return ability[0:3]
         return ItemAbility.NONE
 
         
@@ -329,7 +363,7 @@ class ItemAttack:
         self.chatFlavor = chatFlavor
 
     def getDict(self):
-        attack = {
+        data = {
             "actionType": self.type,
             "ability": self.ability,
             "attackBonus": self.bonus,
@@ -337,9 +371,9 @@ class ItemAttack:
             "formula": self.formula,
             "chatFlavor": self.chatFlavor
         }
-        attack.update(self.damages.getDict())
-        attack.update(self.save.getDict())
-        return attack
+        data.update(self.damages.getDict())
+        data.update(self.save.getDict())
+        return data
 
 class ItemRange:
     EMPTY = ""
@@ -467,18 +501,18 @@ class ItemActivation:
         self.uses = uses if uses else ItemUses()
 
     def getDict(self):
-        activation = {
+        data = {
             "activation": {
                 "type": self.activation,
                 "cost": self.cost,
                 "condition": self.condition
             }
         }
-        activation.update(self.target.getDict())
-        activation.update(self.range.getDict())
-        activation.update(self.duration.getDict())
-        activation.update(self.uses.getDict())
-        return activation
+        data.update(self.target.getDict())
+        data.update(self.range.getDict())
+        data.update(self.duration.getDict())
+        data.update(self.uses.getDict())
+        return data
 
 
 # Feat specific item variables
@@ -576,6 +610,195 @@ class ItemSpellPreparation:
             }
         }
 
+# Physical Item specific attributes
+class ItemInventoryAttributes:
+    def __init__(self, rarity="", quantity=1, weight=1, price=0,
+                 attuned=False, equipped=False, identified=True):
+        self.rarity = rarity
+        self.quantity = quantity
+        self.weight = weight
+        self.price = price
+        self.attuned = attuned
+        self.equipped = equipped
+        self.identified = identified
 
-# standard = ["description", "source", "actionType", "ability", "attackBonus", "critical", "formula", "chatFlavor", "damage", "save", "activation", "target", "range", "duration", "uses"]
-# Object.keys(item.data.data).filter(k => !standard.includes(k) && !item.data.data[k]._deprecated)
+    def getDict(self):
+        return {
+            "rarity": self.rarity,
+            "quantity": self.quantity,
+            "weight": self.weight,
+            "price": self.price,
+            "attuned": self.attuned,
+            "equipped": self.equipped,
+            "identified": self.identified
+        }
+
+
+# Weapon specific item variables
+
+class ItemWeaponProperties:
+    AMMUNITION = "amm"
+    FINESSE = "fin"
+    FIREARM = "fir"
+    FOCUS = "foc"
+    HEAVY = "hvy"
+    LIGHT = "lgt"
+    REACH = "rch"
+    RELOAD = "rel"
+    RETURNING = "ret"
+    SPECIAL = "spc"
+    THROWN = "thr"
+    TWO_HANDED = "two"
+    VERSATILE = "ver"
+
+    def __init__(self):
+        self.properties = []
+
+    def addProperty(self, weapon_property):
+        self.properties.append(weapon_property)
+
+    def getDict(self):
+        data = {
+            "properties": { }
+        }
+        all_properties = ["amm", "hvy", "fin", "fir", "foc", "lgt", "rch", "rel", "ret", "spc", "thr", "two", "ver"]
+        for prop in all_properties:
+            data["properties"].update({
+                prop: prop in self.properties
+            })
+        return data
+
+class ItemWeapon:
+    AMMUNITION = "ammo"
+    IMPROVISED = "improv"
+    MARTIAL_MELEE = "martialM"
+    MARTIAL_RANGED = "martialR"
+    NATURAL = "natural"
+    SIMPLE_MELEE = "simpleM"
+    SIMPLE_RANGED = "simpleR"
+
+    def __init__(self, _type=NATURAL, proficient=True, properties=None):
+        self.type = _type
+        self.proficient = proficient
+        self.properties = properties if properties else ItemWeaponProperties()
+
+
+    def getDict(self):
+        data = {
+            "weaponType": self.type,
+            "proficient": self.proficient
+        }
+        data.update(self.properties.getDict())
+        return data
+
+# Consumable specific item variables
+
+class ItemConsumableUses(ItemUses):
+    def __init__(self, uses=0, max=0, per=ItemUses.PER_NONE, autoDestroy=True, autoUse=True):
+        ItemUses.__init__(self, uses, max, per)
+        self.autoDestroy = autoDestroy
+        self.autoUse = autoUse
+
+    def getDict(self):
+        data = super().getDict()
+        data["uses"].update({
+            "autoUse": self.autoUse,
+            "autoDestroy": self.autoDestroy
+        })
+        return data
+
+class ItemConsumable:
+    POISON = "poison"
+    POTION = "potion"
+    ROD = "rod"
+    SCROLL = "scroll"
+    TRINKET = "trinket"
+    WAND = "wand"
+
+    def __init__(self, _type=TRINKET, uses=None):
+        self.type = _type
+        self.uses = uses if uses else ItemConsumableUses()
+
+    def getDict(self):
+        data = {
+            "consumableType": self.type,
+        }
+        data.update(self.uses.getDict())
+        return data
+
+# Equipment specific item variables
+class ItemEquipment:
+    CLOTHING = "clothing"
+    HEAVY_ARMOR = "heavy"
+    LIGHT_ARMOR = "light"
+    MAGICAL_BONUS = "bonus"
+    MEDIUM_ARMOR = "medium"
+    NATURAL_ARMOR = "natural"
+    SHIELD = "shield"
+    TRINKET = "trinket"
+
+    def __init__(self, _type=CLOTHING, dexterity=0, ac=10, strength=0, stealth=False, proficient=True):
+        self.type = _type
+        self.dexterity = dexterity
+        self.ac = ac
+        self.strength = strength
+        self.stealth = stealth
+        self.proficient = proficient
+
+    def getDict(self):
+        return {
+            "armor": {
+                "type": self.type,
+                "dex": self.dexterity,
+                "value": self.ac
+            },
+            "strength": self.strength,
+            "stealth": self.stealth,
+            "proficient": self.proficient
+        }
+        
+
+# Tool specific item variables
+class ItemTool:
+    def __init__(self, ability=ItemAbility.NONE, proficiency=0, flavor=""):
+        self.proficiency = proficiency
+        self.ability = ability
+        self.flavor = flavor
+
+    def getDict(self):
+        return {
+            "proficient": self.proficiency,
+            "ability": self.ability,
+            "chatFlavor": self.flavor
+        }
+
+# Tool specific item variables
+class ItemBackpack:
+    ITEMS = "items"
+    WEIGHT = "weight"
+    
+    def __init__(self, _type=ITEMS, capacity=0, weightless=False, cp=0, sp=0, ep=0, gp=0, pp=0):
+        self.type = _type
+        self.capacity = capacity
+        self.weightless = weightless
+        self.cp = cp
+        self.sp = sp
+        self.ep = ep
+        self.gp = gp
+        self.pp = pp
+
+    def getDict(self):
+        return {
+            "capacity": {
+                "type": self.type,
+                "value": self.capacity,
+                "weightless": self.weightless
+            },
+            "currency": {
+                "cp": self.cp,
+                "sp": self.sp,
+                "ep": self.ep,
+                "gp": self.gp,
+                "pp": self.pp
+            }
+        }
