@@ -1268,6 +1268,8 @@ class Actor(Entity):
             if self._shaped:
                 index = 0
                 for utility in self.getRepeatingAttributes("utility").values():
+                    if len(utility) == 0:
+                        continue
                     if index == 0:
                         key, name = "primary", "Primary Resource"
                     elif index == 1:
@@ -1286,6 +1288,8 @@ class Actor(Entity):
                     resources.update([(key, resource)])
                     index += 1
                 for ammo in self.getRepeatingAttributes("ammo").values():
+                    if len(ammo) == 0:
+                        continue
                     if index == 0:
                         key, name = "primary", "Primary Resource"
                     elif index == 1:
@@ -1301,6 +1305,8 @@ class Actor(Entity):
             else:
                 index = 2
                 for resource in self.getRepeatingAttributes("resource").values():
+                    if len(resource) == 0:
+                        continue
                     for side in ["left", "right"]:
                         name = self.getAttribute("resource_" + side + "_name", "", from_dict=resource)[0]
                         res = self.createCharacterResource(name, "resource_" + side, from_dict=resource)
@@ -1363,7 +1369,7 @@ class Actor(Entity):
 
     def addInventory(self, items):
         for item in self.getRepeatingAttributes("inventory").values():
-            if self.getAttributeInt("hasattack", 0, from_dict=item) == 1:
+            if len(item) == 0 or self.getAttributeInt("hasattack", 0, from_dict=item) == 1:
                 continue
             name = self.getAttribute("itemname", "", from_dict=item)[0]
             content = self.getAttribute("itemcontent", "", from_dict=item)[0]
@@ -1483,12 +1489,16 @@ class Actor(Entity):
         if self.isNPC():
             npc_traits = self.getRepeatingAttributes("npctrait")
             for trait in npc_traits.values():
+                if len(trait) == 0:
+                    continue
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("desc", "", from_dict=trait)[0]
                 self.createItemFeat(items, name, description, None, None, None)
 
             npc_reactions = self.getRepeatingAttributes("npcreaction")
             for trait in npc_reactions.values():
+                if len(trait) == 0:
+                    continue
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("desc", "", from_dict=trait)[0]
                 activation = ItemActivation(ItemActivation.REACTION, 1)
@@ -1496,6 +1506,8 @@ class Actor(Entity):
         else:
             traits = self.getRepeatingAttributes("traits")
             for trait in traits.values():
+                if len(trait) == 0:
+                    continue
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 description = self.getAttribute("description", "", from_dict=trait)[0]
                 source = self.getAttribute("source", "Racial", from_dict=trait)[0]
@@ -1674,15 +1686,19 @@ class Actor(Entity):
             npc_actions = self.getRepeatingAttributes("npcaction")
             npc_legendary_actions = self.getRepeatingAttributes("npcaction-l")
             for action in npc_actions.values():
-                self.addNPCAction(items, action, False)
+                if len(action) > 0:
+                    self.addNPCAction(items, action, False)
             for action in npc_legendary_actions.values():
-                self.addNPCAction(items, action, True)
+                if len(action) > 0:
+                    self.addNPCAction(items, action, True)
         
         # This is mostly for non NPCs if they manually added a custom attack
         # otherwise, most will be filtered out as they'd match existing inventory
         # items or existing spells
         attacks = self.getRepeatingAttributes("attack")
         for attack in attacks.values():
+            if len(attack) == 0:
+                continue
             # Skip existing spells and items
             if "spellid" in attack:
                 continue
@@ -1692,6 +1708,8 @@ class Actor(Entity):
             attacks.update(self.getRepeatingAttributes("attacher"))
             attacks.update(self.getRepeatingAttributes("classfeature"))
             for attack in attacks.values():
+                if len(attack) == 0:
+                    continue
                 self.addPCAction(items, attack)
 
 
@@ -1713,6 +1731,8 @@ class Actor(Entity):
         for level in range(10):
             spells = self.getRepeatingAttributes("spell-{}".format(level if level > 0 else "cantrip"))
             for spell in spells.values():
+                if len(spell) == 0:
+                    continue
                 name = self.getAttribute("spellname", "", from_dict=spell)[0]
                 description = self.getAttribute("spelldescription", "", from_dict=spell)[0]
                 higherlevel = self.getAttribute("spellathigherlevels", "", from_dict=spell)[0]
@@ -1844,6 +1864,8 @@ class Actor(Entity):
             if self._shaped:
                 classes = self.getRepeatingAttributes("class")
                 for pc_class in classes.values():
+                    if len(pc_class) == 0:
+                        continue
                     name = self.getAttribute("name", "", from_dict=pc_class)[0]
                     level = self.getAttributeInt("level", "", from_dict=pc_class)
                     self.createItemClass(items, name, level)
