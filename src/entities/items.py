@@ -52,8 +52,10 @@ class Items(DatabaseFile):
     def createItemFeat(self, id, name, description, activation, attack, recharge, **kwargs):
         return Item.createItemFeat(self, id, name, description, activation, attack, recharge, **kwargs)
 
-    def createItemSpell(self, id, name, description, spell_type, school, level, **kwargs):
-        return Item.createItemSpell(self, id, name, description, spell_type, school, level, **kwargs)
+    def createItemSpell(self, id, name, description, activation, attack,
+                        level, school, components, preparation, scaling, **kwargs):
+        return Item.createItemSpell(self, id, name, description, activation, attack,
+                        level, school, components, preparation, scaling, **kwargs)
 
     def createItemClass(self, id, name, description, level, **kwargs):
         return Item.createItemClass(self, id, name, description, level, **kwargs)
@@ -232,27 +234,20 @@ class Item(Entity):
         return Item(database, id, name, "feat", None, data)
 
     @staticmethod
-    def createItemSpell(database, id, name, description, spell_type, school, level, **kwargs):
-        data = {
-            "description": {"type": "String", "label": "Description", "value": description},
-            "source": {"type": "String", "label": "Source", "value": kwargs.get("source", "")},
-            "spellType": {"type": "String", "label": "Spell Type", "value": spell_type},
-            "level": {"type": "Number", "label": "Spell Level", "value": level},
-            "school": {"type": "String", "label": "Spell School", "value": school},
-            "components": {"type": "String", "label": "Spell Components", "value": kwargs.get("components", "")},
-            "materials": {"type": "String", "label": "Materials", "value": kwargs.get("materials", "")},
-            "target": {"type": "String", "label": "Target", "value": kwargs.get("target", "")},
-            "range": {"type": "String", "label": "Range", "value": kwargs.get("range", "")},
-            "time": {"type": "String", "label": "Casting Time", "value": kwargs.get("time", "")},
-            "duration": {"type": "String", "label": "Duration", "value": kwargs.get("duration", "")},
-            "damage": {"type": "String", "label": "Spell Damage", "value": kwargs.get("damage", "")},
-            "damageType": {"type": "String", "label": "Damage Type", "value": kwargs.get("damageType", "")},
-            "save": {"type": "String", "label": "Saving Throw", "value": kwargs.get("save", "")},
-            "concentration": {"type": "Boolean", "label": "Requires Concentration", "value": kwargs.get("concentration", False)},
-            "ritual": {"type": "Boolean", "label": "Cast as Ritual", "value": kwargs.get("ritual", False)},
-            "ability": {"type": "String", "label": "Spellcasting Ability", "value": kwargs.get("ability", "")},
-            "prepared": {"type": "Boolean", "label": "Prepared Spell", "value": kwargs.get("prepared", False)}
-        }
+    def createItemSpell(database, id, name, description, activation, attack,
+                        level, school, components, preparation, scaling, **kwargs):
+        source = kwargs.pop("source", "")
+        activation = activation if activation else ItemActivation()
+        attack = attack if attack else ItemAttack()
+        components = components if components else ItemSpellComponents()
+        preparation = preparation if preparation else ItemSpellPreparation()
+        scaling = scaling if scaling else ItemSpellScaling()
+        kwargs.setdefault("level", level)
+        kwargs.setdefault("school", school)
+        kwargs.update(components.getDict())
+        kwargs.update(preparation.getDict())
+        kwargs.update(scaling.getDict())
+        data = Item.createStandardData(description, source, activation, attack, **kwargs)
         return Item(database, id, name, "spell", None, data)
 
         
@@ -260,6 +255,9 @@ class Item(Entity):
     def createItemClass(database, id, name, description, level, **kwargs):
         data = Item.createStandardData(description, levels=level, **kwargs)
         return Item(database, id, name, "class", None, data)
+
+
+# Generic item variables
 
 class ItemAbility:
     NONE = ""
@@ -269,6 +267,13 @@ class ItemAbility:
     INTELLIGENCE = "int"
     WISDOM = "wis"
     CHARISMA = "cha"
+
+    @staticmethod
+    def fromString(string):
+        abbr = string.lower()[0:3]
+        if abbr in ["str", "dex", "con", "wis", "int", "cha"]:
+            return abbr
+        return ItemAbility.NONE
 
         
 class ItemDamage:
@@ -299,6 +304,42 @@ class ItemSave:
                  "dc": self.dc
             }
         }
+
+class ItemAttack:
+    EMPTY = ""
+    MELEE_WEAPON = "mwak"
+    RANGED_WEAPON = "rwak"
+    MELEE_SPELL = "msak"
+    RANGED_SPELL = "rsak"
+    SAVE = "save"
+    HEALING = "heal"
+    ABILITY = "abil"
+    UTILITY = "util"
+    OTHER = "other"
+
+    def __init__(self, type=EMPTY, ability=ItemAbility.NONE, damages=None, save=None,
+                 bonus=0, formula="", critical=None, chatFlavor=""):
+        self.type = type
+        self.ability = ability
+        self.damages = damages if damages else ItemDamage()
+        self.save = save if save else ItemSave()
+        self.bonus = bonus
+        self.formula = formula
+        self.critical = critical
+        self.chatFlavor = chatFlavor
+
+    def getDict(self):
+        attack = {
+            "actionType": self.type,
+            "ability": self.ability,
+            "attackBonus": self.bonus,
+            "critical": self.critical,
+            "formula": self.formula,
+            "chatFlavor": self.chatFlavor
+        }
+        attack.update(self.damages.getDict())
+        attack.update(self.save.getDict())
+        return attack
 
 class ItemRange:
     EMPTY = ""
@@ -355,8 +396,6 @@ class ItemTarget:
                 "type": self.type
             }
         }
-
-
         
 class ItemDuration:
     NONE = ""
@@ -441,41 +480,8 @@ class ItemActivation:
         activation.update(self.uses.getDict())
         return activation
 
-class ItemAttack:
-    EMPTY = ""
-    MELEE_WEAPON = "mwak"
-    RANGED_WEAPON = "rwak"
-    MELEE_SPELL = "msak"
-    RANGED_SPELL = "rsak"
-    SAVE = "save"
-    HEALING = "heal"
-    ABILITY = "abil"
-    UTILITY = "util"
-    OTHER = "other"
 
-    def __init__(self, type=EMPTY, ability=ItemAbility.NONE, damages=None, save=None,
-                 bonus=0, formula="", critical=None, chatFlavor=""):
-        self.type = type
-        self.ability = ability
-        self.damages = damages if damages else ItemDamage()
-        self.save = save if save else ItemSave()
-        self.bonus = bonus
-        self.formula = formula
-        self.critical = critical
-        self.chatFlavor = chatFlavor
-
-    def getDict(self):
-        attack = {
-            "actionType": self.type,
-            "ability": self.ability,
-            "attackBonus": self.bonus,
-            "critical": self.critical,
-            "formula": self.formula,
-            "chatFlavor": self.chatFlavor
-        }
-        attack.update(self.damages.getDict())
-        attack.update(self.save.getDict())
-        return attack
+# Feat specific item variables
 
 class ItemFeatRecharge:
     def __init__(self, recharges=0, charged=False):
@@ -489,3 +495,87 @@ class ItemFeatRecharge:
                 "charged": self.charged
             }
         }
+
+# Spell specific item variables
+
+class ItemSpellSchool:
+    ABJURATION = "abj"
+    CONJURATION = "con"
+    DIVINATION = "div"
+    ENCHANTMENT = "enc"
+    EVOCATION = "evo"
+    ILLUSION = "ill"
+    NECROMANCY = "nec"
+    TRANSMUTATION = "trs"
+
+class ItemSpellComponents:
+    def __init__(self, concentration=False, ritual=False,
+                 v=False, s=False, m=False, materials="",
+                 consumed=False, cost=0, supply=0):
+        self.concentration = concentration
+        self.ritual = ritual
+        self.v = v
+        self.s = s
+        self.m = m
+        self.materials = materials
+        self.consumed = consumed
+        self.cost = cost
+        self.supply = supply
+
+    def getDict(self):
+        return {
+            "components": {
+                "concentration": self.concentration,
+                "ritual": self.ritual,
+                "vocal": self.v,
+                "somatic": self.s,
+                "material": self.m,
+                "value": ""
+            },
+            "materials": {
+                "value": self.materials,
+                "consumed": self.consumed,
+                "cost": self.cost,
+                "supply": self.supply
+            }
+        }
+    
+class ItemSpellScaling:
+    NONE = "none"
+    CANTRIP = "cantrip"
+    LEVEL = "level"
+
+    def __init__(self, mode=NONE, formula=""):
+        self.mode = mode
+        self.formula = formula
+
+    def getDict(self):
+        return {
+            "scaling": {
+                "mode": self.mode,
+                "formula": self.formula
+            }
+        }
+
+class ItemSpellPreparation:
+    NONE = ""
+    PREPARED_SPELL = "prepared"
+    INNATE_SPELLCASTING = "innate"
+    ALWAYS_AVAILABLE = "always"
+    PACT_MAGIC = "pact"
+
+    def __init__(self, mode=NONE, prepared=False):
+        self.mode = mode
+        self.prepared = prepared
+
+    def getDict(self):
+        return {
+            "preparation": {
+                "mode": self.mode,
+                "prepared": self.prepared
+            }
+        }
+
+
+# standard = ["description", "source", "actionType", "ability", "attackBonus", "critical", "formula", "chatFlavor", "damage", "save", "activation", "target", "range", "duration", "uses"]
+# Object.keys(item.data.data).filter(k => !standard.includes(k) && !item.data.data[k]._deprecated)

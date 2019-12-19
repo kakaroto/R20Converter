@@ -320,8 +320,8 @@ class Actor(Entity):
         self.addTraits(owned_items)
         self.addSpells(owned_items)
         # Add actions before inventory so attack items get added first
-        self.addActions(owned_items)
-        self.addInventory(owned_items)
+        #self.addActions(owned_items)
+        #self.addInventory(owned_items)
 
         if self.getArgument("export_as_module", False):
             folder = None
@@ -379,6 +379,10 @@ class Actor(Entity):
     def getAttributeInt(self, key, default=0, from_dict=None):
         value = self.getAttribute(key, default, from_dict)[0]
         return self.toInt(value, default)
+
+    def getAttributeBool(self, key, default=False, from_dict=None):
+        value = str(self.getAttribute(key, default, from_dict)[0]).lower()
+        return not (value == "0" or value == "" or value == "false" or value == "no")
 
     def getRepeatingAttributes(self, key):
         if self._shaped:
@@ -546,11 +550,10 @@ class Actor(Entity):
         return ret
 
     def createAttributeBoolean(self, name, attribute_name, default=False, extra={}):
-        value = self.getAttribute(attribute_name, "on" if default else "")[0]
-        enabled = (value == "on") or (value == "1")
+        value = self.getAttributeBool(attribute_name, "on" if default else "")
         if len(extra) == 0:
-            return enabled
-        ret = {"value": enabled}
+            return value
+        ret = {"value": value}
         ret.update(extra)
         return ret
 
@@ -867,6 +870,8 @@ class Actor(Entity):
             }
             prof = self.getProficiencyBonus()
             for skill in self.getRepeatingAttributes("skill").values():
+                if len(skill) == 0:
+                    continue
                 storage_name = self.getAttribute("storage_name", None, from_dict=skill)[0]
                 name = self.getAttribute("name", storage_name, from_dict=skill)[0]
                 ability = self.getAttribute("ability", "str", from_dict=skill)[0]
@@ -887,7 +892,7 @@ class Actor(Entity):
 
                 bonus = (base_mod + prof * value) - mod
 
-                passive = mod + 10
+                passive = mod = self.getAttributeInt("passive", mod + 10, from_dict=skill)
                 if name is not None:
                     key = name.lower()
                     if type(storage_name) == str:
@@ -1187,7 +1192,6 @@ class Actor(Entity):
             currencies = OrderedDict()
             for currency in self.getRepeatingAttributes("currency").values():
                 acronym = self.getAttribute("acronym", None, from_dict=currency)[0]
-                name = self.getAttribute("name", "", from_dict=currency)[0]
                 # Apparently, you could get a boolean acronym 
                 if type(acronym) == str:
                     currencies.update([(acronym.lower(), self.getAttributeInt("quantity", 0, from_dict=currency))])
@@ -1345,7 +1349,7 @@ class Actor(Entity):
         description = Entity.textToHtml(description)
         compendium_item = self.findCompendiumItem("Items", name)
         if compendium_item and compendium_item.entity["type"] == inventory_type:
-            kwargs["description"] = description
+            kwargs.update({"description": {"value": description}})
             item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
             item = self._converter.items.createItemInventory(None, name, description, inventory_type, **kwargs)
@@ -1468,12 +1472,12 @@ class Actor(Entity):
                 self.createItemInventory(items, name, content, "loot", weight=weight, quantity=count)
 
 
-    def createItemFeat(self, items, name, description, activation, attack, recharge, **kwargs):
+    def createItemFeat(self, items, name, description, activation=None, attack=None, recharge=None, **kwargs):
         name = name if name != "" else "<no name>"
         description = self.textToHtml(description)
         compendium_item = self.findCompendiumItem("Class Features", name)
         if compendium_item:
-            kwargs["description"] = description
+            kwargs.update({"description": {"value": description}})
             kwargs.update(activation.getDict() if activation else {})
             kwargs.update(attack.getDict() if attack else{})
             kwargs.update(recharge.getDict() if recharge else {})
@@ -1713,15 +1717,24 @@ class Actor(Entity):
                 self.addPCAction(items, attack)
 
 
-    def createItemSpell(self, items, name, description, spell_type, school, level, **kwargs):
+    def createItemSpell(self, items, name, description, activation, attack,
+                        level, school, components, preparation, scaling, **kwargs):
         name = name if name != "" else "<no name>"
         description = self.textToHtml(description)
         compendium_item = self.findCompendiumItem("Spells", name)
         if compendium_item:
-            kwargs["description"] = description
+            kwargs.update({"description": {"value": description}})
+            kwargs.setdefault("level", level)
+            kwargs.setdefault("school", school)
+            kwargs.update(activation.getDict())
+            kwargs.update(attack.getDict())
+            kwargs.update(components.getDict())
+            kwargs.update(preparation.getDict())
+            kwargs.update(scaling.getDict())
             item = self._converter.items.createItemFromCompendium(None, compendium_item, **kwargs)
         else:
-            item = self._converter.items.createItemSpell(None, name, description, spell_type, school, level, **kwargs)
+            item = self._converter.items.createItemSpell(None, name, description,  activation, attack,
+                                                        level, school, components, preparation, scaling, **kwargs)
             item.entity["img"] = self._avatar_filename
         owned_item = item.addToOwnedList(items)
         self.exportItem(item, "Spells")
@@ -1737,115 +1750,321 @@ class Actor(Entity):
                 description = self.getAttribute("spelldescription", "", from_dict=spell)[0]
                 higherlevel = self.getAttribute("spellathigherlevels", "", from_dict=spell)[0]
                 school = self.getAttribute("spellschool", "Abjuration", from_dict=spell)[0].lower()
-                save = self.getAttribute("spellsave", "", from_dict=spell)[0]
-
-                dmg = self.getAttribute("spelldamage", "", from_dict=spell)[0]
-                dmg2 = self.getAttribute("spelldamage2", "", from_dict=spell)[0]
-                dmg_type = self.getAttribute("spelldamagetype", "", from_dict=spell)[0]
-                healing = self.getAttribute("spellhealing", "", from_dict=spell)[0]
                 spell_ability = self.getAttribute("spell_ability", "", from_dict=spell)[0]
+                hldie = self.getAttribute("spellhldie", "", from_dict=spell)[0]
+                hldice = self.getAttribute("spellhldietype", "", from_dict=spell)[0]
+                hlbonus = self.getAttribute("spellhlbonus", "", from_dict=spell)[0]
+                hlprogression = self.getAttribute("spell_damage_progression", "", from_dict=spell)[0]
 
-                output = self.getAttribute("spelloutput", "", from_dict=spell)[0]
                 target = self.getAttribute("spelltarget", "", from_dict=spell)[0]
                 spellrange = self.getAttribute("spellrange", "", from_dict=spell)[0]
                 castingtime = self.getAttribute("spellcastingtime", "", from_dict=spell)[0]
                 duration = self.getAttribute("spellduration", "", from_dict=spell)[0]
+                atktype = self.getAttribute("spellattack", "None", from_dict=spell)[0]
                 materials = self.getAttribute("spellcomp_materials", "", from_dict=spell)[0]
                 innate = self.getAttribute("innate", "", from_dict=spell)[0]
                 spell_innate = self.getAttribute("spell_innate", "", from_dict=spell)[0]
-                concentration = self.getAttribute("spellconcentration", "", from_dict=spell)[0] != ""
-                ritual = self.getAttribute("spellritual", "", from_dict=spell)[0] != ""
-                prepared = self.getAttributeInt("spellprepared", 0, from_dict=spell)
+                concentration = self.getAttributeBool("spellconcentration", "", from_dict=spell)
+                ritual = self.getAttributeBool("spellritual", "", from_dict=spell)
+                prepared = self.getAttributeBool("spellprepared", 0, from_dict=spell)
 
+                activation = ItemActivation()
+                attack = ItemAttack()
+                components = ItemSpellComponents()
+                preparation = ItemSpellPreparation()
+                scaling = ItemSpellScaling()
                 if self._shaped:
-                    prepared = prepared == "Yes"
                     castingtime = self._capitalizeAll(castingtime.replace("_", " "))
                     duration = self._capitalizeAll(duration.replace("_", " "))
-                    dmg = dmg2 = dmg_type = healing = ""
-                    for prefix in ["attack", "attack_second", "other", "heal", "saving_throw"]:
-                        toggle_name = "attack_toggle" if prefix.startswith("attack") else (prefix + "_damage_toggle")
-                        toggle = bool(self.getAttributeInt(toggle_name, 0, from_dict=spell))
+                    if "self" in spellrange.lower():
+                        target = spellrange
+                    save = ""
+                    savedc = ""
+                    atktype = "None"
+
+                    for prefix in ["attack", "other", "saving_throw", "heal"]:
+                        toggle_name = prefix + ("_toggle" if prefix != "other" else "_damage_toggle")
+                        toggle = self.getAttributeBool(toggle_name, False, from_dict=spell)
                         if not toggle:
                             continue
-                        dice = self.getAttribute(prefix + "_damage_dice", "", from_dict=spell)[0]
-                        die = self.getAttribute(prefix + "_damage_die", "", from_dict=spell)[0]
-                        bonus = self.getAttribute(prefix + "_damage_bonus", "", from_dict=spell)[0]
-                        ab = self.getAttribute(prefix + "_damage_ability", "", from_dict=spell)[0]
-                        dtype = self.getAttribute(prefix + "_damage_type", "", from_dict=spell)[0]
-                        mod = 0
+                        if prefix == "attack":
+                            attack.bonus = self.getAttributeInt("attack_bonus", 0, from_dict=spell)
+                            attack_type = self.getAttribute("attack_type", "", from_dict=spell)[0]
+                            atktype = "Ranged" if "RANGED" in attack_type else "Melee"
+                        elif prefix == "saving_throw":
+                            save = self.getAttribute("saving_throw_vs_ability", "", from_dict=spell)[0]
+                            savedc = self.getAttribute("saving_throw_dc", "", from_dict=spell)[0]
+                        if prefix == "heal":
+                            damages = [""]
+                        else:
+                            damages = ["_damage", "_second_damage"]
+                        for i, dmg_prefix in enumerate(damages):
+                            if i > 0:
+                                if not self.getAttributeBool(prefix + dmg_prefix + "_condition", False, from_dict=spell):
+                                    continue
+                            dice = self.getAttribute(prefix + dmg_prefix + "_dice", "", from_dict=spell)[0]
+                            die = self.getAttribute(prefix + dmg_prefix + "_die", "", from_dict=spell)[0]
+                            bonus = self.getAttribute(prefix + dmg_prefix + "_bonus", "", from_dict=spell)[0]
+                            ab = self.getAttribute(prefix + dmg_prefix + "_ability", "", from_dict=spell)[0]
+                            dtype = self.getAttribute(prefix + dmg_prefix + "_type", "", from_dict=spell)[0]
+                            mod = ItemAbility.fromString(ab)
+                            value = ""
+                            if dice != "" and die != "":
+                                value = dice + dice
+                            if mod != ItemAbility.NONE:
+                                value += ("" if value == "" else " + ") + "@abilities.{}.mod".format(mod)
+                            if bonus != "":
+                                value += ("" if value == "" else " + ") + bonus
+                            if prefix == "heal":
+                                dtype = "healing"
+                            if value != "" or dtype != "":
+                                attack.damages.addDamage(value, dtype)
+                else:
+                    dmg = self.getAttribute("spelldamage", "", from_dict=spell)[0]
+                    dmg2 = self.getAttribute("spelldamage2", "", from_dict=spell)[0]
+                    dmg_type = self.getAttribute("spelldamagetype", "", from_dict=spell)[0]
+                    dmg_type2 = self.getAttribute("spelldamagetype2", "", from_dict=spell)[0]
+                    add_mod = self.getAttribute("spelldmgmod", "", from_dict=spell)[0]
+                    healing = self.getAttribute("spellhealing", "", from_dict=spell)[0]
+                    save = self.getAttribute("spellsave", "", from_dict=spell)[0]
+                    savedc = self.getAttribute("spell_save_dc", "")[0]
+
+                    add_mod = self.getAttributeBool("spelldmgmod", "", from_dict=spell)
+                    if dmg != "":
+                        if add_mod:
+                            dmg += "+ @mod"
+                        attack.damages.addDamage(dmg, dmg_type.lower())
+                    if dmg2 != "":
+                        if add_mod:
+                            dmg2 += "+ @mod"
+                        attack.damages.addDamage(dmg2, dmg_type2.lower() if dmg_type2 != "" else dmg_type.lower())
+                    if healing != "":
+                        if add_mod:
+                            healing += "+ @mod"
+                        attack.damages.addDamage(healing, "healing")
+
+                # Convert spell school
+                school = school.upper()
+                if school == "ABJURATION":
+                    school = ItemSpellSchool.ABJURATION
+                elif school == "CONJURATION":
+                    school = ItemSpellSchool.CONJURATION
+                elif school == "DIVINATION":
+                    school = ItemSpellSchool.DIVINATION
+                elif school == "ENCHANTMENT":
+                    school = ItemSpellSchool.ENCHANTMENT
+                elif school == "EVOCATION":
+                    school = ItemSpellSchool.EVOCATION
+                elif school == "ILLUSION":
+                    school = ItemSpellSchool.ILLUSION
+                elif school == "NECROMANCY":
+                    school = ItemSpellSchool.NECROMANCY
+                elif school == "TRANSMUTATION":
+                    school = ItemSpellSchool.TRANSMUTATION
+                else:
+                    # Default to abjuration
+                    school = ItemSpellSchool.ABJURATION
+
+                # Convert casting time/condition
+                castingtime = castingtime.lower()
+                match = re.search(r"^\s*(\d+)?\s*(.*)", castingtime)
+                if match:
+                    if match.group(1):
+                        activation.cost = int(match.group(1))
+                    castingtime = match.group(2)
+                else:
+                    activation.cost = 1
+                match = re.search(r"^\s*(action|bonus action|reaction|legendary|legendary action|lair|lair action|minutes?|hours?|days?)\s*,?\s*(.*)", castingtime)
+                if match:
+                    castingtime = match.group(1)
+                    activation.condition = match.group(2) or ""
+                    if castingtime == "action":
+                        activation.activation = ItemActivation.ACTION
+                    elif castingtime ==  "bonus action":
+                        activation.activation = ItemActivation.BONUS_ACTION
+                    elif castingtime == "reaction":
+                        activation.activation = ItemActivation.REACTION
+                    elif "legendary" in castingtime:
+                        activation.activation = ItemActivation.LEGENDARY
+                    elif "lair" in castingtime:
+                        activation.activation = ItemActivation.LAIR
+                    elif "minute" in castingtime:
+                        activation.activation = ItemActivation.MINUTE
+                    elif "hour" in castingtime:
+                        activation.activation = ItemActivation.HOUR
+                    elif "day" in castingtime:
+                        activation.activation = ItemActivation.DAY
+                    else:
+                        activation.activation = ItemActivation.SPECIAL
+
+                # Convert preparation mode and innate spellcasting/uses
+                if self.isNPC():
+                    preparation.mode = ItemSpellPreparation.PREPARED_SPELL
+                    preparation.prepared = True
+                else:
+                    preparation.mode = ItemSpellPreparation.PREPARED_SPELL
+                    preparation.prepared = prepared
+                innate = innate if innate != "" else spell_innate
+                if innate != "":
+                    preparation.mode = ItemSpellPreparation.INNATE_SPELLCASTING
+                    preparation.prepared = True
+                    if activation.condition == "":
+                        activation.condition = innate
+                    match = re.search(r"(\d)(?:/(day|short|long))?", innate.lower())
+                    if match:
+                        activation.uses.uses = int(match.group(1))
+                        activation.uses.max = int(match.group(1))
+                        if match.group(2) == "day":
+                            activation.uses.per = ItemUses.PER_DAY
+                        elif match.group(2) == "short":
+                            activation.uses.per = ItemUses.PER_SHORT_REST
+                        elif match.group(2) == "long":
+                            activation.uses.per = ItemUses.PER_LONG_REST
+                    if "at will" in innate.lower():
+                        preparation.mode = ItemSpellPreparation.ALWAYS_AVAILABLE
+
+                # Convert Duration
+                duration = duration.lower()
+                match = re.search(r"(\d+)", duration)
+                if match:
+                    activation.duration.duration = int(match.group(1))
+                if "instant" in duration:
+                    activation.duration.units = ItemDuration.INSTANTANEOUS
+                elif "turn" in duration:
+                    activation.duration.units = ItemDuration.TURN
+                elif "min" in duration:
+                    activation.duration.units = ItemDuration.MINUTE
+                elif "round" in duration:
+                    activation.duration.units = ItemDuration.ROUND
+                elif "hour" in duration:
+                    activation.duration.units = ItemDuration.HOUR
+                elif "day" in duration:
+                    activation.duration.units = ItemDuration.DAY
+                elif "year" in duration:
+                    activation.duration.units = ItemDuration.YEAR
+                elif "until" in duration or "permanent" in duration:
+                    activation.duration.units = ItemDuration.PERMANENT
+                else:
+                    activation.duration.units = ItemDuration.SPECIAL
+                
+                # Convert range
+                spellrange = spellrange.lower()
+                match = re.search(r"(\d+)", spellrange)
+                if match:
+                    activation.range.range = int(match.group(1))
+                if "self" in spellrange:
+                    activation.range.units = ItemRange.SELF
+                elif "touch" in spellrange:
+                    activation.range.units = ItemRange.TOUCH
+                elif "ft" in spellrange or "feet" in spellrange or "foot" in spellrange:
+                    activation.range.units = ItemRange.FEET
+                elif "mi" in spellrange or "mile" in spellrange:
+                    activation.range.units = ItemRange.MILES
+
+                # Convert Target
+                target = target.lower()
+                match = re.search(r"(\d+)", target)
+                if match:
+                    activation.target.range.range = int(match.group(1))
+                if "ft" in target or "feet" in target or "foot" in target:
+                    activation.target.range.units = ItemRange.FEET
+                elif "mi" in target or "mile" in target:
+                    activation.target.range.units = ItemRange.MILES
+                elif "self" in target:
+                    activation.target.range.units = ItemRange.SELF
+                elif "touch" in target:
+                    activation.target.range.units = ItemRange.TOUCH
+                
+                if "sphere" in target:
+                    activation.target.type = ItemTarget.SPHERE
+                elif "radius" in target:
+                    activation.target.type = ItemTarget.RADIUS
+                elif "cylinder" in target:
+                    activation.target.type = ItemTarget.CYLINDER
+                elif "cone" in target:
+                    activation.target.type = ItemTarget.CONE
+                elif "line" in target:
+                    activation.target.type = ItemTarget.LINE
+                elif "cube" in target:
+                    activation.target.type = ItemTarget.CUBE
+                elif "wall" in target:
+                    activation.target.type = ItemTarget.WALL
+                elif "creature" in target:
+                    activation.target.type = ItemTarget.CREATURE
+                elif "object" in target:
+                    activation.target.type = ItemTarget.OBJECT
+                elif "willing" in target or "ally" in target:
+                    activation.target.type = ItemTarget.ALLY
+                elif "enemy" in target:
+                    activation.target.type = ItemTarget.ENEMY
+                elif "space" in target:
+                    activation.target.type = ItemTarget.SPACE
+                elif "self" in target:
+                    activation.target.type = ItemTarget.SELF
+
+                # Convert Attack type  
+                attack.save.ability = ItemAbility.fromString(save)
+                if attack.save.ability != ItemAbility.NONE:
+                    try:
+                        attack.save.dc = int(savedc)
+                    except:
                         try:
-                            if ab != "":
-                                mod = self._actor_abilities[ab.lower()[0:3]]["mod"]
+                            mod = self._actor_abilities[attack.save.ability]["mod"]
+                            attack.save.dc = 10 + int(mod) + self.getProficiencyBonus()
                         except:
                             pass
-                        value = "{}{}{}{}".format(dice, die, "" if mod == 0 else " + {}".format(mod), "" if bonus else " + {}".format(bonus))
-                        if prefix == "attack" or prefix == "saving_throw":
-                            dmg = value
-                            dmg_type = dtype
-                        elif prefix == "other" or prefix == "attack_second":
-                            dmg2 = value
-                        elif prefix == "heal":
-                            healing = value
-                else:
-                    prepared = bool(prepared)
-                if self.isNPC():
-                    prepared = True
 
-                save = save.lower()[0:3]
-                school = "trs" if school == "transmutation" else school[0:3]
-                if save != "":
-                    spell_type = "save"
-                elif healing != "":
-                    spell_type = "heal"
-                    dmg = healing
-                    dmg_type = "healing"
-                elif output == "ATTACK":
-                    spell_type = "attack"
+                if atktype == "Ranged":
+                    attack.type = ItemAttack.RANGED_SPELL
+                elif atktype == "Melee":
+                    attack.type = ItemAttack.MELEE_SPELL
+                elif attack.save.ability != ItemAbility.NONE:
+                    attack.type = ItemAttack.SAVE
+                elif "healing" in map(lambda dmgs: dmgs[1], attack.damages.damages):
+                    attack.type = ItemAttack.HEALING
                 else:
-                    spell_type = "utility"
-                if dmg2 != "":
-                    dmg += "+ {}".format(dmg2)
-                if higherlevel != "":
-                    description += "\n<strong>Higher Level.</strong>" + higherlevel
-                use_ability = "" # spell casting ability
+                    attack.type = ItemAttack.UTILITY
+
                 for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
                     if ability in spell_ability:
-                        use_ability = ability[0:3]
+                        attack.ability = ItemAbility.fromString(ability)
                         break
-                components = []
+
+                # Convert higher level casting
+                if higherlevel != "":
+                    description += "\n<strong>Higher Level.</strong>" + higherlevel
+                    scaling.mode = ItemSpellScaling.LEVEL if level > 0 else ItemSpellScaling.CANTRIP
+                if hldie != "" or hldice != "" or hlbonus != "":
+                    scaling.formula = hldie + hldice + ((" + " + hlbonus) if hlbonus != "" else "")
+                    scaling.mode = ItemSpellScaling.LEVEL if level > 0 else ItemSpellScaling.CANTRIP
+                if hlprogression == "Cantrip Dice":
+                    scaling.mode = ItemSpellScaling.CANTRIP
+
+                # Convert Components and materials
                 if self._shaped:
                     comps = self.getAttribute("components", "", from_dict=spell)[0]
                     if "_V" in comps:
-                        components.append("V")
+                        components.v = True
                     if "_S" in comps:
-                        components.append("S")
+                        components.s = True
                     if "_M" in comps:
-                        components.append("M")
+                        components.m = True
                 else:
                     if self.getAttributeInt("spellcomp_v", 1, from_dict=spell) != 0:
-                        components.append("V")
+                        components.v = True
                     if self.getAttributeInt("spellcomp_s", 1, from_dict=spell) != 0:
-                        components.append("S")
+                        components.s = True
                     if self.getAttributeInt("spellcomp_m", 1, from_dict=spell) != 0:
-                        components.append("M")
-                if innate != "" or spell_innate != "":
-                    name += " (" + (innate if innate != "" else spell_innate) + ")"
-                kwargs = {
-                    "target": target,
-                    "range": spellrange,
-                    "time": castingtime,
-                    "duration": duration,
-                    "damage": dmg,
-                    "damageType": dmg_type.lower(),
-                    "save": save,
-                    "ability": use_ability,
-                    "materials": materials,
-                    "components": ", ".join(components),
-                    "concentration": concentration,
-                    "ritual": ritual,
-                    "prepared": prepared
-                }
-                self.createItemSpell(items, name, description, spell_type, school, level, **kwargs)
+                        components.m = True
+                components.concentration = concentration
+                components.ritual = ritual
+                components.materials = materials
+                components.consumed = "consume" in materials
+                cost = re.search(r"(\d+) (?:g|s|c)p", materials)
+                if cost:
+                    components.cost = int(cost.group(1))
+                self.createItemSpell(items, name, description, activation, attack,
+                                    level, school, components, preparation, scaling)
 
     def createItemClass(self, items, name, level, subclass=""):
         name = name if name != "" else "<unknown class>"
@@ -2020,6 +2239,7 @@ class Actor(Entity):
             "spellcastingtime": "casting_time",
             "spellprepared": "is_prepared",
             "spell_ability": "attack_ability",
+            "spellattack": "attack_type",
 
             "name": "name",
             "namedisplay": "name",
