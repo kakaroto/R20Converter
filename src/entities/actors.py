@@ -1487,6 +1487,10 @@ class Actor(Entity):
         return owned_item
 
     def addTraits(self, items):
+        if self._shaped:
+            # Shaped sheet doesn't have a name+description only trait, so we handle traits and reactions
+            # as we do other sheet actions
+            return
         if self.isNPC():
             npc_traits = self.getRepeatingAttributes("npctrait")
             for trait in npc_traits.values():
@@ -1515,7 +1519,7 @@ class Actor(Entity):
                 source_type = self.getAttribute("source_type", "", from_dict=trait)[0]
                 self.createItemFeat(items, name, description, None, None, None, source=source, requirements=source_type)
 
-    def addNPCAction(self, items, action, legendary):
+    def addNPCAction(self, items, action, activation_type):
         name = self.getAttribute("name", "", from_dict=action)[0]
         name_display = self.getAttribute("name_display", "", from_dict=action)[0]
         description = self.getAttribute("description", "", from_dict=action)[0]
@@ -1580,7 +1584,7 @@ class Actor(Entity):
         self._parseTarget(activation, atk_target)
 
         activation.cost = 1
-        activation.activation = ItemActivation.LEGENDARY if legendary else ItemActivation.ACTION
+        activation.activation = activation_type
         
         if has_attack:
             proficiency_bonus = self.getProficiencyBonus()
@@ -1597,7 +1601,7 @@ class Actor(Entity):
 
 
         is_weapon = False
-        is_feat = False
+        is_feat = activation_type != ItemActivation.ACTION
         weapon_type = None
         compendium_item = self.findCompendiumItem("Items", name)
         if compendium_item is not None:
@@ -1729,13 +1733,30 @@ class Actor(Entity):
     def addActions(self, items):
         if self.isNPC():
             npc_actions = self.getRepeatingAttributes("npcaction")
-            npc_legendary_actions = self.getRepeatingAttributes("npcaction-l")
             for action in npc_actions.values():
                 if len(action) > 0:
-                    self.addNPCAction(items, action, False)
+                    self.addNPCAction(items, action, ItemActivation.ACTION)
+
+            npc_legendary_actions = self.getRepeatingAttributes("npcaction-l")
             for action in npc_legendary_actions.values():
                 if len(action) > 0:
-                    self.addNPCAction(items, action, True)
+                    self.addNPCAction(items, action, ItemActivation.LEGENDARY)
+
+            if self._shaped:
+                npc_reactions = self.getRepeatingAttributes("reaction")
+                for action in npc_reactions.values():
+                    if len(action) > 0:
+                        self.addNPCAction(items, action, ItemActivation.REACTION)
+                        
+                npc_lair_actions = self.getRepeatingAttributes("lairaction")
+                for action in npc_lair_actions.values():
+                    if len(action) > 0:
+                        self.addNPCAction(items, action, ItemActivation.LAIR)
+
+                regional_effects = self.getRepeatingAttributes("regionaleffect")
+                for action in regional_effects.values():
+                    if len(action) > 0:
+                        self.addNPCAction(items, action, ItemActivation.SPECIAL)
         
         # This is mostly for non NPCs if they manually added a custom attack
         # otherwise, most will be filtered out as they'd match existing inventory
@@ -1848,11 +1869,8 @@ class Actor(Entity):
                         try:
                             attack.save.dc = int(savedc)
                         except:
-                            try:
-                                mod = self._actor_abilities[attack.save.ability]["mod"]
-                                attack.save.dc = 10 + int(mod) + self.getProficiencyBonus()
-                            except:
-                                pass
+                            mod = self._actor_abilities[attack.save.ability]["mod"]
+                            attack.save.dc = 10 + int(mod) + self.getProficiencyBonus()
 
                     if atktype == "Ranged":
                         attack.type = ItemAttack.RANGED_SPELL
@@ -2024,6 +2042,13 @@ class Actor(Entity):
             elif prefix == "saving_throw":
                 save = self.getAttribute("saving_throw_vs_ability", "", from_dict=repeating)[0]
                 savedc = self.getAttribute("saving_throw_dc", "", from_dict=repeating)[0]
+                attack.save.ability = ItemAbility.fromString(save)
+                if attack.save.ability != ItemAbility.NONE:
+                    try:
+                        attack.save.dc = int(savedc)
+                    except:
+                        mod = self._actor_abilities[attack.save.ability]["mod"]
+                        attack.save.dc = 10 + int(mod) + self.getProficiencyBonus()
             if prefix == "heal":
                 damages = [""]
             else:
@@ -2341,6 +2366,7 @@ class Actor(Entity):
         SHAPED_EQUIVALENCE = {
             'npctrait': 'trait',
             'npcaction': 'action',
+            'npcaction-l': 'legendaryaction',
             'spell-cantrip': 'spell0',
             'spell-1':'spell1',
             'spell-2':'spell2',
