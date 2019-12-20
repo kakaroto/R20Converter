@@ -17,7 +17,7 @@ class World(object):
                 "description": self._description,
                 "system": "dnd5e",
                 "coreVersion": "0.4.2",
-                "systemVersion": 0.61,
+                "systemVersion": 0.73,
                 "packs": [],
                 "scripts": [],
                 "styles": [],
