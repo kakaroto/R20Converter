@@ -43,6 +43,7 @@ class Module(object):
                 "description": self._description,
                 "author": "R20Converter",
                 "version": "1.0",
+                "minimumCoreVersion": "0.4.3",
                 "packs": self._packs
             } 
 
