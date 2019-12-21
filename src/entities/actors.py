@@ -617,18 +617,9 @@ class Actor(Entity):
             "value": speed,
             "special": special
         }
-    def createAttributeSpellcasting(self):
-        spellcasting_ability = ""
-        attribute = self.getAttribute("spellcasting_ability", None)[0]
-        if attribute:
-            match = re.search(r"@{(.*)}", attribute)
-            if match:
-                spellcasting_ability = match.group(1)[0:3].lower()
-            else:
-                spellcasting_ability = attribute[0:3].lower()
-        if spellcasting_ability not in ["str", "dex", "con", "int", "wis", "cha"]:
-            spellcasting_ability = ""
-        return spellcasting_ability
+    def getSpellcastingAbility(self):
+        attribute = self.getAttribute("spellcasting_ability", "")[0]
+        return ItemAbility.fromString(attribute)
 
     def createAttributeDeath(self):
         success = 0
@@ -676,7 +667,7 @@ class Actor(Entity):
             ("init", self.createAttributeInitiative()),
             ("prof", self.getProficiencyBonus()),
             ("speed", self.createAttributeSpeed()),
-            ("spellcasting", self.createAttributeSpellcasting()),
+            ("spellcasting", self.getSpellcastingAbility()),
             ("spelldc", self.getAttributeInt("npc_spelldc" if self.isNPC() else "spell_save_dc", 10)),
             ("spellLevel", 0),
             # Add our own bar data
@@ -1528,6 +1519,7 @@ class Actor(Entity):
         atk_range = self.getAttribute("attack_range", "", from_dict=action)[0]
         atk_target = self.getAttribute("attack_target", "one target", from_dict=action)[0]
         has_attack = False
+        proficient = True
 
         activation = ItemActivation()
         attack = ItemAttack()
@@ -1536,12 +1528,13 @@ class Actor(Entity):
             atk_target = self._capitalizeAll(atk_target.replace("_", " "))
             self._parseShapedAttacks(attack, action)
             has_attack = (attack.type == ItemAttack.MELEE_WEAPON or attack.type == ItemAttack.RANGED_WEAPON)
-
+            proficient = self.getAttributeBool("proficiency", True, from_dict=action)
+            reachrange = "reach" if attack.type == ItemAttack.MELEE_WEAPON else "range"
+            atk_range = self.getAttribute(reachrange, "", from_dict=action)[0]
             if has_attack and tohit != "":
                 attack_type = "Melee" if attack.type == ItemAttack.MELEE_WEAPON else "Ranged"
-                reachrange = "Reach" if attack.type == ItemAttack.MELEE_WEAPON else "Range"
                 attack_type += "Weapon Attack"
-                tohitrange = "{} to hit, {} {}".format(tohit, reachrange, atk_range)
+                tohitrange = "{} to hit, {} {}".format(tohit, self._capitalizeAll(reachrange), atk_range)
             else:
                 onhit = ""
         else:
@@ -1566,6 +1559,17 @@ class Actor(Entity):
                     attack.damages.addDamage(dmg, dmg_type.lower())
                 if dmg2 != "":
                     attack.damages.addDamage(dmg2, dmg2_type.lower())
+                proficiency_bonus = self.getProficiencyBonus()
+                for ability in ["str", "dex", "con", "wis", "int", "cha"]:
+                    mod = self._actor_abilities[ability]["mod"]
+                    if mod + proficiency_bonus == tohit:
+                        attack.ability = ItemAbility.fromString(ability)
+                        break
+                else:
+                    # TODO: FVTT 0.4.3 so far will still force strength ability to get added
+                    # even if ability is set to EMPTY
+                    attack.ability = ItemAbility.STRENGTH
+                    attack.bonus = tohit - self._actor_abilities["str"]["mod"]
             else:
                 atktype = "None"
         
@@ -1585,22 +1589,8 @@ class Actor(Entity):
 
         activation.cost = 1
         activation.activation = activation_type
-        
-        if has_attack:
-            proficiency_bonus = self.getProficiencyBonus()
-            for ability in ["str", "dex", "con", "wis", "int", "cha"]:
-                mod = self._actor_abilities[ability]["mod"]
-                if mod + proficiency_bonus == tohit:
-                    attack.ability = ItemAbility.fromString(ability)
-                    break
-            else:
-                # TODO: FVTT 0.4.3 so far will still force strength ability to get added
-                # even if ability is set to EMPTY
-                attack.ability = ItemAbility.STRENGTH
-                tohit -= self._actor_abilities["str"]["mod"]
 
-
-        is_weapon = False
+        is_weapon = has_attack and not proficient
         is_feat = activation_type != ItemActivation.ACTION
         weapon_type = None
         compendium_item = self.findCompendiumItem("Items", name)
@@ -1615,119 +1605,108 @@ class Actor(Entity):
             attributes = ItemInventoryAttributes()
             attributes.equipped = True
             weapon = ItemWeapon()
-            weapon.proficient = True
-            if is_weapon:
-                weapon.type = weapon_type
-            else:
-                weapon.type = ItemWeapon.NATURAL
+            weapon.proficient = proficient
+            weapon.type = weapon_type if is_weapon else ItemWeapon.NATURAL
             self.createItemInventory(items, name, description_block, "weapon", activation, attack,
                                     attributes, weapon)
         else:
             self.createItemFeat(items, name, description_block, activation, attack, None)
 
-    def addPCAction(self, items, attack):
-        return
-        name = self.getAttribute("atkname", "", from_dict=attack)[0]
-        description = self.getAttribute("atk_desc", "", from_dict=attack)[0]
-        dmg = dmg_type = dmg_attr = dmg2 = dmg2_type = dmg2_attr = atk_attr = atk_range = saveattr = ""
+    def addPCAction(self, items, action):
+        # Skip attacks based on existing spells
+        spellid = self.getAttribute("spellid", "", from_dict=action)[0]
+        if spellid != "":
+            return
+        name = self.getAttribute("atkname", "", from_dict=action)[0]
+        description = self.getAttribute("atk_desc", "", from_dict=action)[0]
+        atk_range = self.getAttribute("atkrange", "", from_dict=action)[0]
+
+        activation = ItemActivation()
+        attack = ItemAttack()
+        has_attack = False
+        proficient = True
 
         if self._shaped:
-            atkmagic = ""
-            if self.getAttributeInt("attack_toggle", 1, from_dict=attack) != 0:
-                atk_attr = self.getAttribute("attack_ability", "strength", from_dict=attack)[0].lower()
-            atk_range = self.getAttribute("range", "", from_dict=attack)[0]
-            if atk_range == "":
-                atk_range = self.getAttribute("reach", "", from_dict=attack)[0]
-            for prefix in ["attack", "attack_second", "other", "heal", "saving_throw"]:
-                toggle_name = "attack_toggle" if prefix.startswith("attack") else (prefix + "_damage_toggle")
-                toggle = bool(self.getAttributeInt(toggle_name, 0, from_dict=attack))
-                if not toggle:
-                    continue
-                dice = self.getAttribute(prefix + "_damage_dice", "", from_dict=attack)[0]
-                die = self.getAttribute(prefix + "_damage_die", "", from_dict=attack)[0]
-                bonus = self.getAttribute(prefix + "_damage_bonus", "", from_dict=attack)[0]
-                ab = self.getAttribute(prefix + "_damage_ability", "", from_dict=attack)[0]
-                dtype = self.getAttribute(prefix + "_damage_type", "", from_dict=attack)[0]
-                mod = 0
-                try:
-                    if ab != "":
-                        mod = self._actor_abilities[ab.lower()[0:3]]["mod"]
-                except:
-                    pass
-                value = "{}{}{}{}".format(dice, die, "" if mod == 0 else " + {}".format(mod), "" if bonus else " + {}".format(bonus))
-                if prefix == "attack" or prefix == "saving_throw":
-                    dmg = value
-                    dmg_type = dtype
-                    dmg_attr = ab
-                elif prefix == "other" or prefix == "attack_second":
-                    dmg2 = value
-                    dmg2_type = dtype
-                    dmg2_attr = ab
-                elif prefix == "heal":
-                    dmg = value
-                    dmg_type = "healing"
-                    dmg_attr = ab
+            self._parseShapedAttacks(attack, action)
+            has_attack = (attack.type == ItemAttack.MELEE_WEAPON or attack.type == ItemAttack.RANGED_WEAPON)
+            proficient = self.getAttributeBool("proficiency", True, from_dict=action)
+            reachrange = "reach" if attack.type == ItemAttack.MELEE_WEAPON else "range"
+            atk_range = self.getAttribute(reachrange, "", from_dict=action)[0]
         else:
-            if self.getAttribute("dmgflag", "1", from_dict=attack)[0] != "0":
-                dmg = self.getAttribute("dmgbase", "", from_dict=attack)[0]
-                dmg_type = self.getAttribute("dmgtype", "", from_dict=attack)[0]
-                dmg_attr = self.getAttribute("dmgattr", "strength", from_dict=attack)[0]
-            if self.getAttribute("dmg2flag", "0", from_dict=attack)[0] != "0":
-                dmg2 = self.getAttribute("dmg2base", "", from_dict=attack)[0]
-                dmg2_type = self.getAttribute("dmg2type", "", from_dict=attack)[0]
-                dmg2_attr = self.getAttribute("dmg2attr", "", from_dict=attack)[0]
-            if self.getAttribute("atkflag", "1", from_dict=attack)[0] != "0":
-                atk_attr = self.getAttribute("atkattr_base", "strength", from_dict=attack)[0]
-            proficient = str(self.getAttribute("atkprofflag", "1", from_dict=attack)[0]) != "0"
-            atk_range = self.getAttribute("atkrange", "", from_dict=attack)[0]
-            atkmagic = self.getAttribute("atkmagic", "", from_dict=attack)[0]
-            if atkmagic != "" and dmg != "":
-                dmg = "%s + %s" % (dmg, atkmagic)
-            if self.getAttribute("saveflag", "0", from_dict=attack)[0] != "0":
-                saveattr = self.getAttribute("saveattr", "", from_dict=attack)[0]
-        atk_ability = ""
-        dmg_ability = ""
-        dmg2_ability = ""
-        for ability in ["strength", "dexterity", "constitution", "wisdom", "intelligence", "charisma"]:
-            if ability in str(atk_attr):
-                atk_ability = ability[0:3]
-            if ability in str(dmg_attr):
-                dmg_ability = ability[0:3]
-            if ability in str(dmg2_attr):
-                dmg2_ability = ability[0:3]
-        save = saveattr.lower()[0:3]
-        if dmg2_ability != "":
-            dmg2 += " + {}".format(self._actor_abilities[dmg2_ability]["mod"])
-        # If second damage but no ability for the first damage, then it can't be a weapon attack
-        if dmg2 != "" and dmg_ability == "":
-            dmg += " + " + dmg2
-            dmg2 = ""
-        if (dmg2 != "" or atkmagic != "" or "itemid" in attack) and (save == "" or not proficient):
-            # Let's make this into a weapon attack due to alternate damage, or if not proficient
-            kwargs = {
-                    "weaponType": "simpleM",
-                    "bonus": atkmagic,
-                    "damage": dmg,
-                    "damageType": dmg_type.lower(),
-                    "damage2": dmg2,
-                    "damage2Type": dmg2_type.lower(),
-                    "range": atk_range,
-                    "ability": atk_ability,
-                    "proficient": proficient
-            }
-            self.createItemInventory(items, name, description, "weapon", **kwargs)
+            if self.getAttribute("atkflag", "1", from_dict=action)[0] != "0":
+                has_attack = True
+                proficient = self.getAttributeBool("atkprofflag", True, from_dict=action)
+                atk_attr = self.getAttribute("atkattr_base", "strength", from_dict=action)[0]
+                attack.ability = ItemAbility.fromString(atk_attr)
+                attack.bonus = self.getAttributeInt("atkmagic", 0, from_dict=action)
+                attack.type = ItemAttack.MELEE_WEAPON
+
+            for prefix in ["dmg", "dmg2"]:
+                if self.getAttributeBool(prefix + "flag", prefix == "dmg", from_dict=action):
+                    dmg_base = self.getAttribute(prefix + "base", "", from_dict=action)[0]
+                    dmg_type = self.getAttribute(prefix + "type", "", from_dict=action)[0]
+                    dmg_attr = self.getAttribute(prefix + "attr", "strength", from_dict=action)[0]
+                    dmg_mod = self.getAttributeInt(prefix + "mod", 0, from_dict=action)
+                    if dmg_attr == "spell":
+                        ability = self.getSpellcastingAbility()
+                    else:
+                        ability = ItemAbility.fromString(dmg_attr)
+                    dmg = dmg_base
+                    if ability != ItemAbility.NONE:
+                        dmg += ("" if dmg == "" else " + ") + "@abilities.{}.mod".format(ability)
+                    if dmg_mod != "":
+                        dmg += ("" if dmg == "" else " + ") + str(dmg_mod)
+                    if dmg != "" or dmg_type != "":
+                        attack.damages.addDamage(dmg, dmg_type.lower())
+                        if attack.type == ItemAttack.EMPTY:
+                            attack.type = ItemAttack.UTILITY
+
+            if self.getAttributeBool("saveflag", False, from_dict=action):
+                saveattr = self.getAttribute("saveattr", "strength", from_dict=action)[0]
+                savedc = self.getAttribute("savedc", "spell", from_dict=action)[0]
+                saveflat = self.getAttributeInt("saveflat", 10, from_dict=action)
+                attack.save.ability = ItemAbility.fromString(saveattr)
+                if attack.type == ItemAttack.EMPTY:
+                    attack.type = ItemAttack.SAVE
+                if "saveflat" in savedc:
+                    attack.save.dc = saveflat
+                elif "spell_save_dc" in savedc:
+                    attack.save.dc = self.getAttributeInt("spell_save_dc", 10)
+                else:
+                    ability = ItemAbility.fromString(savedc)
+                    if attack.save.ability != ItemAbility.NONE:
+                        mod = self._actor_abilities[attack.save.ability]["mod"]
+                        attack.save.dc = 10 + int(mod) + self.getProficiencyBonus()
+
+        # Convert range
+        self._parseRange(activation, atk_range)
+        
+        if has_attack or atk_range != "":
+            activation.cost = 1
+            activation.activation = ItemActivation.ACTION
+            
+        is_weapon = ("itemid" in action) or (has_attack and not proficient)
+        is_feat = False
+        weapon_type = None
+        compendium_item = self.findCompendiumItem("Items", name)
+        if compendium_item is not None:
+            if compendium_item.entity["type"] == "feat":
+                is_feat = True
+            elif compendium_item.entity["type"] == "weapon":
+                is_weapon = True
+                weapon_type = compendium_item.entity["data"]["weaponType"]
+
+        if is_feat is False and (has_attack or is_weapon):
+            attributes = ItemInventoryAttributes()
+            attributes.equipped = True
+            weapon = ItemWeapon()
+            weapon.proficient = proficient
+            weapon.type = weapon_type if is_weapon else ItemWeapon.SIMPLE_MELEE
+            # TODO: check itemid and grab weight/quantity/properties/etc.. from the item
+            self.createItemInventory(items, name, description, "weapon", activation, attack,
+                                    attributes, weapon)
         else:
-            if dmg_ability != "":
-                dmg += " + {}".format(self._actor_abilities[dmg_ability]["mod"])
-            kwargs = {
-                    "ability": atk_ability,
-                    "target": "",
-                    "range": atk_range,
-                    "damage": dmg,
-                    "damageType": dmg_type.lower(),
-                    "save": save
-            }
-            self.createItemFeat(items, name, description, "attack" if atk_ability != "" else "passive", **kwargs)
+            self.createItemFeat(items, name, description, activation, attack, None)
 
 
     def addActions(self, items):
@@ -1761,22 +1740,18 @@ class Actor(Entity):
         # This is mostly for non NPCs if they manually added a custom attack
         # otherwise, most will be filtered out as they'd match existing inventory
         # items or existing spells
-        attacks = self.getRepeatingAttributes("attack")
-        for attack in attacks.values():
-            if len(attack) == 0:
-                continue
-            # Skip existing spells and items
-            if "spellid" in attack:
-                continue
-            self.addPCAction(items, attack)
+        actions = self.getRepeatingAttributes("attack")
         if self._shaped:
-            attacks = self.getRepeatingAttributes("offense")
-            attacks.update(self.getRepeatingAttributes("attacher"))
-            attacks.update(self.getRepeatingAttributes("classfeature"))
-            for attack in attacks.values():
-                if len(attack) == 0:
-                    continue
-                self.addPCAction(items, attack)
+            actions.update(self.getRepeatingAttributes("trait"))
+            actions.update(self.getRepeatingAttributes("feat"))
+            actions.update(self.getRepeatingAttributes("racialtrait"))
+            actions.update(self.getRepeatingAttributes("classfeature"))
+            actions.update(self.getRepeatingAttributes("offense"))
+            actions.update(self.getRepeatingAttributes("utility"))
+        for action in actions.values():
+            if len(action) == 0:
+                continue
+            self.addPCAction(items, action)
 
 
     def createItemSpell(self, items, name, description, activation, attack,
@@ -2347,7 +2322,7 @@ class Actor(Entity):
             "description": "content",
             "desc": "content",
             "attack_tohit": "to_hit",
-            "attack_range": "reach",
+            "attack_range": "range",
             "attack_onhit": "attack_damage_string",
 
             "itemname": "name",
