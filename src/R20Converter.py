@@ -6,6 +6,7 @@ import zipfile
 import argparse
 import sys
 import os
+import platform
 from world import World
 from module import Module
 from entities import DatabaseFile, EmptyDB, Actors, Items, Combat, Folders, Journal, Playlists, Scenes, SettingsDB, Users
@@ -19,7 +20,7 @@ except:
     except:
         sg = None
 
-version = "0.6.4"
+version = "0.7-beta1"
 
 class R20Converter(object):
     def __init__(self, args):
@@ -33,16 +34,18 @@ class R20Converter(object):
             self.zip = zipfile.ZipFile(args.zip_file, "r")
             self.campaign = json.load(self.getZipFile("campaign.json"))
         self.packs = {}
-        self.fvtt_path = self.getArgument("fvtt_public_path", None)
-        if self.fvtt_path == None:
-            potential_path = os.path.dirname(os.path.dirname(self.path))
-            if os.path.exists(os.path.join(potential_path, "systems", "dnd5e", "system.json")):
+        self.fvtt_path = self.getArgument("fvtt_data_path", None)
+        if self.fvtt_path is None:
+            potential_path = os.path.abspath(os.path.join(self.path, "..", "..", ".."))
+            if os.path.exists(os.path.join(potential_path, "Data", "systems", "dnd5e", "system.json")):
                 self.fvtt_path = potential_path
+            else:
+                self.fvtt_path = self.getFVTTDataPath()
         if self.fvtt_path is not None:
             self.loadDnD5ePacks()
         else:
-            print("Warning: Could not find the path to the FVTT public directory, either specify a destination directory in the public/worlds/ path\n"
-                  "or use the --fvtt-public-path argument to specify the path to the public directory.\n"
+            print("Warning: Could not find the path to the FVTT Data directory, either specify a destination directory in the Data/worlds/ path\n"
+                  "or use the --fvtt-data-path argument to specify the path to the Data directory.\n"
                   "If you do not, then Item and Spell Compendium links in journal entries will not be replaced with links to SRD data from the D&D 5e packs.")
  
     def getZipFile(self, filename):
@@ -57,12 +60,42 @@ class R20Converter(object):
         self.packs = {}
         for file in ["items", "spells", "classfeatures", "classes", "monsters"]:
             db  = DatabaseFile(self, "%s.db" % file)
-            path = os.path.join(self.fvtt_path, "systems", "dnd5e", "packs", "%s.db" % file)
-            db.load(path)
-            self.packs[file] = db
+            path = os.path.join(self.fvtt_path, "Data", "systems", "dnd5e", "packs", "%s.db" % file)
+            try:
+                db.load(path)
+                self.packs[file] = db
+            except:
+                pass
 
     def hasSystemPacks(self):
         return len(self.packs) > 0
+
+    @staticmethod
+    def getFVTTDataPath():
+        path = os.environ.get("FOUNDRY_VTT_DATA_PATH", None)
+        if path is None:
+            system = platform.system()
+            if system == "Windows":
+                path = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local")), "FoundryVTT")
+            elif system == "Darwin":
+                os.path.join(os.path.expanduser("~/Library/Application Support"), "FoundryVTT")
+            else:
+                path = os.path.join(os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")), "FoundryVTT")
+                if not os.path.exists(path):
+                    path = os.path.join(os.path.expanduser("~"), "FoundryVTT")
+                if not os.path.exists(path):
+                    path = os.path.join("/local", "FoundryVTT")
+        
+        try:
+            with open(os.path.join(path, "Config", "options.json"), "r", encoding='utf-8') as f:
+                options = json.load(f)
+                dataPath = options.get("dataPath", None)
+                if dataPath:
+                    path = dataPath
+        except:
+            pass
+
+        return path
 
     def convert(self):
         print("*** Converting Campaign '%s' ***" % self.campaign["campaign_title"])
@@ -129,16 +162,16 @@ class GUI(object):
                         [sg.Text(self.parser.epilog, font=("Helvetica", 12))],
                         [sg.Text('Use campaign.json as input instead of a ZIP file', key="--json_help", size=self.BIG_LABEL_SIZE), sg.Checkbox('', key="--json")],
                         [sg.Text("ZIP File (or JSON file) export by R20Exporter", size=self.LABEL_SIZE), sg.Input('Campaign.zip', key="zip_file", tooltip='The exported ZIP file (or campaign.json) exported by R20Exporter'), sg.FileBrowse()],
-                        [sg.Text("FVTT Public Directory", size=self.LABEL_SIZE), sg.Input('C:\\FVTT\\resources\\app\\public', key="--fvtt-public-path", tooltip='Path to the Foundry VTT public directory'), sg.FolderBrowse()],
+                        [sg.Text("FVTT Data Directory", size=self.LABEL_SIZE), sg.Input(R20Converter.getFVTTDataPath(), key="--fvtt-data-path", tooltip='Path to the Foundry VTT data directory'), sg.FolderBrowse()],
                         [sg.Text("Export as a Module instead of a World", size=self.BIG_LABEL_SIZE, tooltip='Export the campaign as a module (instead of a world) with Compendium packs for all handouts/characters/scenes/playlists', key="--export-as-module_help"), sg.Checkbox('', key="--export-as-module")],
-                        [sg.Text("World or Module URL name", size=self.LABEL_SIZE, tooltip='Name of the directory in which to convert the campaign. Must be URL-safe (Destination directory will be based on the FVTT public directory and this name)'), sg.Input('your-world-url', key="world-name")],
+                        [sg.Text("World or Module URL name", size=self.LABEL_SIZE, tooltip='Name of the directory in which to convert the campaign. Must be URL-safe (Destination directory will be based on the FVTT Data directory and this name)'), sg.Input('your-world-url', key="world-name")],
                         [sg.Text("_"*100)],
                         ]
         self.options = {}
 
     def add_argument(self, argument, **kwargs):
         self.parser.add_argument(argument, **kwargs)
-        if not argument.startswith("--") or argument in ["--interactive", "--debug-page", "--fvtt-public-path", "--max-path", \
+        if not argument.startswith("--") or argument in ["--interactive", "--debug-page", "--fvtt-data-path", "--max-path", \
             "--disable-module-journal", "--disable-module-actors", "--disable-module-scenes", "--disable-module-playlists"]:
             return
         self.options[argument] = kwargs
@@ -186,21 +219,22 @@ class GUI(object):
                     directory = "modules"
                 else:
                     directory = "worlds"
-                fvtt_path = values["--fvtt-public-path"]
+                fvtt_path = values["--fvtt-data-path"]
                 if not os.path.exists(fvtt_path):
-                    sg.Popup(self.parser.description, "Specified FVTT directory does not exist : ", fvtt_path)
+                    sg.Popup(self.parser.description, "Specified FVTT Data directory does not exist : ", fvtt_path)
                     continue
                     
-                if not os.path.exists(os.path.join(fvtt_path, "worlds")):
-                    if os.path.exists(os.path.join(fvtt_path, "public", "worlds")):
-                        fvtt_path = os.path.join(fvtt_path, "public")
-                    elif os.path.exists(os.path.join(fvtt_path, "resources", "app", "public")):
-                        fvtt_path = os.path.join(fvtt_path, "resources", "app", "public")
+                if not os.path.exists(os.path.join(fvtt_path, "Data", "worlds")):
+                    if os.path.exists(os.path.abspath(os.path.join(fvtt_path, "..", "Data", "worlds"))):
+                        fvtt_path = os.path.abspath(os.path.join(fvtt_path, ".."))
+                    elif os.path.exists(os.path.abspath(os.path.join(fvtt_path, "..", "..", "Data", "worlds"))):
+                        fvtt_path = os.path.abspath(os.path.join(fvtt_path, "..", ".."))
                     else:
-                        sg.Popup(self.parser.description, "Specified FVTT directory does not seem to be a valid FVTT installation : ", fvtt_path)
+                        sg.Popup(self.parser.description, "Specified FVTT directory does not seem to be a valid FVTT Data directory : ", fvtt_path)
                         continue
-                path = os.path.join(fvtt_path, directory, values["world-name"])
+                path = os.path.join(fvtt_path, "Data", directory, values["world-name"])
                 args = [path, values["zip_file"]]
+                args.extend(["--fvtt-data-path", fvtt_path])
                 for option in self.options:
                     value = values[option]
                     if option == "--description":
@@ -236,7 +270,7 @@ else:
     ArgumentParser = GUI
     use_gui = True
 parser = ArgumentParser(description="R20Converter v{}".format(version), epilog="Convert Roll20 campaigns into Foundry VTT worlds or modules.")
-parser.add_argument("path", metavar="destination-directory", help="The destination directory in public/worlds/ or public/modules/")
+parser.add_argument("path", metavar="destination-directory", help="The destination directory in Data/worlds/ or Data/modules/")
 parser.add_argument("zip_file", metavar="exported.zip", help="The exported ZIP file from R20Exporter")
 parser.add_argument("--json", action="store_true", help="Use campaign.json as input instead of a ZIP file (playlist will be empty due to audio tracks being accessible only when logged into Roll20)")
 parser.add_argument("--export-as-module", action="store_true", help="Export the campaign as a module (instead of a world) with Compendium packs for all handouts/characters/scenes/playlists")
@@ -262,7 +296,7 @@ parser.add_argument("--maximum-wall-angle", default=30, type=float, help="Maximu
                     "The angle is calculated with every point in the wall that is skipped, so a circle drawn with small lines and small angles will not be removed.\n"
                     "Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points (Default: 30)")
 parser.add_argument("--debug-page", default=None, help="Only convert a specific page. Useful for debugging")
-parser.add_argument("--fvtt-public-path", default=None, help="Path to the FVTT public directory (used for importing items and spells from dnd5e system)")
+parser.add_argument("--fvtt-data-path", default=None, help="Path to the FVTT Data directory (used for importing items and spells from dnd5e system)")
 parser.add_argument("--npc-source", default="Roll 20", help="Source reference for NPC actors (displayed in the character sheet)")
 parser.add_argument("--no-compendium-overwrite", action="store_true", help="If enabled, items, feats and spells found in the Compendium will not be overwritten with custom description/damage/etc.. from the Roll20 data")
 parser.add_argument("--images-as-drawings", action="store_true", help="Set all images on the scene as textured drawings instead of tiles (requires Furnace to function properly)")
