@@ -799,7 +799,7 @@ class Actor(Entity):
         else:
             value = 0
 
-        bonus = (base_mod + prof * value) - mod
+        bonus = mod - (base_mod + prof * value)
         passive = mod + 10
 
         # An NPC might have overriden the PP in its senses
@@ -940,7 +940,7 @@ class Actor(Entity):
         known = known_list.get(name, None)
         if known:
             array.append(known)
-        else:
+        elif custom:
             custom.append(name)
 
     def createTraitLanguages(self):
@@ -1092,8 +1092,11 @@ class Actor(Entity):
 
     def createTraitArmorProficiencies(self):
         known_profs = {
+            "Light": "lgt",
             "Light Armor": "lgt",
             "Medium Armor": "med",
+            "Medium": "med",
+            "Heavy": "hvy",
             "Heavy Armor": "hvy",
             "Shields": "shl"
         }
@@ -1106,6 +1109,10 @@ class Actor(Entity):
                 prof_name = self.getAttribute("name", "", from_dict=prof)[0]
                 for proficiency in prof_name.split(","):
                     self._addKnownToArray(known_profs, proficiency, proficiencies, custom)
+        if self._shaped:
+            prof_name = self.getAttribute("proficiencies", "")[0]
+            for proficiency in prof_name.split(","):
+                self._addKnownToArray(known_profs, proficiency, proficiencies, None)
 
         return {
             "value": proficiencies,
@@ -1125,6 +1132,10 @@ class Actor(Entity):
                 prof_name = self.getAttribute("name", "", from_dict=prof)[0]
                 for proficiency in prof_name.split(","):
                     self._addKnownToArray(known_profs, proficiency, proficiencies, custom)
+        if self._shaped:
+            prof_name = self.getAttribute("proficiencies", "")[0]
+            for proficiency in prof_name.split(","):
+                self._addKnownToArray(known_profs, proficiency, proficiencies, None)
 
         return {
             "value": proficiencies,
@@ -1153,6 +1164,13 @@ class Actor(Entity):
                 prof_name = self.getAttribute("name", "", from_dict=prof)[0]
                 for proficiency in prof_name.split(","):
                     self._addKnownToArray(known_profs, proficiency, proficiencies, custom)
+        for prof in self.getRepeatingAttributes("tool").values():
+            proficiency = self.getAttribute("toolname", "", from_dict=prof)[0]
+            self._addKnownToArray(known_profs, proficiency, proficiencies, custom)
+        if self._shaped:
+            prof_name = self.getAttribute("proficiencies", "")[0]
+            for proficiency in prof_name.split(","):
+                self._addKnownToArray(known_profs, proficiency, proficiencies, None)
 
         return {
             "value": proficiencies,
@@ -1431,6 +1449,8 @@ class Actor(Entity):
                 equipment.type = ItemEquipment.HEAVY_ARMOR
             elif armor_type == "shield":
                 equipment.type = ItemEquipment.SHIELD
+            if self._shaped:
+                equipment.proficient = armor_type in self.getAttribute("proficiencies", "")[0]
             for prof in self.getRepeatingAttributes("proficiencies").values():
                 if self.getAttribute("prof_type", "", from_dict=prof)[0] == "ARMOR":
                     prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
@@ -1460,6 +1480,14 @@ class Actor(Entity):
                 weapon.type = ItemWeapon.IMPROVISED
 
             weapon.proficient = False
+            if self._shaped:
+                proficiencies = self.getAttribute("proficiencies", "")[0].lower()
+                for proficiency in proficiencies.split(","):
+                    if proficiency.startswith(name.lower()) or \
+                        (proficiency.startswith("simple") and weapon.type.startswith("simple")) or \
+                        (proficiency.startswith("martial") and weapon.type.startswith("martial")):
+                        weapon.proficient = True
+                        break
             for prof in self.getRepeatingAttributes("proficiencies").values():
                 if self.getAttribute("prof_type", "", from_dict=prof)[0] == "WEAPON":
                     prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
@@ -1478,9 +1506,46 @@ class Actor(Entity):
 
     def addInventory(self, items):
         for item in self.getRepeatingAttributes("inventory").values():
-            if len(item) == 0 or self.getAttribute("itemattackid", "", from_dict=item)[0] != "":
+            if len(item) == 0 or \
+                (self.getAttributeBool("hasattack", False, from_dict=item) and \
+                     self.getAttribute("itemattackid", "", from_dict=item)[0] != ""):
                 continue
             self.addInventoryItem(items, item)
+        if self._shaped:
+            for item in self.getRepeatingAttributes("armor").values():
+                if len(item) == 0:
+                    continue
+                name = self.getAttribute("name", "", from_dict=item)[0]
+                content = self.getAttribute("content", "", from_dict=item)[0]
+                count = self.getAttributeInt("uses", 1, from_dict=item)
+                weight = self.getAttributeInt("weight", 0, from_dict=item)
+                activation = ItemActivation()
+                attack = ItemAttack()
+                attributes = ItemInventoryAttributes()
+                equipment = ItemEquipment()
+                attributes.weight = weight
+                attributes.quantity = count
+                attributes.equipped = self.getAttributeBool("worn", True, from_dict=item)
+                equipment.proficient = False
+                equipment.ac  = self.getAttributeInt("ac_total", 10, from_dict=item)
+                armor_type = self.getAttribute("type", "", from_dict=item)[0]("_")[0].lower()
+                if armor_type == "light":
+                    equipment.type = ItemEquipment.LIGHT_ARMOR
+                elif armor_type == "medium":
+                    equipment.type = ItemEquipment.MEDIUM_ARMOR
+                elif armor_type == "heavy":
+                    equipment.type = ItemEquipment.HEAVY_ARMOR
+                elif armor_type == "shield":
+                    equipment.type = ItemEquipment.SHIELD
+                str_requirement = self.getAttribute("strength_requirements", "", from_dict=item)[0]
+                if str_requirement == "Str 13":
+                    equipment.strength = 13
+                elif str_requirement == "Str 15":
+                    equipment.strength = 15
+                if self.getAttribute("ac_ability", "", from_dict=item)[0] == "DEX_MAX_X":
+                    equipment.dexterity = 2
+                equipment.proficient = armor_type in self.getAttribute("proficiencies", "")[0]
+                self.createItemInventory(items, name, content, "equipment", attributes, activation, attack, equipment)
 
 
     def createItemFeat(self, items, name, description, activation=None, attack=None, recharge=None, **kwargs):
@@ -1664,7 +1729,7 @@ class Actor(Entity):
                 if self.getAttributeBool(prefix + "flag", prefix == "dmg", from_dict=action):
                     dmg_base = self.getAttribute(prefix + "base", "", from_dict=action)[0]
                     dmg_type = self.getAttribute(prefix + "type", "", from_dict=action)[0]
-                    dmg_attr = self.getAttribute(prefix + "attr", "strength", from_dict=action)[0]
+                    dmg_attr = self.getAttribute(prefix + "attr", "strength" if prefix == "dmg" else "", from_dict=action)[0]
                     dmg_mod = self.getAttributeInt(prefix + "mod", 0, from_dict=action)
                     if dmg_attr == "spell":
                         ability = self.getSpellcastingAbility()
@@ -1700,7 +1765,7 @@ class Actor(Entity):
         # Convert range
         self._parseRange(activation, atk_range)
         
-        if has_attack or atk_range != "":
+        if atk_range != "" or attack.type != ItemAttack.EMPTY:
             activation.cost = 1
             activation.activation = ItemActivation.ACTION
             
@@ -2356,6 +2421,7 @@ class Actor(Entity):
             "itemcontent": "content",
             "itemcount": "uses",
             "itemweight": "weight",
+            "equipped": "carried",
 
             "atkname": "name",
             "atk_desc": "content",
