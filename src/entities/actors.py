@@ -321,7 +321,7 @@ class Actor(Entity):
         self.addSpells(owned_items)
         # Add actions before inventory so attack items get added first
         self.addActions(owned_items)
-        #self.addInventory(owned_items)
+        self.addInventory(owned_items)
 
         if self.getArgument("export_as_module", False):
             folder = None
@@ -1335,13 +1335,13 @@ class Actor(Entity):
         item.entity["folder"] = folder_id
         self._converter.items.addEntity(item)
 
-    def createItemInventory(self, items, name, description, inventory_type,
-                            activity, attack, attributes, specific, **kwargs):
+    def createItemInventory(self, items, name, description, inventory_type, attributes,
+                            activity=None, attack=None, specific=None, **kwargs):
         name = name if name != "" else "<no name>"
         description = Entity.textToHtml(description)
         compendium_item = self.findCompendiumItem("Items", name)
-        item = self._converter.items.createItemInventory(None, name, description, inventory_type,
-                                                        activity, attack, attributes, specific, **kwargs)
+        item = self._converter.items.createItemInventory(None, name, description, inventory_type, attributes,
+                                                        activity, attack, specific, **kwargs)
         if compendium_item:
             item = self._converter.items.createItemFromCompendium(None, compendium_item, item.entity["data"])
         else:
@@ -1363,105 +1363,124 @@ class Actor(Entity):
         self.exportItem(item, folder_prefix)
         return owned_item
 
+    def addInventoryItem(self, items, item):
+        name = self.getAttribute("itemname", "", from_dict=item)[0]
+        content = self.getAttribute("itemcontent", "", from_dict=item)[0]
+        count = self.getAttributeInt("itemcount", 1, from_dict=item)
+        weight = self.getAttributeInt("itemweight", 1, from_dict=item)
+        mods = self.getAttribute("itemmodifiers", "", from_dict=item)[0]
+        modifiers = {}
+        for mod in mods.split(","):
+            if mod == "":
+                continue
+            # In case the mods aren't properly formatted, let's not crash here, kthxbye
+            try:
+                if ":" in mod:
+                    key, value = mod.split(":", 1)
+                    modifiers[key.strip()] = value.strip()
+                elif "+" in mod:
+                    key, value = mod.split(" +", 1)
+                    modifiers[key.strip()] = "+" + value
+                elif "-" in mod:
+                    key, value = mod.split(" -", 1)
+                    modifiers[key.strip()] = "-" + value
+                else:
+                    modifiers[mod.strip()] = mod
+            except:
+                pass
+        item_type = modifiers.get("Item Type", "Gear")
+        armor = modifiers.get("AC", 0)
+        damage = modifiers.get("Damage", "")
+        damage_type = modifiers.get("Damage Type", "").lower()
+        damage2 = modifiers.get("Alternate Damage", "")
+        damage2_type = modifiers.get("Altermate Damage Type", "").lower()
+        if damage2 == "":
+            damage2 = modifiers.get("Secondary Damage", "")
+            damage2_type = modifiers.get("Secondary Damage Type", "").lower()
+        weapon_range = modifiers.get("Range", "")
+
+        activation = ItemActivation()
+        attack = ItemAttack()
+        attributes = ItemInventoryAttributes()
+
+        attributes.weight = weight
+        attributes.quantity = count
+        attributes.equipped = self.getAttributeBool("equipped", True, from_dict=item)
+
+        if damage != "" or damage_type != "":
+            attack.damages.addDamage(damage, damage_type.lower())
+        if damage2 != "" or damage2_type != "":
+            attack.damages.addDamage(damage2, damage2_type.lower())
+
+        # Convert range
+        self._parseRange(activation, weapon_range)
+
+        if item_type in ["Light Armor", "Medium Armor", "Heavy Armor", "Shield"] or armor != 0:
+            equipment = ItemEquipment()
+            equipment.proficient = False
+            try:
+                equipment.ac  = int(armor)
+            except ValueError:
+                pass
+            armor_type = item_type.split(" ")[0].lower()
+            if armor_type == "light":
+                equipment.type = ItemEquipment.LIGHT_ARMOR
+            elif armor_type == "medium":
+                equipment.type = ItemEquipment.MEDIUM_ARMOR
+            elif armor_type == "heavy":
+                equipment.type = ItemEquipment.HEAVY_ARMOR
+            elif armor_type == "shield":
+                equipment.type = ItemEquipment.SHIELD
+            for prof in self.getRepeatingAttributes("proficiencies").values():
+                if self.getAttribute("prof_type", "", from_dict=prof)[0] == "ARMOR":
+                    prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
+                    for proficiency in prof_name.split(","):
+                        if proficiency == item_type.lower() or proficiency == armor_type:
+                            equipment.proficient = True
+                            break
+            self.createItemInventory(items, name, content, "equipment", attributes, activation, attack, equipment)
+        elif item_type in ["Melee Weapon", "Ranged Weapon", "Ammunition"] or len(attack.damages.damages) > 0:
+            weapon = ItemWeapon()
+            properties = self.getAttribute("itemproperties", "", from_dict=item)[0]
+            for prop in properties.split(","):
+                weapon.properties.addFromString(prop.strip())
+
+            compendium_item = self.findCompendiumItem("Items", name)
+            if compendium_item is not None and compendium_item.entity["type"] == "weapon":
+                weapon.type = compendium_item.entity["data"]["weaponType"]
+            elif "Improvised Weapon" in properties:
+                weapon.type = ItemWeapon.IMPROVISED
+            elif item_type == "Ammunition":
+                weapon.type = ItemWeapon.AMMUNITION
+            elif item_type == "Melee Weapon":
+                weapon.type = ItemWeapon.SIMPLE_MELEE
+            elif item_type == "Ranged Weapon":
+                weapon.type = ItemWeapon.SIMPLE_RANGED
+            else:
+                weapon.type = ItemWeapon.IMPROVISED
+
+            weapon.proficient = False
+            for prof in self.getRepeatingAttributes("proficiencies").values():
+                if self.getAttribute("prof_type", "", from_dict=prof)[0] == "WEAPON":
+                    prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
+                    for proficiency in prof_name.split(","):
+                        if proficiency.startswith(name.lower()) or \
+                            (proficiency.startswith("simple") and weapon.type.startswith("simple")) or \
+                            (proficiency.startswith("martial") and weapon.type.startswith("martial")):
+                            weapon.proficient = True
+                            break
+
+            self.createItemInventory(items, name, content, "weapon", attributes, activation, attack, weapon)
+        else:
+            if item_type not in ["Adventuring Gear", "Items", "Gear"]:
+                print("Unknown item properties : ", name, modifiers)
+            self.createItemInventory(items, name, content, "loot", attributes)
+
     def addInventory(self, items):
         for item in self.getRepeatingAttributes("inventory").values():
-            if len(item) == 0 or self.getAttributeInt("hasattack", 0, from_dict=item) == 1:
+            if len(item) == 0 or self.getAttribute("itemattackid", "", from_dict=item)[0] != "":
                 continue
-            name = self.getAttribute("itemname", "", from_dict=item)[0]
-            content = self.getAttribute("itemcontent", "", from_dict=item)[0]
-            count = self.getAttributeInt("itemcount", 1, from_dict=item)
-            weight = self.getAttributeInt("itemweight", 1, from_dict=item)
-            mods = self.getAttribute("itemmodifiers", "Item Type: Items", from_dict=item)[0]
-            modifiers = {}
-            for mod in mods.split(","):
-                if mod == "":
-                    continue
-                # In case the mods aren't properly formatted, let's not crash here, kthxbye
-                try:
-                    if ":" in mod:
-                        key, value = mod.split(":", 1)
-                        modifiers[key.strip()] = value.strip()
-                    elif "+" in mod:
-                        key, value = mod.split(" +", 1)
-                        modifiers[key.strip()] = "+" + value
-                    elif "-" in mod:
-                        key, value = mod.split(" -", 1)
-                        modifiers[key.strip()] = "-" + value
-                except:
-                    pass
-            item_type = modifiers.get("Item Type", "")
-            armor = modifiers.get("AC", 0)
-            damage = modifiers.get("Damage", "")
-            damage_type = modifiers.get("Damage Type", "").lower()
-            damage2 = modifiers.get("Alternate Damage", "")
-            damage2_type = modifiers.get("Altermate Damage Type", "").lower()
-            if damage2 == "":
-                damage2 = modifiers.get("Secondary Damage", "")
-                damage2_type = modifiers.get("Secondary Damage Type", "").lower()
-            weapon_range = modifiers.get("Range", "")
-
-            if item_type in ["Light Armor", "Medium Armor", "Heavy Armor", "Shield"] or armor != 0:
-                try:
-                    armor = int(armor)
-                except ValueError:
-                    pass
-                armor_type = item_type.split(" ")[0].lower()
-                if armor_type not in ["light", "medium", "heavy", "shielf"]:
-                    armor_type = "bonus"
-                kwargs = {
-                    "armor": armor,
-                    "armorType": armor_type,
-                    "equipped": bool(self.getAttributeInt("equipped", 1, from_dict=item)),
-                    "proficient": False,
-                }
-                for prof in self.getRepeatingAttributes("proficiencies").values():
-                    if self.getAttribute("prof_type", "", from_dict=prof)[0] == "ARMOR":
-                        prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
-                        for proficiency in prof_name.split(","):
-                            if proficiency == item_type.lower() or proficiency == armor_type:
-                                kwargs["proficient"] = True
-                self.createItemInventory(items, name, content, "equipment", weight=weight, quantity=count, **kwargs)
-            elif item_type in ["Melee Weapon", "Ranged Weapon", "Ammunition"] or damage != "":
-                kwargs = {
-                    "properties": self.getAttribute("itemproperties", "", from_dict=item)[0],
-                    "damage": damage,
-                    "damageType": damage_type,
-                    "damage2": damage2,
-                    "damage2Type": damage2_type,
-                    "range": weapon_range,
-                    "ability": "dex" if item_type == "Ranged Weapon" else "str"
-                }
-                item = self.createItemInventory(items, name, content, "weapon", weight=weight, quantity=count, **kwargs)
-                if item["data"]["weaponType"]["value"] == "":
-                    # Don't override the weapon type if taken from compendium, set it otherwise
-                    if item_type == "Ammunition":
-                        weaponType="ammo"
-                    elif item_type == "Melee Weapon":
-                        weaponType = "simpleM"
-                    elif item_type == "Ranged Weapon":
-                        weaponType = "simpleR"
-                    else:
-                        weaponType = "improv"
-
-                    item["data"]["weaponType"]["value"] = weaponType
-                weaponType = item["data"]["weaponType"]["value"]
-                
-                proficient = False
-                for prof in self.getRepeatingAttributes("proficiencies").values():
-                    if self.getAttribute("prof_type", "", from_dict=prof)[0] == "WEAPON":
-                        prof_name = self.getAttribute("name", "", from_dict=prof)[0].lower()
-                        for proficiency in prof_name.split(","):
-                            if proficiency.startswith(name.lower()) or \
-                                (proficiency.startswith("simple") and weaponType.startswith("simple")) or \
-                                (proficiency.startswith("martial") and weaponType.startswith("martial")):
-                                proficient = True
-                                break
-
-                item["data"]["proficient"]["value"] = proficient
-            else:
-                if item_type not in ["Adventuring Gear", "Items", "Gear"]:
-                    print("Unknown item properties : ", name, modifiers)
-                self.createItemInventory(items, name, content, "loot", weight=weight, quantity=count)
+            self.addInventoryItem(items, item)
 
 
     def createItemFeat(self, items, name, description, activation=None, attack=None, recharge=None, **kwargs):
@@ -1607,8 +1626,8 @@ class Actor(Entity):
             weapon = ItemWeapon()
             weapon.proficient = proficient
             weapon.type = weapon_type if is_weapon else ItemWeapon.NATURAL
-            self.createItemInventory(items, name, description_block, "weapon", activation, attack,
-                                    attributes, weapon)
+            self.createItemInventory(items, name, description_block, "weapon", attributes,
+                                    activation, attack, weapon)
         else:
             self.createItemFeat(items, name, description_block, activation, attack, None)
 
@@ -1702,9 +1721,17 @@ class Actor(Entity):
             weapon = ItemWeapon()
             weapon.proficient = proficient
             weapon.type = weapon_type if is_weapon else ItemWeapon.SIMPLE_MELEE
-            # TODO: check itemid and grab weight/quantity/properties/etc.. from the item
-            self.createItemInventory(items, name, description, "weapon", activation, attack,
-                                    attributes, weapon)
+            itemid = self.getAttribute("itemid", "", from_dict=action)[0]
+            if itemid != "":
+                item = self.getRepeatingAttributes("inventory").get(itemid, {})
+                attributes.weight = self.getAttributeInt("itemweight", 1, from_dict=item)
+                attributes.quantity = self.getAttributeInt("itemcount", 1, from_dict=item)
+                properties = self.getAttribute("itemproperties", "", from_dict=item)[0]
+                for prop in properties.split(","):
+                    weapon.properties.addFromString(prop.strip())
+
+            self.createItemInventory(items, name, description, "weapon", attributes,
+                                    activation, attack, weapon)
         else:
             self.createItemFeat(items, name, description, activation, attack, None)
 

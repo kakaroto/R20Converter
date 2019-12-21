@@ -25,7 +25,7 @@ class Items(DatabaseFile):
             elif is_items_folder:
                 handout = self.findID(item, "handout")
                 if handout != None:
-                    items.append(Item.createItemFromHandout(self, handout, index, folder_id, folder_path))
+                    items.append(Item.createItemFromHandout(self, handout, index, folder_id, folder_name, folder_path))
                     index += 1
                 elif self.findID(item, "character") != None:
                     index += 1
@@ -43,11 +43,11 @@ class Items(DatabaseFile):
         self.entities.append(entity)
         entity.setPosition(len(self.entities))
         
-    def createItemFromCompendium(self, id, compendium_item, custom_data):
+    def createItemFromCompendium(self, id, compendium_item, custom_data=None):
         return Item.createItemFromCompendium(self, id, compendium_item, custom_data)
 
-    def createItemInventory(self, id, name, description, inventory_type, activation, attack,
-                            attributes, specific, **kwargs):
+    def createItemInventory(self, id, name, description, inventory_type, attributes,
+                            activation=None, attack=None, specific=None, **kwargs):
         if inventory_type == "loot":
             return Item.createItemLoot(self, id, name, description, attributes, **kwargs)
         elif inventory_type == "weapon":
@@ -113,7 +113,7 @@ class Item(Entity):
         return data
 
     @staticmethod
-    def createItemFromHandout(database, handout, index, parent, path):
+    def createItemFromHandout(database, handout, index, parent, source, path):
         item = Item(database, handout["id"], handout["name"], "loot")
         
         print("Creating Item from Handout : %s" % item.getName())
@@ -149,6 +149,8 @@ class Item(Entity):
         if item.getArgument("export_as_module", False):
             parent = None
 
+        attributes = ItemInventoryAttributes()
+        data = Item.createStandardData(content, source, **attributes.getDict())
         item.entity = {
             "_id": item._id,
             "name":  handout["name"],
@@ -158,29 +160,18 @@ class Item(Entity):
             "type": "loot",
             "img": avatar_filename,
             "sort": index * Entity.SORT_ORDER,
-            "data": {
-                "description": {"value": content, "chat": "", "unidentified": ""},
-                "source": "",
-                "rarity": "",
-                "quantity": 1,
-                "weight": 1,
-                "price": 0,
-                "attuned": False,
-                "equipped": False,
-                "identified": True,
-                "damage": {"parts": []},
-            }
+            "data": data
         }
         return item
 
     @staticmethod
-    def createItemFromCompendium(database, id, compendium_item, custom_data):
+    def createItemFromCompendium(database, id, compendium_item, custom_data=None):
         item = Item(database, id, compendium_item.entity["name"])
         item.entity = copy.deepcopy(compendium_item.entity)
         item.entity["_id"] = item.getID()
         item.entity["permission"] = {"default": Item.PERMISSION_NONE}
         item.entity["folder"] = None
-        if item.getArgument("no_compendium_overwrite", False) is False:
+        if custom_data and item.getArgument("no_compendium_overwrite", False) is False:
             item.entity["data"].update(custom_data)
 
         return item
@@ -298,7 +289,7 @@ class ItemAbility:
 
     @staticmethod
     def fromString(string):
-        string = string.lower()
+        string = str(string).lower()
         abbr = string[0:3]
         if abbr in ["str", "dex", "con", "wis", "int", "cha"]:
             return abbr
@@ -656,6 +647,35 @@ class ItemWeaponProperties:
 
     def addProperty(self, weapon_property):
         self.properties.append(weapon_property)
+
+    def addFromString(self, string):
+        string = string.lower()
+        if string == "ammunication":
+            self.addProperty(self.AMMUNITION)
+        elif string == "finesse":
+            self.addProperty(self.FINESSE)
+        elif string == "firearm":
+            self.addProperty(self.FIREARM)
+        elif string == "focus":
+            self.addProperty(self.FOCUS)
+        elif string == "heavy":
+            self.addProperty(self.HEAVY)
+        elif string == "light":
+            self.addProperty(self.LIGHT)
+        elif string == "reach":
+            self.addProperty(self.REACH)
+        elif string == "reload":
+            self.addProperty(self.RELOAD)
+        elif string == "returning":
+            self.addProperty(self.RETURNING)
+        elif string == "special":
+            self.addProperty(self.SPECIAL)
+        elif string == "thrown":
+            self.addProperty(self.THROWN)
+        elif string == "two-handed":
+            self.addProperty(self.TWO_HANDED)
+        elif string == "versatile":
+            self.addProperty(self.VERSATILE)
 
     def getDict(self):
         data = {
