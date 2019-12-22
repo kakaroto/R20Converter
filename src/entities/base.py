@@ -67,7 +67,11 @@ class DatabaseFile(object):
             elif compendium == "Class Features":
                 db = converter.packs.get("classfeatures", None)
             if db:
-                return db.getByName(item_name, False)
+                item = db.getByName(item_name, False)
+                if item is None and item_name.lower() == "enlarge reduce":
+                    # 'Enlarge/Reduce' is 'Enlarge Reduce' in Roll20's compendium
+                    return db.getByName("Enlarge/Reduce", False)
+                return item
         return None
 
     def getArgument(self, name, default=None):

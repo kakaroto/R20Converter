@@ -7,6 +7,7 @@ import argparse
 import sys
 import os
 import platform
+from version import version
 from world import World
 from module import Module
 from entities import DatabaseFile, EmptyDB, Actors, Items, Combat, Folders, Journal, Playlists, Scenes, SettingsDB, Users
@@ -19,8 +20,6 @@ except:
         import PySimpleGUI as sg
     except:
         sg = None
-
-version = "0.7-beta1"
 
 class R20Converter(object):
     def __init__(self, args):

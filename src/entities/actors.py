@@ -787,7 +787,12 @@ class Actor(Entity):
 
     def createActorSkill(self, label, attribute_name, ability):
         base_mod = self.getAttributeInt(ability + "_mod", 0)
-        mod = self.getAttributeInt("npcd_" + attribute_name if self.isNPC() else attribute_name + "_bonus", base_mod)
+        if self.isNPC():
+            mod = self.getAttributeInt("npcd_" + attribute_name, -999)
+            if mod == -999:
+                mod = self.getAttributeInt("npc_" + attribute_name, base_mod)
+        else:
+            mod = self.getAttributeInt(attribute_name + "_bonus", base_mod)
         prof = self.getProficiencyBonus()
 
         if mod >= base_mod + prof * 2:
@@ -1717,12 +1722,15 @@ class Actor(Entity):
             reachrange = "reach" if attack.type == ItemAttack.MELEE_WEAPON else "range"
             atk_range = self.getAttribute(reachrange, "", from_dict=action)[0]
         else:
+            atkmagic = self.getAttributeInt("atkmagic", 0, from_dict=action)
             if self.getAttribute("atkflag", "1", from_dict=action)[0] != "0":
                 has_attack = True
                 proficient = self.getAttributeBool("atkprofflag", True, from_dict=action)
                 atk_attr = self.getAttribute("atkattr_base", "strength", from_dict=action)[0]
                 attack.ability = ItemAbility.fromString(atk_attr)
-                attack.bonus = self.getAttributeInt("atkmagic", 0, from_dict=action)
+                attack.bonus = self.getAttributeInt("atkmod", 0, from_dict=action)
+                if atkmagic != 0:
+                    attack.bonus += atkmagic
                 attack.type = ItemAttack.MELEE_WEAPON
 
             for prefix in ["dmg", "dmg2"]:
@@ -1738,8 +1746,10 @@ class Actor(Entity):
                     dmg = dmg_base
                     if ability != ItemAbility.NONE:
                         dmg += ("" if dmg == "" else " + ") + "@abilities.{}.mod".format(ability)
-                    if dmg_mod != "":
+                    if dmg_mod != 0:
                         dmg += ("" if dmg == "" else " + ") + str(dmg_mod)
+                    if prefix == "dmg" and atkmagic != 0:
+                        dmg += ("" if dmg == "" else " + ") + str(atkmagic)
                     if dmg != "" or dmg_type != "":
                         attack.damages.addDamage(dmg, dmg_type.lower())
                         if attack.type == ItemAttack.EMPTY:

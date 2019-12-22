@@ -1,5 +1,6 @@
 import json
 import os
+from version import version
 
 class Module(object):
     def __init__(self, converter):
@@ -42,7 +43,7 @@ class Module(object):
                 "title": self._title,
                 "description": self._description,
                 "author": "R20Converter",
-                "version": "1.0",
+                "version": version,
                 "minimumCoreVersion": "0.4.3",
                 "packs": self._packs
             } 
