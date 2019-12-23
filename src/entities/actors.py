@@ -202,6 +202,7 @@ class Actor(Entity):
     def __init__(self, database, character, index):
         Entity.__init__(self, database, character["id"])
         self._character = character
+        tables = self._database._campaign.get("tables", [])
 
         print("Creating Character : %s" % character["name"])
         self.parseAttributes()
@@ -222,11 +223,12 @@ class Actor(Entity):
         npc = self.isNPC()
 
         self._avatar_filename = ""
+        base_path = os.path.join("characters", "%03d - %s" % (index, character["name"]))
         if character["avatar"] != "":
             if self.getArgument("use_original_image_urls", False):
                 self._avatar_filename = character["avatar"]
             else:
-                filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "avatar.png")
+                filename = os.path.join(base_path, "avatar.png")
                 if self.getArgument("json", False):
                     (_, self._avatar_filename) = self.downloadResource(character["avatar"], filename)
                 else:
@@ -240,7 +242,7 @@ class Actor(Entity):
             if self.getArgument("use_original_image_urls", False):
                 token_filename = default_token["imgsrc"]
             else:
-                filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "token.png")
+                filename = os.path.join(base_path, "token.png")
                 if self.getArgument("json", False):
                     (_, token_filename) = self.downloadResource(default_token["imgsrc"], filename)
                 else:
@@ -249,13 +251,30 @@ class Actor(Entity):
                     self._avatar_filename = token_filename
                 if "sides" in default_token and len(default_token["sides"]) > 0:
                     randomImg = True
+                    side_names = None
+                    for table in tables:
+                        if table["name"] == character["name"]:
+                            table_items = table["items"].values()
+                            side_names = {}
+                            for side in default_token["sides"]:
+                                el = [i for i in table_items if i["avatar"] == side]
+                                if len(el) > 0:
+                                    side_names[side] = el[0]["name"]
+                                else:
+                                    side_names = None
+                                    break
                     for i in range(len(default_token["sides"])):
-                        filename = os.path.join("characters", "%03d - %s" % (index, character["name"]), "side_" + str(i) + ".png")
+                        zip_filename = os.path.join(base_path, "side_" + str(i) + ".png")
+                        if side_names:
+                            side_img = default_token["sides"][i]
+                            filename = os.path.join(base_path, "sides", side_names[side_img] + ".png")
+                        else:
+                            filename = os.path.join(base_path, "sides", "side_" + str(i) + ".png")
                         if self.getArgument("json", False):
                             (_, token_filename) = self.downloadResource(default_token["sides"][i], filename)
                         else:
-                            (_, token_filename) = self.copyZipFile(filename, filename)
-                        token_filename = token_filename.replace("side_" + str(i) + ".png", "side_*.png")
+                            (_, token_filename) = self.copyZipFile(zip_filename, filename)
+                        token_filename = os.path.dirname(token_filename) + "/*.png"
             if self._avatar_filename == "":
                 self._avatar_filename = token_filename
         if token_filename == "":
