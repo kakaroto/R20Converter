@@ -8,3 +8,4 @@ from .playlists import Playlists, Playlist
 from .scenes import Scenes, Scene
 from .settings import SettingsDB, Setting
 from .users import Users, User
+from .tables import Tables, RollableTables, Decks, Table

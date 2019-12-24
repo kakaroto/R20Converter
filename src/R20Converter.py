@@ -11,7 +11,12 @@ from collections import OrderedDict
 from version import version
 from world import World
 from module import Module
-from entities import DatabaseFile, EmptyDB, Actors, Items, Combat, Folders, Journal, Playlists, Scenes, SettingsDB, Users
+from entities import DatabaseFile, EmptyDB, \
+        Actors, Items, Combat, \
+        Folders, Journal, Playlists, \
+        Scenes, SettingsDB, Users, \
+        Tables, RollableTables, Decks
+
 try:
     import PySimpleGUIQt as sg
     line_height = 0.5
@@ -108,27 +113,45 @@ class R20Converter(object):
                 self.journal = EmptyDB(self, "journal")
             else:
                 self.journal = Journal(self)
-            if self.getArgument("disable_module_items", False):
-                # actors can modify the items list, so create the correct class
-                # and overwrite it with an emptyDB later
-                self.items = Items(self)
-            else:
-                self.items = Items(self)
-                self.items.createEntities()
+
+            # actors can modify the items list, so create the correct class
+            # and overwrite it with an emptyDB later
+            self.items = Items(self)
+
             if self.getArgument("disable_module_actors", False):
                 self.actors = EmptyDB(self, "actors")
             else:
                 self.actors = Actors(self)
+
+            if self.getArgument("disable_module_items", False):
+                self.items = EmptyDB(self, "items")
+            else:
+                self.items.createEntities()
+
             if self.getArgument("disable_module_scenes", False):
                 self.scenes = EmptyDB(self, "scenes")
             else:
                 self.scenes = Scenes(self)
+
             if self.getArgument("disable_module_playlists", False):
                 self.playlists = EmptyDB(self, "playlists")
             else:
                 self.playlists = Playlists(self)
+
+            if self.getArgument("disable_module_tables", False):
+                self.tables = EmptyDB(self, "tables")
+            else:
+                self.tables = RollableTables(self)
+            if self.getArgument("disable_module_decks", False):
+                self.cards = EmptyDB(self, "cards")
+                self.decks = EmptyDB(self, "decks")
+            else:
+                self.cards = Items(self, "cards.db")
+                self.decks = Decks(self)
+
             if self.getArgument("disable_module_items", False):
                 self.items = EmptyDB(self, "items")
+
             # Module will add the packs that are not empty and save them to file
             self.module = Module(self).save()
         else:
@@ -145,10 +168,13 @@ class R20Converter(object):
             self.scenes = Scenes(self).save()
             self.combat = Combat(self).save()
             self.playlists = Playlists(self).save()
+            # Use items database for deck cards
+            self.cards = self.items
+            self.tables = Tables(self).save()
 
             self.sessions = EmptyDB(self, "sessions").save()
             self.chat = EmptyDB(self, "chat").save()
-            # Could get modified by the journal
+            # Could get modified by the journal or rollable tables
             self.folders.save()
             self.items.save()
             self.world = World(self).save()
@@ -173,7 +199,8 @@ class GUI(object):
     def add_argument(self, argument, **kwargs):
         self.parser.add_argument(argument, **kwargs)
         if not argument.startswith("--") or argument in ["--interactive", "--debug-page", "--fvtt-data-path", "--max-path", \
-            "--disable-module-journal", "--disable-module-actors", "--disable-module-scenes", "--disable-module-playlists"]:
+            "--disable-module-journal", "--disable-module-actors", "--disable-module-scenes", "--disable-module-playlists", \
+            "--disable-module-tables", "--disable-module-decks", "--use-original-image-urls"]:
             return
         self.options[argument] = kwargs
         if argument in ["--json", "--export-as-module"]:
@@ -183,7 +210,6 @@ class GUI(object):
             "--gm-password": "GM Password",
             "--npc-source": "NPC Source",
             "--no-compendium-overwrite": "Overwrite actor items and feats with data from SRD Compendium",
-            "--use-original-image-urls": "Use Roll 20 Image URLs (NOT Recommended)",
             "--folder-as-items": "List of handout folders to convert into items (comma separated)", 
         }
         name = " ".join(map(lambda x: x.capitalize(), argument[2:].split("-")))
@@ -305,6 +331,8 @@ parser.add_argument("--disable-module-journal", action="store_true", help="Disab
 parser.add_argument("--disable-module-actors", action="store_true", help="Disable conversion of Actors in the module (requires --export-as-module)")
 parser.add_argument("--disable-module-scenes", action="store_true", help="Disable conversion of Scenes in the module (requires --export-as-module)")
 parser.add_argument("--disable-module-playlists", action="store_true", help="Disable conversion of Playlists in the module (requires --export-as-module)")
+parser.add_argument("--disable-module-tables", action="store_true", help="Disable conversion of rollable tables in the module (requires --export-as-module)")
+parser.add_argument("--disable-module-decks", action="store_true", help="Disable conversion of card decks in the module (requires --export-as-module)")
 parser.add_argument("--folder-as-items", action="append", default=["Magic Items"], help="Converts each entry in a journal folder into items. Useful for 'Magic Items' folders. Can be passed multiple times to convert more than one folder.")
 parser.add_argument("--dont-export-actor-items", action="store_true", help="Items from actors will be exported as individual Entity Items. This option disables that behavior and no items will be created.")
 parser.add_argument("--no-duplicate-actor-items", action="store_true", help="This option causes items with the same name from different actors to be exported under a single item. The first processed actor with the item of that name gets their item in the item entities.")

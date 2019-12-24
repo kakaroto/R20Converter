@@ -28,6 +28,15 @@ class Module(object):
         if len(converter.playlists.entities) > 0:
             converter.playlists.save()
             self._packs.append(self._newPack("playlists", "Jukebox", "Playlist", "playlists.db"))
+        if len(converter.tables.entities) > 0:
+            converter.tables.save()
+            self._packs.append(self._newPack("tables", "Rollable Tables", "RollTable", "tables.db"))
+        if len(converter.decks.entities) > 0:
+            converter.decks.save()
+            self._packs.append(self._newPack("decks", "Decks", "RollTable", "decks.db"))
+        if len(converter.cards.entities) > 0:
+            converter.cards.save()
+            self._packs.append(self._newPack("cards", "Deck Cards", "Item", "cards.db"))
 
 
     def _newPack(self, name, label, entity, filename):

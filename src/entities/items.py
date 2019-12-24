@@ -4,8 +4,8 @@ import os
 import copy
 
 class Items(DatabaseFile):
-    def __init__(self, converter):
-        DatabaseFile.__init__(self, converter, "items.db")
+    def __init__(self, converter, filename="items.db"):
+        DatabaseFile.__init__(self, converter, filename)
         self._handouts = self._campaign["handouts"]
         # We can't generate them here because an Item could have cross links to another item
         # which could make it generate a new item which will try to get it added to the database
