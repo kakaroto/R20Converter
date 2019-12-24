@@ -314,9 +314,9 @@ class Actor(Entity):
                     except ValueError:
                         pass
             token = self.token.getDict()
-            if bar1_link == hp_id:
+            if bar1_link == hp_id or self.getArgument("force_hp_for_token_bar1", False):
                 token["bar1"]["attribute"] = "attributes.hp"
-            if bar2_link == hp_id:
+            if bar2_link == hp_id or self.getArgument("force_hp_for_token_bar2", False):
                 token["bar2"]["attribute"] = "attributes.hp"
         token["randomImg"] = randomImg
         token["actorLink"] = not npc
@@ -595,13 +595,21 @@ class Actor(Entity):
         if self.isNPC():
             if hp[2] == None:
                 hp = self.getAttribute("npc_hpbase", 10)
-            value = hp[1]
-            max = hp[1]
+            value = hp[0]
+            max = hp[0]
             formula = self.getAttribute("npc_hpformula", "")[0]
         else:
             value = hp[0]
             max = hp[1]
             formula = ""
+        try:
+            value = int(value)
+        except:
+            pass
+        try:
+            max = int(max)
+        except:
+            pass
         return {
             "value": value,
             "min": 0,

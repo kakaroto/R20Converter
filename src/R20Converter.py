@@ -210,7 +210,9 @@ class GUI(object):
             "--gm-password": "GM Password",
             "--npc-source": "NPC Source",
             "--no-compendium-overwrite": "Overwrite actor items and feats with data from SRD Compendium",
-            "--folder-as-items": "List of handout folders to convert into items (comma separated)", 
+            "--folder-as-items": "List of handout folders to convert into items (comma separated)",
+            "--force-hp-for-token-bar1": "Force HP attribute on all tokens' first bar",
+            "--force-hp-for-token-bar2": "Force HP attribute on all tokens' second bar"
         }
         name = " ".join(map(lambda x: x.capitalize(), argument[2:].split("-")))
         name = argument_labels.get(argument, name)
@@ -306,6 +308,8 @@ parser.add_argument("--description", default="Imported from Roll20 using R20Conv
 parser.add_argument("--gm-password", default="", help="Default GM password")
 parser.add_argument("--player-password", default="", help="Default player password")
 parser.add_argument("--restrict-movement", action="store_true", help="Force all walls to restrict movement")
+parser.add_argument("--force-hp-for-token-bar1", action="store_true", help="Forces the use of HP attribute for all tokens' first bar")
+parser.add_argument("--force-hp-for-token-bar2", action="store_true", help="Forces the use of HP attribute for all tokens' second bar")
 parser.add_argument("--add-walls-around-map", action="store_true", help="Add 4 walls to enclose the map and cut off view/movement to the side table")
 parser.add_argument("--enable-fog", action="store_true", help="Enable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
 parser.add_argument("--disable-fog", action="store_true", help="Disable Fog Exploration on all Scenes with Dynamic Lighting regardless of Advanced Fog of War setting")
