@@ -75,9 +75,12 @@ class Folders(DatabaseFile):
                     folders.append(Folder(self, "archived-characters-folder-id", "Archived Actors", "Actor", None, len(folders)))
                     break
             if len(self._campaign.get("tables", [])) > 0:
-                folders.append(Folder(self, "tables-rollable-table", "Rollable Tables", "RollTable", None, len(folders)))
+                folders.append(Folder(self, "tables-rollable-tables", "Rollable Tables", "RollTable", None, len(folders)))
             if len(self._campaign.get("decks", [])) > 0:
                 folders.append(Folder(self, "tables-decks", "Decks", "RollTable", None, len(folders)))
+                folders.append(Folder(self, "items-decks", "Decks", "Item", None, len(folders)))
+                for deck in self._campaign.get("decks", []):
+                    folders.append(Folder(self, "items-" + deck["id"], deck["name"], "Item", "items-decks", len(folders)))
         return folders
     
 

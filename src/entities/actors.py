@@ -254,7 +254,10 @@ class Actor(Entity):
                     side_names = None
                     for table in tables:
                         if table["name"] == character["name"]:
-                            table_items = table["items"].values()
+                            table_items = table["items"]
+                            # Older exporter was creating an object of {id: item_data}, newer exports the tables and decks as arrays instead
+                            if isinstance(table_items, dict):
+                                table_items = table_items.values()
                             side_names = {}
                             for side in default_token["sides"]:
                                 match = [i for i in table_items if i["avatar"] == side]

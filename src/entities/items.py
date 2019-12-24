@@ -156,7 +156,7 @@ class Item(Entity):
             "name":  handout["name"],
             "permission": permissions,
             "folder": Entity.normalizeID(parent),
-            "flags": {"entityorder": {"order": index}},
+            "flags": {},
             "type": "loot",
             "img": avatar_filename,
             "sort": index * Entity.SORT_ORDER,

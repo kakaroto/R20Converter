@@ -53,7 +53,38 @@ class Decks(DatabaseFile):
         self.entities = self.genEntities()
 
     def genEntities(self):
-        return []
+        tables = []
+        for index, deck in enumerate(self._decks):
+            table = Table(self, deck, index, "tables-decks", False)
+            cards = deck["cards"]
+            # Older exporter was creating an object of {id: item_data}, newer exports the tables and decks as arrays instead
+            if isinstance(cards, dict):
+                cards = cards.values()
+            for card_index, card in enumerate(cards):
+                name = card.get("name", "")
+                img = card.get("avatar", "")
+                weight = 1
+                drawn = card["id"] in deck["discardPile"]
+                if img != "":
+                    if not self.getArgument("use_original_image_urls", False):
+                        filename = os.path.join("decks", "%03d - %s" % (index, deck["name"]), "%s.png" % name)
+                        if self.getArgument("json", False):
+                            (_, img) = table.downloadResource(img, filename)
+                        else:
+                            zip_filename = os.path.join("decks", "%03d - %s" % (index, deck["name"]), "%03d - %s.png" % (card_index, name))
+                            (_, img) = table.copyZipFile(zip_filename, filename)
+                item = self._converter.cards.createItemInventory(card["id"], name, name, "loot", None)
+                collection = "{}.cards".format(self._converter.name) if self.getArgument("export_as_module", False) else "Item"
+                table.addEntry(name, img, weight, item, collection, drawn)
+
+                item.entity["img"] = img
+                item.entity["folder"] = Entity.normalizeID("items-" + deck["id"])
+                item.entity["permission"] = table.entity["permission"]
+                self._converter.cards.addEntity(item)
+
+
+            tables.append(table)
+        return tables
 
 class Table(Entity):
     RESULT_TYPE_TEXT = 0
