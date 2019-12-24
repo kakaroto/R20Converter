@@ -485,11 +485,11 @@ class Scene(Entity):
                         drawings.append(drawing)
                     else:
                         if graphic["flipv"]:
-                            y = y + height
-                            height *= -1
+                            y = y + tile_height
+                            tile_height *= -1
                         if graphic["fliph"]:
-                            x = x + width
-                            width *= -1
+                            x = x + tile_width
+                            tile_width *= -1
                         tile = {"id": tile_id,
                                 "flags": {},
                                 "img": tile_image,
