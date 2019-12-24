@@ -266,6 +266,9 @@ class Actor(Entity):
                                 else:
                                     side_names = None
                                     break
+                            else:
+                                break
+
                     for i in range(len(default_token["sides"])):
                         zip_filename = os.path.join(base_path, "side_" + str(i) + ".png")
                         if side_names:
@@ -594,9 +597,12 @@ class Actor(Entity):
         hp = self.getAttribute("hp", 10)
         if self.isNPC():
             if hp[2] == None:
-                hp = self.getAttribute("npc_hpbase", 10)
-            value = hp[0]
-            max = hp[0]
+                hp = self.getAttribute("npc_hpbase", "10")
+                value = str(hp[0]).split(" ")[0]
+                max = value
+            else:
+                value = hp[1]
+                max = hp[1]
             formula = self.getAttribute("npc_hpformula", "")[0]
         else:
             value = hp[0]
