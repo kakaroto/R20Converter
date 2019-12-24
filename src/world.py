@@ -3,8 +3,9 @@ import os
 
 class World(object):
     def __init__(self, converter):
+        self._converter = converter
         self._path = converter.path
-        self._name = os.path.basename(os.path.dirname(os.path.join(self._path, ".")))
+        self._name = converter.name
         self._title = converter.getArgument("campaign_title")
         if self._title is None:
             self._title = converter.campaign["campaign_title"]
@@ -16,7 +17,7 @@ class World(object):
                 "title": self._title,
                 "description": self._description,
                 "system": "dnd5e",
-                "coreVersion": "0.4.2",
+                "coreVersion": "0.4.3",
                 "systemVersion": 0.73,
                 "packs": [],
                 "scripts": [],

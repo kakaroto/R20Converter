@@ -7,6 +7,7 @@ import argparse
 import sys
 import os
 import platform
+from collections import OrderedDict
 from version import version
 from world import World
 from module import Module
@@ -25,13 +26,14 @@ class R20Converter(object):
     def __init__(self, args):
         self.args = args
         self.path = args.path
+        self.name = os.path.basename(os.path.dirname(os.path.join(self.path, ".")))
         if args.json:
             with open(args.zip_file, "r", encoding='utf-8') as f:
-                self.campaign = json.load(f)
+                self.campaign = json.load(f, object_pairs_hook=OrderedDict)
             self.campaign["jukeboxfolder"] = ""
         else:
             self.zip = zipfile.ZipFile(args.zip_file, "r")
-            self.campaign = json.load(self.getZipFile("campaign.json"))
+            self.campaign = json.load(self.getZipFile("campaign.json"), object_pairs_hook=OrderedDict)
         self.packs = {}
         self.fvtt_path = self.getArgument("fvtt_data_path", None)
         if self.fvtt_path is None:

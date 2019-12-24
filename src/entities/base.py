@@ -221,7 +221,7 @@ class Entity(object):
         normalized_id = Entity.strToID(id)
         index = 0
         while normalized_id in Entity.id_database.values():
-            print("Found an ID conflict for %s=%s\n%s" % (id, normalized_id, str(Entity.id_database)))
+            #print("Found an ID conflict for %s=%s\n%s" % (id, normalized_id, str(Entity.id_database)))
             new_id = "%s%d" % (id, index)
             normalized_id = Entity.strToID(new_id)
             index += 1

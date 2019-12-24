@@ -16,7 +16,7 @@ class Playlists(DatabaseFile):
                          }
         root_playlist_has_items = False
         for index, item in enumerate(self._campaign["jukeboxfolder"]):
-            if type(item) == dict:
+            if isinstance(item, dict):
                 folder = "%03d - %s" % (index, item["n"])
                 playlists.append(Playlist(self, item, folder, index))
                 # Need to add empty items to keep order in the playlist for finding the files in the zip

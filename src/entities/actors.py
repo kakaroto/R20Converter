@@ -257,9 +257,9 @@ class Actor(Entity):
                             table_items = table["items"].values()
                             side_names = {}
                             for side in default_token["sides"]:
-                                el = [i for i in table_items if i["avatar"] == side]
-                                if len(el) > 0:
-                                    side_names[side] = el[0]["name"]
+                                match = [i for i in table_items if i["avatar"] == side]
+                                if len(match) > 0:
+                                    side_names[side] = match[0]["name"]
                                 else:
                                     side_names = None
                                     break
@@ -367,7 +367,7 @@ class Actor(Entity):
 
     def findFolder(self, id, folder, folder_id=None):
         for item in folder:
-            if type(item) == dict:
+            if isinstance(item, dict):
                 ret = self.findFolder(id, item["i"], "character" + item["id"])
                 if ret:
                     return ret
@@ -1552,7 +1552,7 @@ class Actor(Entity):
                 attributes.equipped = self.getAttributeBool("worn", True, from_dict=item)
                 equipment.proficient = False
                 equipment.ac  = self.getAttributeInt("ac_total", 10, from_dict=item)
-                armor_type = self.getAttribute("type", "", from_dict=item)[0]("_")[0].lower()
+                armor_type = self.getAttribute("type", "", from_dict=item)[0].split("_")[0].lower()
                 if armor_type == "light":
                     equipment.type = ItemEquipment.LIGHT_ARMOR
                 elif armor_type == "medium":

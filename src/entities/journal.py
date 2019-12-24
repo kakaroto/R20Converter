@@ -12,7 +12,7 @@ class Journal(DatabaseFile):
         handouts = []
         index = 0
         for item in folder:
-            if type(item) == dict:
+            if isinstance(item, dict):
                 dirname = "%03d - %s" % (index, item["n"])
                 handouts.extend(self.addToFolder("handout" + item["id"], item["i"], os.path.join(folder_path, dirname)))
                 index += 1

@@ -18,7 +18,7 @@ class Items(DatabaseFile):
         index = 0
         is_items_folder = folder_name and folder_name.strip() in self.getArgument("folder_as_items", [])
         for item in folder:
-            if type(item) == dict:
+            if isinstance(item, dict):
                 dirname = "%03d - %s" % (index, item["n"])
                 items.extend(self.addToFolder("item" + item["id"], item["n"], item["i"], os.path.join(folder_path, dirname)))
                 index += 1

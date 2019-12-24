@@ -6,7 +6,7 @@ class Module(object):
     def __init__(self, converter):
         self._converter = converter
         self._path = converter.path
-        self._name = os.path.basename(os.path.dirname(os.path.join(self._path, ".")))
+        self._name = converter.name
         self._title = converter.getArgument("campaign_title")
         if self._title is None:
             self._title = converter.campaign["campaign_title"]

@@ -14,7 +14,7 @@ class Folders(DatabaseFile):
         has_items = is_items_folder
             
         for item in folder["i"]:
-            if type(item) == dict:
+            if isinstance(item, dict):
                 # Found a folder
                 folder_id = folder["id"]
                 if depth >= 2:
@@ -57,7 +57,7 @@ class Folders(DatabaseFile):
     def genEntities(self):
         folders = []
         for item in self._campaign["journalfolder"]:
-            if type(item) == dict:
+            if isinstance(item, dict):
                 (children, _, _, _) = self.addJournalFolder(item, None, len(folders))
                 folders.extend(children)
 
@@ -85,8 +85,10 @@ class Folder(Entity):
         #    name = "|_ " + name
         #    parent = None
         self.entity = {"_id": self._id,
-                       "name": name, 
+                       "name": name,
+                       "flags": {},
                        "type": folder_type,
+                       "color": "",
                        "parent": Entity.normalizeID(parent),
                        "sort": 100000 * (index if index else 1)
                        }
