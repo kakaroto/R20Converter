@@ -77,10 +77,13 @@ class Scene(Entity):
         bg = None
         bg_image = ""
         for m in map_layer:
-            if m["imgsrc"] != "" and m["width"] == width and m["height"] == height:
+            if self.getArgument("all_backgrounds_as_tiles", False):
+                break
+            if m["imgsrc"] != "" and m["width"] == width and m["height"] == height and not m["flipv"] and not m["fliph"]:
                 bg = m
                 if self.getArgument("use_original_image_urls", False):
                     bg_image = bg["imgsrc"]
+                    break
                 else:
                     filename = os.path.join(zip_page_path, "graphics", bg["id"] + ".png")
                     dest = os.path.join("scenes", "backgrounds", safe_name + ".png")
@@ -91,8 +94,11 @@ class Scene(Entity):
                     if bg_image == "":
                         print("Couldn't copy background image for page '%s'" % (name))
                         bg = None
-        if not bg:
-            print("Background does not match scene dimensions 100%. Will be set as a tile instead")
+                    else:
+                        break
+        else:
+            if len(map_layer) > 0:
+                print("Background does not match scene dimensions 100%. Will be set as a tile instead")
 
         if self.getArgument("use_original_image_urls", False):
             thumb_image = page["thumbnail"]

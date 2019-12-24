@@ -319,6 +319,7 @@ parser.add_argument("--auto-doors", action="store_true", help="Automatically det
 parser.add_argument("--door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into doors. For example, set it to '#ff0000' for Red walls.")
 parser.add_argument("--secret-door-color", default=None, help="Sets the color of the dynamic lighting walls to convert into secret doors")
 parser.add_argument("--disable-archived", action="store_true", help="Disable the automatic move of archived scenes/handouts/characters to an Archived folder.")
+parser.add_argument("--all-backgrounds-as-tiles",  action="store_true", help="Set all page backgrounds as tiles.")
 parser.add_argument("--minimum-wall-length", default=0, type=float, help="Minimum distance for walls (in pixels).\n"
                     "If a wall is smaller and part of a longer chain of walls, it will get merged with the adjacent wall.\n"
                     "This is useful if there are a lot of small/jagged walls or freehand-drawn walls (Default: 0 (disabled))")
