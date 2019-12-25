@@ -355,7 +355,7 @@ class Scene(Entity):
                             "height": int(tile_height * grid_multiplier),
                             "rotation": rotation,
                             "hidden": layer == "gmlayer" or layer == "walls",
-                            "locked": False,
+                            "locked": layer == "map",
                             "author": Entity.normalizeID(text["controlledby"]) or "GM"
                 }
                 drawing = self.createTextDrawing(drawing, text)
@@ -375,7 +375,7 @@ class Scene(Entity):
                             "height": int(tile_height * grid_multiplier),
                             "rotation": rotation,
                             "hidden": layer == "gmlayer" or layer == "walls",
-                            "locked": False,
+                            "locked": layer == "map",
                             "author": Entity.normalizeID(path["controlledby"]) or "GM"
                 }
                 drawing = self.createPathDrawing(drawing, path)
@@ -469,7 +469,7 @@ class Scene(Entity):
                                     "height": int(tile_height * grid_multiplier),
                                     "rotation": rotation,
                                     "hidden": layer == "gmlayer" or layer == "walls",
-                                    "locked": False,
+                                    "locked": layer == "map",
                                     "author": Entity.normalizeID(obj["controlledby"]) or "GM", # invalid user (or export-as-module) will be invalid author, which means all GM
                                     "type": "r",
                                     "fillType": 2,
@@ -506,6 +506,7 @@ class Scene(Entity):
                                 "y": int(margin_top + y * grid_multiplier),
                                 "z": 10 * tile_id, # Z is currently unusedm the order in the list is what counts
                                 "rotation": rotation,
+                                "locked": layer == "map",
                                 "hidden": layer == "gmlayer" or layer == "walls"
                                 }
                         tile_id += 1
