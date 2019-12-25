@@ -4,13 +4,13 @@ This application converts a Roll20 campaign into a Foundry VTT world or module.
 
 It will automate the entire conversion process and most(*) of your campaign will be setup just the way it was in Roll 20
 
-(*) Your chat log will not be converted (yet) and things such as decks, tables and macros will not be converted either as those features are not yet available in Foundry VTT. You also need to be using the OGL character sheet ("D&D 5e by Roll20") though partial support for the Shaped sheet is available. 
+(*) Your chat log will not be converted (yet) and things such as macros will not be converted either as those features are not yet available in Foundry VTT. You also need to be using the OGL character sheet ("D&D 5e by Roll20") or the Shaped Sheet template for conversion of characters to work. 
 
 ## How to use
 
 ### Windows
 
-This package comes with an executable for Windows in the `windows` subdirectory. Simply double click it to open the User Interface, then Browse for the ZIP file that was exported and for the public directory of your FVTT installation (you can also just direct it to the FVTT installation directory itself and it will adjust the path automatically) then enter a name for your world directory.
+This package comes with an executable for Windows in the `windows` subdirectory. Simply double click it to open the User Interface, then Browse for the ZIP file that was exported. If you use a custom data path for your FVTT installation, then set it as well in the appropriate space then enter a name for your world directory.
 
 Select the options you would like to use, then press the "Convert Campaign" button. You can always keep your mouse still on one of the options to see a tooltip with more information on what each option does.
 
@@ -19,7 +19,13 @@ Select the options you would like to use, then press the "Convert Campaign" butt
 
 If using Linux, you can run it with `python3 src/R20Converter.py` in a terminal. Use the --help option to see which options are available to you during conversion.
 
-Dependencies for the GUI, you need to install `pysimplegui`, `pysimpleguiqt` and `pyside2`.
+Install dependencies : `requests`
+ 
+`pip3 install requests`
+
+If no arguments are provided and the appropriate dependencies are installed, the program will launch in GUI mode.
+
+Dependencies for the GUI : `pysimplegui`, `pysimpleguiqt` and `pyside2`.
 
 `pip3 install requests pysimplegui pysimpleguiqt pyside2`
 
@@ -27,6 +33,8 @@ Dependencies for the GUI, you need to install `pysimplegui`, `pysimpleguiqt` and
 ## Campaign Conversion
 
 To convert a campaign, you first need to have your Roll 20 campaign exported. To do so, use the [R20Exporter](https://github.com/kakaroto/R20Exporter) script and follow its README instructions on how to use it.
+
+**Make sure you wait long enough for all the character sheets to load in Roll 20 before you export your campaign (Remember that Roll 20 can be slow to load) otherwise you'll end up with some actors not having any of their abilities set**
 
 Once you have your campaign exported as a zip file, you can start the conversion process. Note that you do not need to extract the campaign's zip file; R20Converter will work directly with the zip file itself to do the conversion.
 
@@ -68,32 +76,34 @@ usage: R20Converter.py [-h] [--json] [--export-as-module]
                        [--campaign-title CAMPAIGN_TITLE]
                        [--description DESCRIPTION] [--gm-password GM_PASSWORD]
                        [--player-password PLAYER_PASSWORD]
-                       [--restrict-movement] [--add-walls-around-map]
+                       [--restrict-movement] [--force-hp-for-token-bar1]
+                       [--force-hp-for-token-bar2] [--add-walls-around-map]
                        [--enable-fog] [--disable-fog] [--cleanup-scenes]
                        [--interactive] [--auto-doors]
                        [--door-color DOOR_COLOR]
                        [--secret-door-color SECRET_DOOR_COLOR]
-                       [--disable-archived]
+                       [--disable-archived] [--all-backgrounds-as-tiles]
                        [--minimum-wall-length MINIMUM_WALL_LENGTH]
                        [--maximum-wall-angle MAXIMUM_WALL_ANGLE]
                        [--debug-page DEBUG_PAGE]
-                       [--fvtt-public-path FVTT_PUBLIC_PATH]
+                       [--fvtt-data-path FVTT_DATA_PATH]
                        [--npc-source NPC_SOURCE] [--no-compendium-overwrite]
                        [--images-as-drawings] [--disable-module-journal]
                        [--disable-module-actors] [--disable-module-scenes]
-                       [--disable-module-playlists]
+                       [--disable-module-playlists] [--disable-module-tables]
+                       [--disable-module-decks]
                        [--folder-as-items FOLDER_AS_ITEMS]
                        [--dont-export-actor-items]
                        [--no-duplicate-actor-items]
                        [--use-original-image-urls] [--max-path MAX_PATH]
                        destination-directory exported.zip
 
-R20Converter v0.6
+R20Converter v0.7
 
 positional arguments:
   destination-directory
-                        The destination directory in public/worlds/ or
-                        public/modules/
+                        The destination directory in Data/worlds/ or
+                        Data/modules/
   exported.zip          The exported ZIP file from R20Exporter
 
 optional arguments:
@@ -113,6 +123,12 @@ optional arguments:
   --player-password PLAYER_PASSWORD
                         Default player password
   --restrict-movement   Force all walls to restrict movement
+  --force-hp-for-token-bar1
+                        Forces the use of HP attribute for all tokens' first
+                        bar
+  --force-hp-for-token-bar2
+                        Forces the use of HP attribute for all tokens' second
+                        bar
   --add-walls-around-map
                         Add 4 walls to enclose the map and cut off
                         view/movement to the side table
@@ -134,6 +150,8 @@ optional arguments:
                         convert into secret doors
   --disable-archived    Disable the automatic move of archived
                         scenes/handouts/characters to an Archived folder.
+  --all-backgrounds-as-tiles
+                        Set all page backgrounds as tiles.
   --minimum-wall-length MINIMUM_WALL_LENGTH
                         Minimum distance for walls (in pixels). If a wall is
                         smaller and part of a longer chain of walls, it will
@@ -154,8 +172,8 @@ optional arguments:
                         the 3 points (Default: 30)
   --debug-page DEBUG_PAGE
                         Only convert a specific page. Useful for debugging
-  --fvtt-public-path FVTT_PUBLIC_PATH
-                        Path to the FVTT public directory (used for importing
+  --fvtt-data-path FVTT_DATA_PATH
+                        Path to the FVTT Data directory (used for importing
                         items and spells from dnd5e system)
   --npc-source NPC_SOURCE
                         Source reference for NPC actors (displayed in the
@@ -178,6 +196,12 @@ optional arguments:
                         --export-as-module)
   --disable-module-playlists
                         Disable conversion of Playlists in the module
+                        (requires --export-as-module)
+  --disable-module-tables
+                        Disable conversion of rollable tables in the module
+                        (requires --export-as-module)
+  --disable-module-decks
+                        Disable conversion of card decks in the module
                         (requires --export-as-module)
   --folder-as-items FOLDER_AS_ITEMS
                         Converts each entry in a journal folder into items.
@@ -208,10 +232,10 @@ Convert Roll20 campaigns into Foundry VTT worlds or modules.
 
 ## Final steps
 
-When the script is done, if you hadn't converted the campaign into the appropriate folder (`worlds` or `modules`) of your FVTT public directory, then copy the generated directory to the resources/app/public/worlds directory in your FVTT installation and load the world in FVTT. 
+When the script is done, if you hadn't converted the campaign into the appropriate folder (`worlds` or `modules`) of your FVTT public directory, then copy the generated directory to the Data/worlds directory in your FVTT data folder and load the world in FVTT. 
 
 And you're done!
 
-The converted world will automatically enable the [entityorder](https://github.com/kakaroto/fvtt-module-entityorder), [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) and [Furnace](https://github.com/kakaroto/fvtt-module-furnace) FVTT modules in the generated world. The `entityorder` FVTT module is required in order to see the journals appearing in the correct order while the Furnace module is only really required if you use the `--images-as-drawings` option. 
+The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) and [Furnace](https://github.com/kakaroto/fvtt-module-furnace) FVTT modules in the generated world. The `permission viewer` FVTT module is helpful for those coming fro Roll 20 to see which handouts/character sheets are shared with whom while the Furnace module is only really required if you use the `--images-as-drawings` option. 
 
 If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info), another project of mine which lets you roll from monster stat blocks and character sheets directly in D&D Beyond and get the result in your VTT application.

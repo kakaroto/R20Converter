@@ -231,7 +231,8 @@ class GUI(object):
             widget = sg.Radio(default, "fog", key=argument, default=enabled)
         elif kwargs.get("action", "") == "store_true":
             size = self.BIG_LABEL_SIZE
-            widget = sg.Checkbox(default, key=argument, default=argument in ["--add-walls-around-map", "--restrict-movement"])
+            options_defaulting_to_true = ["--add-walls-around-map", "--restrict-movement", "--force-hp-for-token-bar1"]
+            widget = sg.Checkbox(default, key=argument, default=argument in options_defaulting_to_true)
         else:   
             widget = sg.Input(default, key=argument)
         self.layout.append([sg.Text(name, tooltip=kwargs.get("help", ""), size=size), widget])

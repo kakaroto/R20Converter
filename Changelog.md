@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.7
+
+- Port Core data to 0.4.x
+- Port Actor data to 0.4.x
+- Port Item data to 0.4.x
+- Port Command line options/behavior and GUI to use 0.4.x data and auto discover of FVTT data path on the system
+- Fix some scenes that could have drawings with an invalid author if the player that drew it was deleted from the campaign
+- Add support for flipped tiles without needing to use drawings
+- Add support for sort order of entities using core feature without the use of entityorder module
+- Better support for shaped sheet character conversions
+- Add support for lair and regional effects for NPCs
+- Nearly rewrote the entire character sheet data migration making it much more stable and reliable and accurate in how character data is converted
+- Use rollable table names for multi-sided tokens to name the actor side filenames more accurately
+- Add support for roll tables
+- Add support for converting decks into Items and associated Roll Tables
+- Add option to force all scene backgrounds to be converted into tiles
+- Add option to force all token bars (bar 1 or bar 2 or both) to be linked to the actor HP
+- Lock all tiles/drawings from the map layer
+
 ## v0.6.4
 
 - Fix various small crashes related to character sheets having invalid data
