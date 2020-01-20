@@ -209,10 +209,10 @@ class Actor(Entity):
         permissions = {"default": Handout.PERMISSION_NONE}
         for player in character.get("inplayerjournals", []):
             if player == "all":
-                permissions["default"] = Handout.PERMISSION_OBSERVER
+                permissions["default"] = Handout.PERMISSION_LIMITED
             elif player != "":
                 player_id = Entity.normalizeID(player)
-                permissions[player_id] = Handout.PERMISSION_OBSERVER
+                permissions[player_id] = Handout.PERMISSION_LIMITED
         for player in character.get("controlledby", []):
             if player == "all":
                 permissions["default"] = Handout.PERMISSION_OWNER
