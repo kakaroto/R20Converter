@@ -8,7 +8,13 @@ class Macros(DatabaseFile):
         self.entities = self.genEntities()
 
     def genEntities(self):
-        return [Macro(self, macro, index) for index, macro in enumerate(self._macros)]
+        macros = []
+        for index, macro in enumerate(self._macros):
+            if isinstance(macro, list):
+                macros.extend([Macro(self, playermacro, i) for i, playermacro in enumerate(macro)])
+            elif isinstance(macro, dict):
+                macros.append(Macro(self, macro, index))
+        return macros
 
 class Macro(Entity):
     def __init__(self, database, macro, index):

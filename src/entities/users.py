@@ -30,7 +30,15 @@ class User(Entity):
     def __init__(self, database, player, index, is_gm=False, scene=None):
         Entity.__init__(self, database, player["id"])
         hotbar = {}
-        for index, macro in enumerate(player.get("macrobar", [])):
+        macrobar = player.get("macrobar", [])
+        if macrobar == "":
+            macrobar = []
+        for index, macro in enumerate(macrobar):
+            if macro == "":
+                continue
+            if isinstance(macro, str):
+                (macro_src, macro_id) = macro.split("|")
+                macro = {"src": macro_src, "id": macro_id}
             hotbar[str(index + 1)] = Entity.normalizeID(macro["id"])
         self.entity = {"_id": self._id,
                        "name": player["displayname"],
