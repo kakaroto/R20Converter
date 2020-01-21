@@ -16,7 +16,7 @@ from entities import DatabaseFile, EmptyDB, \
         Folders, Journal, Playlists, \
         Scenes, SettingsDB, Users, \
         Tables, RollableTables, Decks, \
-        Macros
+        Macros, ChatLog
 
 try:
     import PySimpleGUIQt as sg
@@ -162,6 +162,10 @@ class R20Converter(object):
             self.users = Users(self).save()
             self.folders = Folders(self)
             self.macros = Macros(self).save()
+            if self.getArgument("dont_convert_chat", False):
+                self.chat = EmptyDB(self, "chat").save()
+            else:
+                self.chat = ChatLog(self).save()
             # Items DB needs to happen as two separate calls due to cross links
             self.items = Items(self)
             self.items.createEntities()
@@ -175,7 +179,6 @@ class R20Converter(object):
             self.tables = Tables(self).save()
 
             self.sessions = EmptyDB(self, "sessions").save()
-            self.chat = EmptyDB(self, "chat").save()
             # Could get modified by the journal or rollable tables
             self.folders.save()
             self.items.save()
@@ -341,6 +344,7 @@ parser.add_argument("--disable-module-scenes", action="store_true", help="Disabl
 parser.add_argument("--disable-module-playlists", action="store_true", help="Disable conversion of Playlists in the module (requires --export-as-module)")
 parser.add_argument("--disable-module-tables", action="store_true", help="Disable conversion of rollable tables in the module (requires --export-as-module)")
 parser.add_argument("--disable-module-decks", action="store_true", help="Disable conversion of card decks in the module (requires --export-as-module)")
+parser.add_argument("--dont-convert-chat", action="store_true", help="Disable converting the chat and leave the chat log empty")
 parser.add_argument("--folder-as-items", action="append", default=["Magic Items"], help="Converts each entry in a journal folder into items. Useful for 'Magic Items' folders. Can be passed multiple times to convert more than one folder.")
 parser.add_argument("--dont-export-actor-items", action="store_true", help="Items from actors will be exported as individual Entity Items. This option disables that behavior and no items will be created.")
 parser.add_argument("--no-duplicate-actor-items", action="store_true", help="This option causes items with the same name from different actors to be exported under a single item. The first processed actor with the item of that name gets their item in the item entities.")

@@ -25,6 +25,8 @@ class Users(DatabaseFile):
         return self.entities[0]
 
 class User(Entity):
+    ROLE_PLAYER = 1
+    ROLE_GM = 4
     def __init__(self, database, player, index, is_gm=False, scene=None):
         Entity.__init__(self, database, player["id"])
         hotbar = {}
@@ -45,5 +47,5 @@ class User(Entity):
         self.setGM(is_gm)
 
     def setGM(self, gm):
-        self.entity["role"] = 4 if gm else 1
+        self.entity["role"] = User.ROLE_GM if gm else User.ROLE_PLAYER
         self.entity["password"] = self.getArgument("gm_password" if gm else "player_password", "")
