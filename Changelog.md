@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.8
+
+- Port database format to FVTT 0.4.4/0.4.5
+- Add support for macros (as chat messages) and player hotbars
+- Add support for converting chat log (no roll templates)
+- Set permission for character sheets in player's journal to Limited instead of Observer
+- Add support for horizontal mirroring of tokens
+- Add checks against invalid roll tables and decks
+
 ## v0.7
 
 - Port Core data to 0.4.x
