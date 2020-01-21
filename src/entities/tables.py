@@ -118,7 +118,7 @@ class Table(Entity):
         if entity:
             result_type = Table.RESULT_TYPE_COMPENDIUM if self.getArgument("export_as_module", False) else Table.RESULT_TYPE_ENTITY
         entry = {
-            "id": len(self.entity["results"]) + 1,
+            "_id": self.genID(),
             "flags": {},
             "type": result_type,
             "collection": collection,

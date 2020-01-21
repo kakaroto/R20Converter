@@ -111,6 +111,7 @@ class Entity(object):
     SORT_ORDER = 10000
     # Ensures ids are unique accross all entities
     id_database = {}
+    uuids = []
     resource_cache = {}
 
     def __init__(self, database, id):
@@ -141,8 +142,8 @@ class Entity(object):
             del entity["folder"]
         except:
             pass
-        entity["id"] = len(parent_list) + 1
-        entity["sort"] = entity["id"] * Entity.SORT_ORDER
+        entity["_id"] = self.genID()
+        entity["sort"] = (len(parent_list) + 1) * Entity.SORT_ORDER
         parent_list.append(entity)
         return entity
 
@@ -230,7 +231,11 @@ class Entity(object):
 
     @staticmethod
     def genID():
-        return Entity.normalizeID(str(uuid.uuid4()))
+        id = uuid.uuid4()
+        while id in Entity.uuids:
+            id = uuid.uuid4()
+        Entity.uuids.append(id)
+        return Entity.normalizeID(str(id))
 
     # Used to fix the sometimes broken color codes in R20
     @staticmethod

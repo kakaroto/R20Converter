@@ -116,16 +116,11 @@ class Scene(Entity):
             except Exception as e:
                 print("Unable to create thumbnail : %s" % e)
         
-        tile_id = 1
         map_tiles = []
         objects_tiles = []
-        token_id = 1
         tokens = []
-        wall_id = 1
         walls = []
-        light_id = 1
         lights = []
-        drawing_id = 1
         drawings = []
         # Some graphics/paths/texts don't appear in the zorder (if drawn by other players?),
         # so let's add them at the end in the order they should appear, map, objects, gm and wall layers.
@@ -203,7 +198,7 @@ class Scene(Entity):
                 ((0, height), (0, 0))
             ]
             for (x0, x1) in positions:
-                wall = {"id": wall_id,
+                wall = {"_id": self.genID(),
                         "flags": {},
                         "c": [
                                 int(margin_left + x0[0] * grid_multiplier),
@@ -215,7 +210,6 @@ class Scene(Entity):
                         "sense": 1,
                         "door": 0
                         }
-                wall_id += 1
                 walls.append(wall)
                 
         total_walls = len(walls)
@@ -233,6 +227,7 @@ class Scene(Entity):
             tile_width = obj["width"]
             tile_height = obj["height"]
             rotation = obj["rotation"]
+            tiles = (map_tiles if layer == "map" else objects_tiles)
 
             if graphic and layer != "walls" and (bg is None or graphic != bg):
                 # The character might have been deleted, but the graphic still represents a token
@@ -251,7 +246,7 @@ class Scene(Entity):
                         token_image = graphic["imgsrc"]
                     else:
                         filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
-                        dest = os.path.join("scenes", "tokens", safe_name, "token_" + str(token_id) + ".png")
+                        dest = os.path.join("scenes", "tokens", safe_name, "token_" + str(len(tokens)) + ".png")
                         if self.getArgument("json", False):
                             (_, token_image) = self.downloadResource(graphic["imgsrc"], dest)
                         else:
@@ -276,7 +271,7 @@ class Scene(Entity):
                         if bar2_link == hp_id or self.getArgument("force_hp_for_token_bar2", False):
                             token["bar2"]["attribute"] = "attributes.hp"
                         token["actorLink"] = not npc
-                    token["id"] = token_id
+                    token["_id"] = self.genID()
                     token["hidden"] = (layer == "gmlayer")
                     x = (left - (tile_width / 2))
                     y = (top - (tile_height / 2))
@@ -287,9 +282,8 @@ class Scene(Entity):
                     token["height"] = token["height"] / (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
                     # Store the token id mapping for the Combat database
                     page_tokens = self.token_ids.setdefault(page["id"], {})
-                    page_tokens[graphic["id"]] = token_id
+                    page_tokens[graphic["id"]] = token["_id"]
                     if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
-                        token_id += 1
                         tokens.append(token)
                 else:
                     if self.getArgument("use_original_image_urls", False):
@@ -297,9 +291,9 @@ class Scene(Entity):
                     else:
                         filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
                         if self.isDrawing(graphic):
-                            basename = "drawing_" + str(drawing_id)
+                            basename = "drawing_" + str(len(drawings))
                         else:
-                            basename = "tile_" + str(tile_id)
+                            basename = "tile_" + str(len(tiles))
                         dest = os.path.join("scenes", "tiles", safe_name, basename + ".png")
                         if self.getArgument("json", False):
                             (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest)
@@ -323,7 +317,7 @@ class Scene(Entity):
                         rotation = 0
                     if angle != 360:
                         rotation = (rotation + 180) % 360
-                    light = {"id": light_id,
+                    light = {"_id": self.genID(),
                              "flags": {},
                              "t": "l",
                              # light object get placed at the center of the graphic
@@ -338,7 +332,6 @@ class Scene(Entity):
                     y = (top - (tile_height / 2))
                     # Check if light spills into the scene even if the graphic itself is outside of it
                     if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
-                        light_id += 1
                         lights.append(light)
             elif text and text["text"].strip() != "":
                 # NOTE: We ignore text items without any text.. there's a lot of those...
@@ -346,11 +339,11 @@ class Scene(Entity):
                 x = (left - (tile_width / 2))
                 y = (top - (tile_height / 2))
                 # Drawing author can't be null or empty string, so give an invalid id instead
-                drawing = {"id": drawing_id,
+                drawing = {"_id": self.genID(),
                             "flags": {},
                             "x": int(margin_left + x * grid_multiplier),
                             "y": int(margin_top + y * grid_multiplier),
-                            "z": 10 * drawing_id,
+                            "z": 10 * len(drawings),
                             "width": int(tile_width * grid_multiplier),
                             "height": int(tile_height * grid_multiplier),
                             "rotation": rotation,
@@ -359,18 +352,17 @@ class Scene(Entity):
                             "author": Entity.normalizeID(text["controlledby"]) or "GM"
                 }
                 drawing = self.createTextDrawing(drawing, text)
-                drawing_id += 1
                 drawings.append(drawing)
             elif path and layer != "walls":
                 tile_width = tile_width * path["scaleX"]
                 tile_height = tile_height * path["scaleY"]
                 x = (left - (tile_width / 2))
                 y = (top - (tile_height / 2))
-                drawing = {"id": drawing_id,
+                drawing = {"_id": self.genID(),
                             "flags": {},
                             "x": int(margin_left + x * grid_multiplier),
                             "y": int(margin_top + y * grid_multiplier),
-                            "z": 10 * drawing_id,
+                            "z": 10 * len(drawings),
                             "width": int(tile_width * grid_multiplier),
                             "height": int(tile_height * grid_multiplier),
                             "rotation": rotation,
@@ -379,7 +371,6 @@ class Scene(Entity):
                             "author": Entity.normalizeID(path["controlledby"]) or "GM"
                 }
                 drawing = self.createPathDrawing(drawing, path)
-                drawing_id += 1
                 drawings.append(drawing)
             elif path and layer == "walls":
                 drawing_width = tile_width * path["scaleX"]
@@ -422,7 +413,7 @@ class Scene(Entity):
                                 top + previous_point[1]]
                     wall_b = [left + point[0],
                                 top + point[1]]
-                    wall = {"id": wall_id,
+                    wall = {"_id": self.genID(),
                             "flags": {},
                             "c": [
                                     int(margin_left + wall_a[0] * grid_multiplier),
@@ -441,7 +432,6 @@ class Scene(Entity):
                     wall_width = max(wall_a[0], wall_b[0]) - wall_x
                     wall_height = max(wall_a[1], wall_b[1]) - wall_y
                     if not self._needsCleanup(wall_x, wall_y, wall_width, wall_height, width, height):
-                        wall_id += 1
                         walls.append(wall)
                     previous_point = point
                     previous_point_idx = point_idx
@@ -453,7 +443,7 @@ class Scene(Entity):
                 y = (top - (tile_height / 2))
                 if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
                     if self.isDrawing(graphic):
-                        drawing = {"id": drawing_id,
+                        drawing = {"_id": self.genID(),
                                     "flags": {
                                         "furnace": {
                                             "fillType": 3,
@@ -464,7 +454,7 @@ class Scene(Entity):
                                     },
                                     "x": int(margin_left + x * grid_multiplier),
                                     "y": int(margin_top + y * grid_multiplier),
-                                    "z": 10 * drawing_id,
+                                    "z": 10 * len(drawings),
                                     "width": int(tile_width * grid_multiplier),
                                     "height": int(tile_height * grid_multiplier),
                                     "rotation": rotation,
@@ -487,7 +477,6 @@ class Scene(Entity):
                                     "bezierFactor": 0,
                                     "points": [],
                                 }
-                        drawing_id += 1
                         drawings.append(drawing)
                     else:
                         if graphic["flipv"]:
@@ -496,7 +485,7 @@ class Scene(Entity):
                         if graphic["fliph"]:
                             x = x + tile_width
                             tile_width *= -1
-                        tile = {"id": tile_id,
+                        tile = {"_id": self.genID(),
                                 "flags": {},
                                 "img": tile_image,
                                 "width": int(tile_width * grid_multiplier),
@@ -504,13 +493,12 @@ class Scene(Entity):
                                 "scale": 1, # Also seems unused
                                 "x": int(margin_left + x * grid_multiplier),
                                 "y": int(margin_top + y * grid_multiplier),
-                                "z": 10 * tile_id, # Z is currently unusedm the order in the list is what counts
+                                "z": 10 * len(tiles),
                                 "rotation": rotation,
                                 "locked": layer == "map",
                                 "hidden": layer == "gmlayer" or layer == "walls"
                                 }
-                        tile_id += 1
-                        (map_tiles if layer == "map" else objects_tiles).append(tile)
+                        tiles.append(tile)
                 
                     
         if len(walls) != total_walls:

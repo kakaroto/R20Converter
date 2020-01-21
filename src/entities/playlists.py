@@ -39,7 +39,6 @@ class Playlist(Entity):
                  "b": 0, # Loop
                  }
         sounds = []
-        sound_id = 1
         print("creating playlist %s" % playlist["n"])
         for index, track_id in enumerate(playlist["i"]):
             track = self.findID(track_id, "track")
@@ -57,7 +56,7 @@ class Playlist(Entity):
                         volume = float(track["volume"]) / 100.0
                     except:
                         volume = 1
-                    sounds.append({"id": sound_id,
+                    sounds.append({"_id": self.genID(),
                                    "flags": {},
                                    "path": mp3_path,
                                    "repeat": track["loop"],
@@ -65,7 +64,6 @@ class Playlist(Entity):
                                    "name": track["title"],
                                    "playing": track["playing"]
                                    })
-                    sound_id += 1
 
         self.entity = {"_id": self._id,
                        "name": playlist["n"],

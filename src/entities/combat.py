@@ -20,7 +20,6 @@ class Encounter(Entity):
     def __init__(self, database, id, turnorder, page_id, active):
         Entity.__init__(self, database, id)
         combatants = []
-        combatant_id = 1
         for token in turnorder:
             page_tokens = Scene.token_ids.get(page_id, {})
             token_id = page_tokens.get(token["id"], None)
@@ -34,12 +33,11 @@ class Encounter(Entity):
                     initiative = int(token["pr"])
                 except ValueError:
                     initiative = None
-                combatants.append({"id": combatant_id,
+                combatants.append({"_id": self.genID(),
                                    "flags": {},
                                    "tokenId": token_id,
                                    "initiative": initiative,
                                    "hidden": hidden})
-                combatant_id += 1
 
         self.entity = {"_id": self._id,
                        "flags": {},
