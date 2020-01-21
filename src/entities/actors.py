@@ -53,6 +53,8 @@ class Token(Entity):
         self.has_vision = False
         self.light_angle = 360
         self.sight_angle = 360
+        self.mirrorX = False
+        self.mirrorY = False
 
         if token:
             self.token_name = token.get("name", self.token_name)
@@ -80,6 +82,8 @@ class Token(Entity):
             self.light_angle = parseInt("light_angle", self.light_angle)
             self.sight_angle = parseInt("light_losangle", self.sight_angle)
             self.setupLighting(lradius, ldimradius)
+            self.mirrorX = bool(token.get("fliph", self.mirrorX))
+            self.mirrorY = bool(token.get("flipv", self.mirrorY))
 
         if self.bar1_max > 0 or self.bar2_max > 0:
             all_see_bars = all_see_bar1 or all_see_bar2
@@ -163,6 +167,7 @@ class Token(Entity):
                 "img": self.token_filename if self.token_filename != "" else "icons/svg/mystery-man.svg",
                 "width": self.width / 70.0,
                 "height": self.height / 70.0,
+                "mirrorX": self.mirrorX,
                 "scale": 1,
                 "elevation": 0,
                 "rotation": rotation,
