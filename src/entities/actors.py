@@ -263,6 +263,8 @@ class Actor(Entity):
                             # Older exporter was creating an object of {id: item_data}, newer exports the tables and decks as arrays instead
                             if isinstance(table_items, dict):
                                 table_items = table_items.values()
+                            if not isinstance(table_items, list):
+                                table_items = []
                             side_names = {}
                             for side in default_token["sides"]:
                                 match = [i for i in table_items if i["avatar"] == side]

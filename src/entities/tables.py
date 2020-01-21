@@ -26,6 +26,8 @@ class RollableTables(DatabaseFile):
             # Older exporter was creating an object of {id: item_data}, newer exports the tables and decks as arrays instead
             if isinstance(items, dict):
                 items = items.values()
+            if not isinstance(items, list):
+                items = []
             for item_index, entry in enumerate(items):
                 name = entry.get("name", "")
                 img = entry.get("avatar", "")
@@ -60,6 +62,8 @@ class Decks(DatabaseFile):
             # Older exporter was creating an object of {id: item_data}, newer exports the tables and decks as arrays instead
             if isinstance(cards, dict):
                 cards = cards.values()
+            if not isinstance(cards, list):
+                cards = []
             for card_index, card in enumerate(cards):
                 name = card.get("name", "")
                 img = card.get("avatar", "")
