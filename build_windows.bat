@@ -3,7 +3,7 @@ set version=%version_py:~11,-1%
 rd /s /q dist
 rd /s /q windows
 rd /s /q "releases\R20Converter-%version%"
-"C:\Users\kakaroto\AppData\Local\Programs\Python\Python37-32\Scripts\pyinstaller.exe" R20Converter.spec
+"C:\Users\kakaroto\AppData\Local\Programs\Python\Python38-32\Scripts\pyinstaller.exe" R20Converter.spec
 
 mkdir "releases\R20Converter-%version%"
 xcopy /s src "releases\R20Converter-%version%\src\"

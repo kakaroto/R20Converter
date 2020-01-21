@@ -521,6 +521,7 @@ class Scene(Entity):
                        "navigation": not page["archived"],
                        "active": active_page == page["id"],
                        "img": bg_image,
+                       "initial": None,
                        "thumb": thumb_image,
                        "width": width * grid_multiplier,
                        "height": height * grid_multiplier,

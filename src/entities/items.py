@@ -318,15 +318,17 @@ class ItemDamage:
         }
     
 class ItemSave:
-    def __init__(self, ability=ItemAbility.NONE, dc=None):
+    def __init__(self, ability=ItemAbility.NONE, dc=None, scaling=None):
         self.ability = ability
         self.dc = dc
+        self.scaling = scaling if scaling else "spell"
 
     def getDict(self):
         return {
             "save": {
                 "ability": self.ability,
-                 "dc": self.dc
+                "dc": self.dc,
+                "scaling": self.scaling
             }
         }
 

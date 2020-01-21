@@ -325,6 +325,7 @@ class Actor(Entity):
         token["actorLink"] = not npc
         del token["effects"]
         del token["hidden"]
+        del token["elevation"]
         if token["actorLink"]:
             del token["actorData"]["data"]
 
@@ -339,6 +340,7 @@ class Actor(Entity):
             ("currency", self.createActorCurrency()),
             ("spells", self.createActorSpells()),
             ("resources", self.createActorResources()),
+            ("bonuses", self.createActorBonuses()),
         ])
         owned_items = []
         self.addClasses(owned_items)
@@ -1374,6 +1376,22 @@ class Actor(Entity):
                             resources.update([(key, res)])
                             index += 1
             return resources
+
+    def createActorBonuses(self):
+        # Unused for now
+        return {
+            "bonuses": {
+                "mwak": "",
+                "rwak": "",
+                "msak": "",
+                "rsak": "",
+                "damage": "",
+                "abilityCheck": "",
+                "abilitySave": "",
+                "skillCheck": ""
+            }
+        }
+
 
     def exportItem(self, item, folder_prefix, force=False):
         if not force and self.getArgument("dont_export_actor_items", False):
