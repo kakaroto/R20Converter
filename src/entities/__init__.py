@@ -9,3 +9,4 @@ from .scenes import Scenes, Scene
 from .settings import SettingsDB, Setting
 from .users import Users, User
 from .tables import Tables, RollableTables, Decks, Table
+from .macros import Macros, Macro

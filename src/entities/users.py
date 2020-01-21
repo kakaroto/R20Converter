@@ -27,6 +27,9 @@ class Users(DatabaseFile):
 class User(Entity):
     def __init__(self, database, player, index, is_gm=False, scene=None):
         Entity.__init__(self, database, player["id"])
+        hotbar = {}
+        for index, macro in enumerate(player.get("macrobar", [])):
+            hotbar[str(index + 1)] = Entity.normalizeID(macro["id"])
         self.entity = {"_id": self._id,
                        "name": player["displayname"],
                        "flags":{},
@@ -34,7 +37,8 @@ class User(Entity):
                        "scene": Entity.normalizeID(scene),
                        "permission": 0,
                        "permissions": {},
-                       "sort": index * Entity.SORT_ORDER
+                       "sort": index * Entity.SORT_ORDER,
+                       "hotbar": hotbar
                        }
         print("Creating User : %s (%s)" % (self.entity["name"], "GM" if is_gm else "Player"))
         

@@ -15,7 +15,8 @@ from entities import DatabaseFile, EmptyDB, \
         Actors, Items, Combat, \
         Folders, Journal, Playlists, \
         Scenes, SettingsDB, Users, \
-        Tables, RollableTables, Decks
+        Tables, RollableTables, Decks, \
+        Macros
 
 try:
     import PySimpleGUIQt as sg
@@ -160,6 +161,7 @@ class R20Converter(object):
             self.settings = SettingsDB(self).save()
             self.users = Users(self).save()
             self.folders = Folders(self)
+            self.macros = Macros(self).save()
             # Items DB needs to happen as two separate calls due to cross links
             self.items = Items(self)
             self.items.createEntities()
