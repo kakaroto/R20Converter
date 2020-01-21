@@ -1424,10 +1424,11 @@ class Actor(Entity):
         compendium_item = self.findCompendiumItem("Items", name)
         item = self._converter.items.createItemInventory(None, name, description, inventory_type, attributes,
                                                         activity, attack, specific, **kwargs)
-        if compendium_item:
+        # Prevent a weapon (torch, shovel) from being transformed into loot and losing its damage/attack properties
+        if compendium_item and (compendium_item.entity["type"] != "loot" or inventory_type == "loot"):
             item = self._converter.items.createItemFromCompendium(None, compendium_item, item.entity["data"])
         else:
-            item.entity["img"] = self._avatar_filename
+            item.entity["img"] = compendium_item.entity["img"] if compendium_item else self._avatar_filename
         owned_item = item.addToOwnedList(items)
 
         if inventory_type == "loot":
@@ -1617,10 +1618,10 @@ class Actor(Entity):
         description = self.textToHtml(description)
         compendium_item = self.findCompendiumItem("Class Features", name)
         item = self._converter.items.createItemFeat(None, name, description, activation, attack, recharge, **kwargs)
-        if compendium_item:
+        if compendium_item and compendium_item.entity["type"] != "loot":
             item = self._converter.items.createItemFromCompendium(None, compendium_item, item.entity["data"])
         else:
-            item.entity["img"] = self._avatar_filename
+            item.entity["img"] = compendium_item.entity["img"] if compendium_item else self._avatar_filename
         owned_item = item.addToOwnedList(items)
         self.exportItem(item, "Abilities & Feats")
         return owned_item
@@ -1922,10 +1923,10 @@ class Actor(Entity):
         compendium_item = self.findCompendiumItem("Spells", name)
         item = self._converter.items.createItemSpell(None, name, description,  activation, attack,
                                                     level, school, components, preparation, scaling, **kwargs)
-        if compendium_item:
+        if compendium_item and compendium_item.entity["type"] != "loot":
             item = self._converter.items.createItemFromCompendium(None, compendium_item, item.entity["data"])
         else:
-            item.entity["img"] = self._avatar_filename
+            item.entity["img"] = compendium_item.entity["img"] if compendium_item else self._avatar_filename
         owned_item = item.addToOwnedList(items)
         self.exportItem(item, "Spells")
         return owned_item
@@ -2130,10 +2131,10 @@ class Actor(Entity):
         name = name if name != "" else "<unknown class>"
         compendium_item = self.findCompendiumItem("Classes", name)
         item = self._converter.items.createItemClass(None, name, name, level, subclass, **kwargs)
-        if compendium_item:
+        if compendium_item and compendium_item.entity["type"] != "loot":
             item = self._converter.items.createItemFromCompendium(None, compendium_item, item.entity["data"])
         else:
-            item.entity["img"] = self._avatar_filename
+            item.entity["img"] = compendium_item.entity["img"] if compendium_item else self._avatar_filename
         return item.addToOwnedList(items)
 
     def addClasses(self, items):
