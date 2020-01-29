@@ -41,7 +41,12 @@ class World(object):
         if self._copy_templates:
             path = os.path.join(self._path, "templates")
             os.makedirs(path)
-            shutil.copy("templates/roll20-templates.css", path)
-            shutil.copy("templates/roll20-templates.js", path)
+            # If running from the windows directory alone, there won't be a 'src' directory anymore
+            parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            if not os.path.exists(os.path.join(parent, "templates")):
+                parent = os.path.abspath(os.path.join(parent, ".."))
+            templates_dir = os.path.join(parent, "templates")
+            shutil.copy(os.path.join(templates_dir, "roll20-templates.css"), path)
+            shutil.copy(os.path.join(templates_dir, "roll20-templates.js"), path)
 
         return self

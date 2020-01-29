@@ -236,6 +236,6 @@ When the script is done, if you hadn't converted the campaign into the appropria
 
 And you're done!
 
-The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) and [Furnace](https://github.com/kakaroto/fvtt-module-furnace) FVTT modules in the generated world. The `permission viewer` FVTT module is helpful for those coming fro Roll 20 to see which handouts/character sheets are shared with whom while the Furnace module is only really required if you use the `--images-as-drawings` option. 
+The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer), [Furnace](https://github.com/kakaroto/fvtt-module-furnace) and [Chat Autoloader](https://gitlab.com/moerills-fvtt-modules/chat-autoloader) FVTT modules in the generated world. The `permission viewer` FVTT module is helpful for those coming from Roll 20 to see which handouts/character sheets are shared with whom, while the Furnace module is only really required if you use the `--images-as-drawings` option. The `Chat Autoloader` module will make chat messages load progressively instead of all at once, making the startup time of the world immensely faster if you have a lot of chat messages in your game.
 
 If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info), another project of mine which lets you roll from monster stat blocks and character sheets directly in D&D Beyond and get the result in your VTT application.
