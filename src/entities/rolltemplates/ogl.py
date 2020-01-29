@@ -488,3 +488,77 @@ class OGLTemplate:
         {}
         {}
         """.format(klass.render_npc(attributes, "Attack"), description, klass.render_npcdmg(attributes, crit))
+
+    @classmethod
+    def template_mancerroll(klass, attributes):
+        title = attributes.get("title", "")
+        c1 = attributes.get("c1", "")
+        option = ""
+        if c1 != "":
+            totals = re.findall(r"data-roll-total='(\d+)'", c1)
+            total = int(totals[0]) if len(totals) > 0 else 0
+            c1 = "<span>{}</span>".format(c1)
+            option = attributes.get("option{}".format(total), "")
+
+        rolls = ""
+        for i in range(6):
+            r = attributes.get("r{}".format(i + 1), "")
+            if r != "":
+                rolls += """
+                <div class="sheet-row">
+                    <span class="sheet-desc">Roll {}: </span>
+                    <span class="sheet-result">{}</span>
+                </div>""".format(i + 1, r)
+        return """
+        <div class="sheet-container">
+            <div class="sheet-row sheet-header">
+                <span>
+                    {}
+                    {}
+                </span>
+            </div>
+            {}
+            <div class="sheet-row">
+                <span class="sheet-desc">
+                {}
+                </span>
+            </div>
+        </div>
+            """.format(title, c1, rolls, option)
+
+            
+    @classmethod
+    def template_mancerhproll(klass, attributes):
+        title = attributes.get("title", "")
+        c1 = attributes.get("c1", "")
+        a1 = attributes.get("a1", "")
+        if c1 != "":
+            c1 = "<span>{}</span>".format(c1)
+
+        if a1 != "":
+            a1 = """
+                <div class="sheet-row">
+                    <span class="sheet-desc">Average: </span>
+                    <span class="sheet-result">{}</span>
+                </div>""".format(a1)
+        rolls = ""
+        for i in range(20):
+            r = attributes.get("r{}".format(i + 1), "")
+            if r != "":
+                rolls += """
+                <div class="sheet-row">
+                    <span class="sheet-desc">Roll {}: </span>
+                    <span class="sheet-result">{}</span>
+                </div>""".format(i + 1, r)
+        return """
+        <div class="sheet-container">
+            <div class="sheet-row sheet-header">
+                <span>
+                    {}
+                    {}
+                </span>
+            </div>
+            {}
+            {}
+        </div>
+            """.format(title, c1, a1, rolls)
