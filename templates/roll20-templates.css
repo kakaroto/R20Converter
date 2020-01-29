@@ -436,7 +436,7 @@ By Miguel
   border: 1px solid black;
   color: black;
   font-family: "Times New Roman", Times, serif;
-  margin-left: -3em;
+  margin-left: -3px;
   padding: 0.5em;
   width: 19em; }
 
@@ -656,3 +656,46 @@ By Miguel
 .sheet-rolltemplate-atkdmg .sheet-savedc .sheet-rolltemplate-inline,
 .sheet-rolltemplate-atkdmg .sheet-label .sheet-rolltemplate-inline {
   display: inline-block; }
+
+/* Roll tooltips */
+.tipsy-n.tipsy, .tipsy-n-right.tipsy {
+    opacity: 1!important;
+    visibility: visible;
+    display: block;
+}
+.tipsy {
+  word-wrap: break-word;
+  padding: 5px;
+  font-size: 12px;
+  position: absolute;
+  z-index: 100000;
+}
+
+.tipsy-arrow {
+  top: 0;
+  left: 50%;
+  margin-left: -4px;
+  position: absolute;
+  background-color: black;
+  width: 9px;
+  height: 9px;
+  
+  /* Rotate the black square 45 degrees to make it become an arrow */
+  -webkit-transform-origin:50% 50%;
+  -ms-transform-origin:50% 50%;
+  transform-origin:50% 50%;
+  
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
+}
+
+.tipsy-inner {
+  word-wrap: break-word;
+  font-size: 1.1em;
+  padding: 5px 8px 4px 8px;
+  background-color: black;
+  color: white;
+  max-width: 200px;
+  text-align: center;
+}
