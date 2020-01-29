@@ -4,7 +4,7 @@ from .actors import Token
 try:
     from PIL import Image
 except:
-    pass
+    Image = None
 
 import os
 import math
@@ -110,9 +110,10 @@ class Scene(Entity):
             else:
                 (thumb_filename, thumb_image) = self.copyZipFile(filename, dest)
             try:
-                im = Image.open(thumb_filename)
-                im.thumbnail((300, 100))
-                im.save(thumb_filename)
+                if Image is not None:
+                    im = Image.open(thumb_filename)
+                    im.thumbnail((300, 100))
+                    im.save(thumb_filename)
             except Exception as e:
                 print("Unable to create thumbnail : %s" % e)
         
