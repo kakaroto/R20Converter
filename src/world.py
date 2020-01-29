@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 
 class World(object):
     def __init__(self, converter):
@@ -10,6 +11,8 @@ class World(object):
         if self._title is None:
             self._title = converter.campaign["campaign_title"]
         self._description = converter.getArgument("description")
+        self._copy_templates = len(converter.chat.entities) > 0
+            
 
     def toDict(self):
         return {"id": self._name,
@@ -20,8 +23,8 @@ class World(object):
                 "coreVersion": "0.4.5",
                 "systemVersion": 0.8,
                 "packs": [],
-                "scripts": [],
-                "styles": [],
+                "scripts":  ["templates/roll20-templates.js"] if self._copy_templates else [],
+                "styles": ["templates/roll20-templates.css"] if self._copy_templates else [],
                 "unavailable": 0,
                 "languages": []
                 }
@@ -34,4 +37,11 @@ class World(object):
         filename = os.path.join(self._path, "world.json")
         with open(filename, "w", encoding='utf-8') as f:
             f.write(str(self))
+
+        if self._copy_templates:
+            path = os.path.join(self._path, "templates")
+            os.makedirs(path)
+            shutil.copy("templates/roll20-templates.css", path)
+            shutil.copy("templates/roll20-templates.js", path)
+
         return self

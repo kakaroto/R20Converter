@@ -1,6 +1,8 @@
 import json
+import re
 from .base import DatabaseFile, Entity
 from .users import User
+from .rolltemplates import RollTemplate
 
 class ChatLog(DatabaseFile):
     def __init__(self, converter):
@@ -11,11 +13,15 @@ class ChatLog(DatabaseFile):
     def genEntities(self):
         messages = []
         for msg_group in self._archive:
+            if not isinstance(msg_group, dict):
+                continue
             for msg_id in msg_group.keys():
                 try:
                     messages.append(ChatMessage(self, msg_id, msg_group[msg_id]))
                 except Exception as e:
                     print("Error converting Chat message ", e)
+                    print(e)
+                    raise e
         return messages
 
 class ChatMessage(Entity):
@@ -32,13 +38,15 @@ class ChatMessage(Entity):
         content = message["content"]
         sound = None
         roll = None
+        inline = list(map(lambda r: Roll(r["expression"], r["results"]), message.get("inlinerolls", [])))
+
         if message["type"] == "whisper":
             if message["target"] == "gm":
                 whispers = self.getGMWhispers()
             else:
                 whispers.append(Entity.normalizeID(message["target"]))
             roll_type = ChatMessage.TYPE_WHISPER
-        elif message["type"] == "whisper":
+        elif message["type"] == "emote":
             roll_type = ChatMessage.TYPE_EMOTE
         elif message["type"] == "rollresult" or message["type"] == "gmrollresult":
             roll_type = ChatMessage.TYPE_ROLL
@@ -48,8 +56,10 @@ class ChatMessage(Entity):
             roll = Roll(content, r20roll)
             if message["type"] == "gmrollresult":
                 whispers = self.getGMWhispers()
-        if message.get("rolltemplate", None) is not None:
-            raise Exception("Roll templates not supported yet")
+        if "rolltemplate" in message:
+            content = RollTemplate(message["rolltemplate"], content, inline).toHTML()
+        content = self._replaceInlineRolls(content, inline)
+        content = self._replaceLinks(content)
         self.entity = {
             "_id": self._id,
             "flags": {},
@@ -72,6 +82,19 @@ class ChatMessage(Entity):
                 whispers.append(i._id)
         return whispers
 
+    def _replaceInlineRolls(self, content, rolls):
+        def repl(match):
+            idx = int(match.group(1))
+            if idx < 0 or idx >= len(rolls):
+                return match.group(0)
+            return rolls[idx].getInline()
+        return re.sub(r'\$\[\[(\d+)\]\]', repl, content)
+
+    def _replaceLinks(self, content):
+        def repl(match):
+            return "<a href='{}'>{}</a>".format(match.group(2).replace('\'', '&#39;'), match.group(1))
+        return re.sub(r'\[(.+?)\]\((.*?)\)', repl, content)
+
 class Roll:
     def __init__(self, formula, r20roll):
         self.formula = formula
@@ -86,18 +109,51 @@ class Roll:
                     "options": {},
                     "rolls": []
                 }
-                for result in roll["results"]:
+                for result in roll.get("results", []):
                     die = {"roll": result["v"]}
                     if result.get("d", False):
                         die["discarded"] = True
                     dice["rolls"].append(die)
                 self.parts.append(dice)
             elif roll["type"] == "M":
-                self.parts.append(roll["expr"])
+                self.parts.append(str(roll["expr"]))
             elif roll["type"] == "L" or roll["type"] == "C":
                 pass # text
             else:
                 raise Exception("Unknown roll type %s" % str(roll))
+
+    def isCrit(self):
+        for part in self.parts:
+            if isinstance(part, dict):
+                for roll in part["rolls"]:
+                    if roll.get("discarded", False):
+                        continue
+                    if roll["roll"] == part["faces"]:
+                        return True
+                        
+    def isFail(self):
+        for part in self.parts:
+            if isinstance(part, dict):
+                for roll in part["rolls"]:
+                    if roll.get("discarded", False):
+                        continue
+                    if roll["roll"] == 1:
+                        return True
+
+    def getTooltip(self):
+        return "Rolling {} = {}".format(self.formula, "".join(map(lambda r: r if isinstance(r, str) else ("+(" + "+".join(map(lambda d: str(d["roll"]), r["rolls"])) + ")"),self.parts)))
+
+    def getInline(self):
+        if self.isCrit() and self.isFail():
+            classes = "importantroll"
+        elif self.isCrit():
+            classes = "fullcrit"
+        elif self.isFail():
+            classes = "fullfail"
+        else:
+            classes = ""
+        return "<span class='fvtt-inline-roll inlinerollresult showtip {}' data-roll-total='{}' data-roll='{}' original-title='{}'>{}</span>" \
+                    .format(classes, self.total, json.dumps(self.toJSON()).replace('\"', '\\\"'), self.getTooltip(), self.total)
 
     def toJSON(self):
         return {
@@ -106,4 +162,3 @@ class Roll:
             'parts': self.parts,
             'total': self.total
         }
-    
