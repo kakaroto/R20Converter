@@ -378,3 +378,113 @@ class OGLTemplate:
         </div>
         """.format(name, innate, level, ritual, castingtime, range_, target, components, duration, description, athigherlevels)
 
+    @staticmethod
+    def render_npc(attributes, type_):
+        rname = attributes.get("rname", "")
+        name = attributes.get("name", "")
+        r1 = attributes.get("r1", "")
+        r2 = attributes.get("r2", "")
+        always = attributes.get("always", "")
+        normal = attributes.get("normal", "")
+        advantage = attributes.get("advantage", "")
+        disadvantage = attributes.get("disadvantage", "")
+        if name != "":
+            name = """
+            <div class="sheet-row sheet-subheader">
+                <span class="sheet-italics">{}</span>
+            </div>""".format(name)
+        if always != "" or advantage != "" or disadvantage != "":
+            r1_totals = re.findall(r"data-roll-total='(\d+)'", r1)
+            r2_totals = re.findall(r"data-roll-total='(\d+)'", r2)
+            r1_total = int(r1_totals[0]) if len(r1_totals) > 0 else 0
+            r2_total = int(r2_totals[0]) if len(r2_totals) > 0 else 0
+            if always != "":
+                r1_class = ""
+                r2_class = ""
+            elif advantage != "":
+                r1_class = "sheet-grey" if r1_total < r2_total else ""
+                r2_class = "sheet-grey" if r1_total > r2_total else ""
+            elif disadvantage != "":
+                r1_class = "sheet-grey" if r1_total > r2_total else ""
+                r2_class = "sheet-grey" if r1_total < r2_total else ""
+            roll = """<span class="sheet-italics">{}: </span><span class="{}">{}</span><span> | </span><span class="{}">{}</span>""" \
+                .format(type_, r1_class, r1, r2_class, r2)
+        elif normal != "":
+            roll = """<span class="sheet-italics">{}: </span><span>{}</span>""".format(type_, r1)
+        return """
+        <div class="sheet-row sheet-header">
+            <span>{}</span>
+        </div>
+        {}
+        <div class="sheet-arrow-right"></div>
+        <div class="sheet-row">
+        {}
+        </div>
+        """.format(rname, name, roll)
+        
+    @staticmethod
+    def render_npcdmg(attributes, crit):
+        dmg1flag = attributes.get("dmg1flag", "")
+        dmg1type = attributes.get("dmg1type", "")
+        dmg1 = attributes.get("dmg1", "")
+        crit1 = attributes.get("crit1", "")
+        dmg2flag = attributes.get("dmg2flag", "")
+        dmg2type = attributes.get("dmg2type", "")
+        dmg2 = attributes.get("dmg2", "")
+        crit2 = attributes.get("crit2", "")
+        if dmg1flag != "":
+            damage1 = "{}{}{}".format(dmg1, (" + " + crit1) if crit != "" else "", dmg1type)
+        else:
+            damage1 = ""
+        if dmg2flag != "":
+            damage2 = "{}{}{}".format(dmg2, (" + " + crit2) if crit != "" else "", dmg2type)
+        else:
+            damage2 = ""
+        return """
+        <div class="sheet-container sheet-dmgcontainer sheet-damagetemplate">
+            <span class="sheet-italics">Damage: </span>
+            <span>
+            {}
+            {}
+            {}
+            </span>
+        </div>
+        """.format(damage1, " + " if damage1 != "" and damage2 != "" else "", damage2)
+
+    @classmethod
+    def template_npc(klass, attributes):
+        type_ = attributes.get("type", "")
+        return klass.render_npc(attributes, type_)
+
+    @classmethod
+    def template_npcatk(klass, attributes):
+        type_ = attributes.get("type", "")
+        description = attributes.get("description", "")
+        if description != "":
+            description = """
+            <div class="sheet-row">
+                <span class="sheet-desc">{}</span>
+            </div>""".format(description)
+        #TODO: rnamec handling for critical
+        return """{}
+        {}
+        """.format(klass.render_npc(attributes, type_), description)
+    @classmethod
+    def template_npdmg(klass, attributes):
+        crit = attributes.get("crit", "")
+        return klass.render_npcdmg(attributes, crit)
+
+    @classmethod
+    def template_npaction(klass, attributes):
+        crit = attributes.get("crit", "")
+        description = attributes.get("description", "")
+        if description != "":
+            description = """
+            <div class="sheet-row">
+                <span class="sheet-desc">{}</span>
+            </div>""".format(description)
+        return """
+        {}
+        {}
+        {}
+        """.format(klass.render_npc(attributes, "Attack"), description, klass.render_npcdmg(attributes, crit))
