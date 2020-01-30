@@ -37,7 +37,7 @@ class User(Entity):
             if macro == "":
                 continue
             if isinstance(macro, str):
-                (macro_src, macro_id) = macro.split("|")
+                (macro_src, macro_id, _) = (macro +"||").split("|", 2)
                 macro = {"src": macro_src, "id": macro_id}
             hotbar[str(index + 1)] = Entity.normalizeID(macro["id"])
         self.entity = {"_id": self._id,
