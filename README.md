@@ -2,9 +2,9 @@
 
 This application converts a Roll20 campaign into a Foundry VTT world or module.
 
-It will automate the entire conversion process and most(*) of your campaign will be setup just the way it was in Roll 20
+It will automate the entire conversion process and all(*) of your campaign will be setup just the way it was in Roll 20
 
-(*) Your chat log will not be converted (yet) and things such as macros will not be converted either as those features are not yet available in Foundry VTT. You also need to be using the OGL character sheet ("D&D 5e by Roll20") or the Shaped Sheet template for conversion of characters to work. 
+(*) While macros will be converted, they will be sent as chat message only, since inline rolls and other Roll20 specific macros are not supported in Foundry VTT. You also need to be using the OGL character sheet ("D&D 5e by Roll20") or the Shaped Sheet template for conversion of characters to work. 
 
 ## How to use
 
@@ -32,9 +32,7 @@ Dependencies for the GUI : `pysimplegui`, `pysimpleguiqt` and `pyside2`.
 
 ## Campaign Conversion
 
-To convert a campaign, you first need to have your Roll 20 campaign exported. To do so, use the [R20Exporter](https://github.com/kakaroto/R20Exporter) script and follow its README instructions on how to use it.
-
-**Make sure you wait long enough for all the character sheets to load in Roll 20 before you export your campaign (Remember that Roll 20 can be slow to load) otherwise you'll end up with some actors not having any of their abilities set**
+To convert a campaign, you first need to have your Roll 20 campaign exported. To do so, use the [R20Exporter](https://github.com/kakaroto/R20Exporter) extension and follow its README instructions on how to use it.
 
 Once you have your campaign exported as a zip file, you can start the conversion process. Note that you do not need to extract the campaign's zip file; R20Converter will work directly with the zip file itself to do the conversion.
 
@@ -91,14 +89,14 @@ usage: R20Converter.py [-h] [--json] [--export-as-module]
                        [--images-as-drawings] [--disable-module-journal]
                        [--disable-module-actors] [--disable-module-scenes]
                        [--disable-module-playlists] [--disable-module-tables]
-                       [--disable-module-decks]
+                       [--disable-module-decks] [--dont-convert-chat]
                        [--folder-as-items FOLDER_AS_ITEMS]
                        [--dont-export-actor-items]
                        [--no-duplicate-actor-items]
                        [--use-original-image-urls] [--max-path MAX_PATH]
                        destination-directory exported.zip
 
-R20Converter v0.7
+R20Converter v0.8
 
 positional arguments:
   destination-directory
@@ -203,6 +201,8 @@ optional arguments:
   --disable-module-decks
                         Disable conversion of card decks in the module
                         (requires --export-as-module)
+  --dont-convert-chat   Disable converting the chat and leave the chat log
+                        empty
   --folder-as-items FOLDER_AS_ITEMS
                         Converts each entry in a journal folder into items.
                         Useful for 'Magic Items' folders. Can be passed
@@ -232,10 +232,10 @@ Convert Roll20 campaigns into Foundry VTT worlds or modules.
 
 ## Final steps
 
-When the script is done, if you hadn't converted the campaign into the appropriate folder (`worlds` or `modules`) of your FVTT public directory, then copy the generated directory to the Data/worlds directory in your FVTT data folder and load the world in FVTT. 
+When the script is done, your campaign will be converted and availableif to use in Foundry VTT.
 
-And you're done!
+The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer), [Furnace](https://github.com/kakaroto/fvtt-module-furnace) and [Chat Autoloader](https://gitlab.com/moerills-fvtt-modules/chat-autoloader) FVTT modules in the generated world. It is strongly suggest to have those modules installed.
 
-The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer), [Furnace](https://github.com/kakaroto/fvtt-module-furnace) and [Chat Autoloader](https://gitlab.com/moerills-fvtt-modules/chat-autoloader) FVTT modules in the generated world. The `permission viewer` FVTT module is helpful for those coming from Roll 20 to see which handouts/character sheets are shared with whom, while the Furnace module is only really required if you use the `--images-as-drawings` option. The `Chat Autoloader` module will make chat messages load progressively instead of all at once, making the startup time of the world immensely faster if you have a lot of chat messages in your game.
+The `permission viewer` FVTT module is helpful for those coming from Roll 20 to see which handouts/character sheets are shared with whom, while the Furnace module is only really required if you use the `--images-as-drawings` option. The `Chat Autoloader` module will make chat messages load progressively instead of all at once, making the startup time of the world immensely faster if you have a lot of chat messages in your game.
 
 If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info), another project of mine which lets you roll from monster stat blocks and character sheets directly in D&D Beyond and get the result in your VTT application.

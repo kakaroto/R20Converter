@@ -3,11 +3,16 @@
 ## v0.8
 
 - Port database format to FVTT 0.4.4/0.4.5
-- Add support for macros (as chat messages) and player hotbars
-- Add support for converting chat log (no roll templates)
-- Set permission for character sheets in player's journal to Limited instead of Observer
+- Convert Roll20 macros into chat macros 
+- Restore each user's macro hotbar to match their macrobar on Roll20
+- Add support for converting the chat log
+- Convert roll templates for the OGL sheet so character sheet rolls from chat will appear as they did on Roll20, including tooltip support
+- Enables [Chat Autoloader](https://gitlab.com/moerills-fvtt-modules/chat-autoloader) FVTT module by default (module by @Moerill).
+- Fix permissions for actors that are in player's journal to limited instead of observer, to better match the behavior on Roll20
 - Add support for horizontal mirroring of tokens
 - Add checks against invalid roll tables and decks
+- Prevent NPC weapons that match loot item names (such as a shovel or torches that deal 1 damage) from becoming loot and removing their damage values
+- Make the 'Auto Doors' option enabled by default in the GUI
 
 ## v0.7
 
