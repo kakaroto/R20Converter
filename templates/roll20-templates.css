@@ -123,7 +123,7 @@ text-align: center;
   background-repeat: no-repeat;
   background-size: 14em 100%;
   color: black;
-  width: 81%; }
+}
 
 /* Obsolete Template */
 .sheet-rolltemplate-simple .sheet-containerold {
@@ -412,7 +412,7 @@ text-align: center;
   padding-bottom: 5px;
   padding-top: 5px;
   text-align: center;
-  width: 81%; }
+ }
 
 /*
 Fix for Global Damage Modifier

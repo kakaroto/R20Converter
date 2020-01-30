@@ -41,6 +41,7 @@ class ChatMessage(Entity):
         roll = None
         inline = list(map(lambda r: Roll(r["expression"].encode('latin-1').decode(), r["results"]), message.get("inlinerolls", [])))
 
+
         if message["type"] == "whisper":
             if message["target"] == "gm":
                 whispers = self.getGMWhispers()
@@ -57,8 +58,11 @@ class ChatMessage(Entity):
             roll = Roll(content, r20roll)
             if message["type"] == "gmrollresult":
                 whispers = self.getGMWhispers()
+
         if "rolltemplate" in message:
             content = RollTemplate(message["rolltemplate"], content, inline).toHTML()
+        elif message["type"] in ["whisper", "emote", "general"]:
+            content = content.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("\'", "&#039;")
         content = self._replaceInlineRolls(content, inline)
         content = self._replaceLinks(content)
         self.entity = {
@@ -94,7 +98,9 @@ class ChatMessage(Entity):
     def _replaceLinks(self, content):
         def repl(match):
             return "<a href='{}'>{}</a>".format(match.group(2).replace('\'', '&#39;'), match.group(1))
-        return re.sub(r'\[(.+?)\]\((.*?)\)', repl, content)
+        if "Song of Rest" in content:
+            print("")
+        return re.sub(r'\[(.+?)\]\((.*?)\)', repl, content, flags=re.DOTALL)
 
 class Roll:
     def __init__(self, formula, r20roll):
