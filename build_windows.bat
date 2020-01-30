@@ -7,6 +7,7 @@ rd /s /q "releases\R20Converter-%version%"
 
 mkdir "releases\R20Converter-%version%"
 xcopy /s src "releases\R20Converter-%version%\src\"
+xcopy /s templates "releases\R20Converter-%version%\templates\"
 copy Changelog.md "releases\R20Converter-%version%\"
 copy README.md "releases\R20Converter-%version%\"
 copy README.html "releases\R20Converter-%version%\"
