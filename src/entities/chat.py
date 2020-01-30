@@ -35,10 +35,11 @@ class ChatMessage(Entity):
         Entity.__init__(self, database, id)
         roll_type = ChatMessage.TYPE_OOC
         whispers = []
-        content = message["content"]
+        content = message["content"].encode('latin-1').decode()
+        who = message["who"].encode('latin-1').decode()
         sound = None
         roll = None
-        inline = list(map(lambda r: Roll(r["expression"], r["results"]), message.get("inlinerolls", [])))
+        inline = list(map(lambda r: Roll(r["expression"].encode('latin-1').decode(), r["results"]), message.get("inlinerolls", [])))
 
         if message["type"] == "whisper":
             if message["target"] == "gm":
@@ -50,9 +51,9 @@ class ChatMessage(Entity):
             roll_type = ChatMessage.TYPE_EMOTE
         elif message["type"] == "rollresult" or message["type"] == "gmrollresult":
             roll_type = ChatMessage.TYPE_ROLL
-            content = message["origRoll"]
             sound = "sounds/dice.wav"
-            r20roll = json.loads(message["content"])
+            r20roll = json.loads(content)
+            content = message["origRoll"].encode('latin-1').decode()
             roll = Roll(content, r20roll)
             if message["type"] == "gmrollresult":
                 whispers = self.getGMWhispers()
@@ -67,7 +68,7 @@ class ChatMessage(Entity):
             "user": Entity.normalizeID(message["playerid"]),
             "timestamp": {"$$date": message[".priority"]},
             "content": content,
-            "speaker": {"alias": message["who"]},
+            "speaker": {"alias": who},
             "whisper": whispers,
         } 
         if sound:
@@ -106,6 +107,22 @@ class Roll:
                     'class': 'Die',
                     'faces': roll["sides"],
                     "formula": "{}d{}".format(roll["dice"], roll["sides"]),
+                    "options": {},
+                    "rolls": []
+                }
+                for result in roll.get("results", []):
+                    die = {"roll": result["v"]}
+                    if result.get("d", False):
+                        die["discarded"] = True
+                    dice["rolls"].append(die)
+                self.parts.append(dice)
+            elif roll["type"] == "G":
+                # Compound rolls, like {1d20, 1d20} or {1d20, 1d20}kh1
+                # FIXME: Ignoring the 'rolls' attribute which contains the actual rolls.
+                dice = {
+                    'class': 'Die',
+                    'faces': 0,
+                    "formula": "0d0",
                     "options": {},
                     "rolls": []
                 }
