@@ -1,4 +1,48 @@
 
+/* Roll tooltips */
+.tipsy-n.tipsy, .tipsy-n-right.tipsy {
+  opacity: 1!important;
+  visibility: visible;
+  display: block;
+}
+.tipsy {
+word-wrap: break-word;
+padding: 5px;
+font-size: 12px;
+position: absolute;
+z-index: 100000;
+}
+
+.tipsy-arrow {
+top: 0;
+left: 50%;
+margin-left: -4px;
+position: absolute;
+background-color: black;
+width: 9px;
+height: 9px;
+
+/* Rotate the black square 45 degrees to make it become an arrow */
+-webkit-transform-origin:50% 50%;
+-ms-transform-origin:50% 50%;
+transform-origin:50% 50%;
+
+-webkit-transform: rotate(45deg);
+-ms-transform: rotate(45deg);
+transform: rotate(45deg);
+}
+
+.tipsy-inner {
+word-wrap: break-word;
+font-size: 1.1em;
+padding: 5px 8px 4px 8px;
+background-color: black;
+color: white;
+max-width: 200px;
+text-align: center;
+}
+
+/* Default template */
 .sheet-rolltemplate-default table {
     width: 100%;
     background-color: white;
@@ -31,6 +75,7 @@
     background-color: #eee
 }
 
+/* OGL sheet templates */
 
 .sheet-rolltemplate-spell .sheet-grey {
   color: #A0A0A0;
@@ -657,45 +702,273 @@ By Miguel
 .sheet-rolltemplate-atkdmg .sheet-label .sheet-rolltemplate-inline {
   display: inline-block; }
 
-/* Roll tooltips */
-.tipsy-n.tipsy, .tipsy-n-right.tipsy {
-    opacity: 1!important;
-    visibility: visible;
-    display: block;
-}
-.tipsy {
-  word-wrap: break-word;
-  padding: 5px;
-  font-size: 12px;
-  position: absolute;
-  z-index: 100000;
-}
 
-.tipsy-arrow {
-  top: 0;
-  left: 50%;
-  margin-left: -4px;
-  position: absolute;
-  background-color: black;
-  width: 9px;
-  height: 9px;
-  
-  /* Rotate the black square 45 degrees to make it become an arrow */
-  -webkit-transform-origin:50% 50%;
-  -ms-transform-origin:50% 50%;
-  transform-origin:50% 50%;
-  
-  -webkit-transform: rotate(45deg);
-  -ms-transform: rotate(45deg);
-  transform: rotate(45deg);
-}
+/* 5e shaped roll templates */
 
-.tipsy-inner {
-  word-wrap: break-word;
-  font-size: 1.1em;
-  padding: 5px 8px 4px 8px;
-  background-color: black;
-  color: white;
-  max-width: 200px;
-  text-align: center;
+.sheet-rolltemplate-5e-shaped{
+  margin-bottom:-5px;
+  margin-left:-43px;
+  margin-right:-2px
+}
+.withoutavatars .sheet-rolltemplate-5e-shaped{
+  margin-left:-13px
+}
+.sheet-rolltemplate-5e-shaped .sheet-no-border{
+  border-bottom:0!important
+}
+.sheet-rolltemplate-5e-shaped a[href^='!'],.sheet-rolltemplate-5e-shaped a[href^='~']{
+  background-color:transparent;
+  border:0;
+  color:#ce0f69;
+  display:inline;
+  padding:0
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-card{
+  box-sizing:border-box;
+  font-size:11px;
+  overflow:hidden
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-card.sheet-continuous,.sheet-rolltemplate-5e-shaped .sheet-rt-card.sheet-continuous-header{
+  border-bottom:0;
+  border-bottom-left-radius:0;
+  border-bottom-right-radius:0
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-card.sheet-continuous,.sheet-rolltemplate-5e-shaped .sheet-rt-card.sheet-continuous-footer{
+  border-top:0;
+  border-top-left-radius:0;
+  border-top-right-radius:0;
+  margin-top:-28px;
+  padding-top:9px
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-content{
+  color:#000
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-content>div{
+  padding:2px 4px
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-content>div:not(:last-of-type){
+  -o-border-image:linear-gradient(to right,transparent,rgba(0,0,0,.75),transparent) 1;
+  border-image:linear-gradient(to right,transparent,rgba(0,0,0,.75),transparent) 1;
+  border-left:0;
+  border-right:0;
+  border-bottom:1px solid #000;
+  border-top:0
+}
+.sheet-rolltemplate-5e-shaped .sheet-grid-box{
+  align-items:stretch;
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+  bottom:0;
+  display:grid;
+  justify-items:stretch;
+  left:0;
+  position:absolute;
+  right:0;
+  top:0
+}
+.sheet-rolltemplate-5e-shaped .sheet-box-inner{
+  position:relative
+}
+.sheet-rolltemplate-5e-shaped .sheet-box-middle{
+  background-color:#fff
+}
+.sheet-rolltemplate-5e-shaped .sheet-boring-box-wrapper{
+  -webkit-backface-visibility:hidden;
+  backface-visibility:hidden;
+  margin-bottom:8px;
+  min-height:51px;
+  padding:4px 10px;
+  position:relative
+}
+.sheet-rolltemplate-5e-shaped .sheet-boring-box{
+  grid-template-columns:19px auto 19px;
+  grid-template-rows:15px auto 36px
+}
+.sheet-rolltemplate-5e-shaped .sheet-boring-box-bottom-left,.sheet-rolltemplate-5e-shaped .sheet-boring-box-bottom-right{
+  background:url(https://cdn.rawgit.com/mlenser/6029d0d0ff53cb5a934a0c9222f3c390/raw/dbe7598bf283951835ef231b4cf322d1d96e7384/boringBoxBottomCornerWhite.svg) no-repeat
+}
+.sheet-rolltemplate-5e-shaped .sheet-boring-box-top-left,.sheet-rolltemplate-5e-shaped .sheet-boring-box-top-right{
+  background:url(https://cdn.rawgit.com/mlenser/6029d0d0ff53cb5a934a0c9222f3c390/raw/dbe7598bf283951835ef231b4cf322d1d96e7384/boringBoxTopCornerWhite.svg) no-repeat
+}
+.sheet-rolltemplate-5e-shaped .sheet-boring-box-expand-left,.sheet-rolltemplate-5e-shaped .sheet-boring-box-expand-right{
+  background:url(https://cdn.rawgit.com/mlenser/6029d0d0ff53cb5a934a0c9222f3c390/raw/dbe7598bf283951835ef231b4cf322d1d96e7384/boringBoxSideExpandWhite.svg) repeat-y
+}
+.sheet-rolltemplate-5e-shaped .sheet-boring-box-expand-bottom,.sheet-rolltemplate-5e-shaped .sheet-boring-box-expand-top{
+  background:#fff url(https://cdn.rawgit.com/mlenser/6029d0d0ff53cb5a934a0c9222f3c390/raw/dbe7598bf283951835ef231b4cf322d1d96e7384/boringBoxTopBottomExpandWhite.svg) repeat-x
+}
+.sheet-rolltemplate-5e-shaped .sheet-boring-box-bottom-right,.sheet-rolltemplate-5e-shaped .sheet-boring-box-expand-right,.sheet-rolltemplate-5e-shaped .sheet-boring-box-top-right{
+  -webkit-transform:scaleX(-1);
+  transform:scaleX(-1)
+}
+.sheet-rolltemplate-5e-shaped .sheet-boring-box-expand-bottom{
+  -webkit-transform:scaleY(-1);
+  transform:scaleY(-1)
+}
+.sheet-rolltemplate-5e-shaped .inlinerollresult{
+  background:0 0;
+  border:2px solid transparent;
+  border-radius:4px;
+  font-size:18px;
+  padding:0 2px
+}
+.sheet-rolltemplate-5e-shaped .sheet-output{
+  font-size:13px;
+  margin-top:2px
+}
+.sheet-rolltemplate-5e-shaped .sheet-output-label{
+  color:#676767;
+  font-style:italic
+}
+.sheet-rolltemplate-5e-shaped .sheet-height-one-em{
+  min-height:1em
+}
+.sheet-rolltemplate-5e-shaped ::-webkit-scrollbar{
+  height:6px;
+  width:6px
+}
+.sheet-rolltemplate-5e-shaped ::-webkit-scrollbar-button{
+  height:0;
+  width:0
+}
+.sheet-rolltemplate-5e-shaped ::-webkit-scrollbar-thumb{
+  background:#708090;
+  border:0;
+  border-radius:0
+}
+.sheet-rolltemplate-5e-shaped ::-webkit-scrollbar-thumb:hover{
+  background:#5e6b77
+}
+.sheet-rolltemplate-5e-shaped ::-webkit-scrollbar-thumb :active{
+  background:#4c565f
+}
+.sheet-rolltemplate-5e-shaped ::-webkit-scrollbar-track{
+  background:rgba(0,0,0,.12);
+  border:0;
+  border-radius:0
+}
+.sheet-rolltemplate-5e-shaped ::-webkit-scrollbar-track:active,.sheet-rolltemplate-5e-shaped ::-webkit-scrollbar-track:hover{
+  background:rgba(0,0,0,.12)
+}
+.sheet-rolltemplate-5e-shaped ::-webkit-scrollbar-corner{
+  background:0 0
+}
+.sheet-rolltemplate-5e-shaped .sheet-advantage-circle{
+  border:1px solid #000;
+  border-radius:50%;
+  height:11px;
+  position:absolute;
+  right:0;
+  text-align:center;
+  top:0;
+  width:11px;
+  z-index:5
+}
+.sheet-rolltemplate-5e-shaped .sheet-advantage-circle.sheet-advantage{
+  background-color:#2fc910
+}
+.sheet-rolltemplate-5e-shaped .sheet-advantage-circle.sheet-disadvantage{
+  background-color:#980000
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-title-wrap{
+  margin-right:13px;
+  padding:0 2px
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-title{
+  color:#591209;
+  font-family:'Times New Roman',Times,serif;
+  font-variant:small-caps;
+  font-weight:700
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-title-name{
+  font-size:20px
+}
+.sheet-rolltemplate-5e-shaped .sheet-spell-points,.sheet-rolltemplate-5e-shaped .sheet-uses-recharge-cost-wrap{
+  font-size:14px
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-subheader{
+  padding:0 3px
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-subheader div{
+  line-height:1.4em
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-character-name{
+  font-size:1.2em;
+  font-variant:small-caps
+}
+.sheet-rolltemplate-5e-shaped .sheet-rt-emote{
+  background-color:#f5e4d3;
+  border-bottom:2px solid #f0c392;
+  border-top:2px solid #f0c392;
+  color:#db831f;
+  font-size:11px;
+  font-style:italic;
+  font-weight:700;
+  padding:3px 4px;
+  text-align:center
+}
+.sheet-rolltemplate-5e-shaped .userscript-criterion{
+  margin:2px 0
+}
+.sheet-rolltemplate-5e-shaped .userscript-criterion a[href^='!'] .userscript-notselected,.sheet-rolltemplate-5e-shaped .userscript-criterion a[href^='!']:not(.userscript-selected),.sheet-rolltemplate-5e-shaped .userscript-criterion a[href^='~'] .userscript-notselected,.sheet-rolltemplate-5e-shaped .userscript-criterion a[href^='~']:not(.userscript-selected){
+  color:#909090
+}
+.sheet-rolltemplate-5e-shaped a[href^='!'].userscript-notselected,.sheet-rolltemplate-5e-shaped a[href^='~'].userscript-notselected{
+  color:#909090
+}
+.sheet-rolltemplate-5e-shaped .userscript-section:not(:first-child){
+  margin-top:5px
+}
+.sheet-rolltemplate-5e-shaped .userscript-section:not(:last-child){
+  margin-bottom:5px
+}
+.sheet-rolltemplate-5e-shaped .userscript-section-heading{
+  font-size:14px;
+  font-weight:700
+}
+.sheet-rolltemplate-5e-shaped .userscript-criterion-name{
+  font-style:italic;
+  font-weight:700
+}
+.sheet-rolltemplate-5e-shaped .userscript-shaped-config{
+  width:100%
+}
+.sheet-rolltemplate-5e-shaped .userscript-shaped-config tr:nth-child(odd){
+  background:#dedede
+}
+.sheet-rolltemplate-5e-shaped .userscript-shaped-config table{
+  width:100%
+}
+.sheet-rolltemplate-5e-shaped hr{
+  background-image:linear-gradient(to right,transparent,rgba(0,0,0,.75),transparent);
+  border:0;
+  height:1px;
+  margin:5px 0
+}
+.sheet-rolltemplate-5e-shaped .sheet-spells-wrapper{
+  font-family:'Times New Roman',Times,serif;
+  font-size:1.1em;
+  font-style:italic;
+  text-transform:lowercase!important
+}
+.sheet-rolltemplate-5e-shaped .sheet-prepared-matters .sheet-spell-wrapper:not(.sheet-prepared) a[href^='~']{
+  color:#909090
+}
+.sheet-rolltemplate-5e-shaped a[href^='!'].userscript-remove{
+  color:#909090
+}
+.sheet-rolltemplate-5e-shaped .sheet-entity-scroller{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  max-height:calc(60vh - 170px);
+  overflow-y:auto
+}
+.sheet-rolltemplate-5e-shaped .sheet-entity-scroller a{
+  overflow:hidden;
+  white-space:nowrap;
+  width:49%
+}
+.sheet-rolltemplate-5e-shaped .sheet-ammo-wrapper .inlinerollresult{
+  font-size:inherit;
+  font-weight:400
 }

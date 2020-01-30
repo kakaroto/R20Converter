@@ -1,5 +1,5 @@
 import re
-from .translations import ogl_translations
+from .translations import ogl_translations, shaped_translations
 from .ogl import OGLTemplate
 from .default import DefaultTemplate
 from .shaped import ShapedTemplate
@@ -25,7 +25,10 @@ class RollTemplate:
             self.attributes[key] = re.sub(r'\$\[\[(\d+)\]\]', self._replaceInlineRolls, value)
 
     def _translateTemplateString(self, match):
-        return ogl_translations.get(match.group(1), match.group(0))
+        ogl = ogl_translations.get(match.group(1), None)
+        if ogl is not None:
+            return ogl
+        return shaped_translations.get(match.group(1), match.group(0))
 
     def _replaceInlineRolls(self, match):
         idx = int(match.group(1))
