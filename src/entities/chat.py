@@ -20,8 +20,6 @@ class ChatLog(DatabaseFile):
                     messages.append(ChatMessage(self, msg_id, msg_group[msg_id]))
                 except Exception as e:
                     print("Error converting Chat message ", e)
-                    print(e)
-                    raise e
         return messages
 
 class ChatMessage(Entity):
