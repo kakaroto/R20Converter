@@ -205,8 +205,12 @@ class Entity(object):
 
     @staticmethod
     def textToHtml(text):
+        if type(text) == list:
+            text_list = text
+        else:
+            text_list = text.split("\n")
         # Replace each line with <p>line</p>
-        return "".join(list(map(lambda l: "<p>" + l + "</p>", text.split("\n"))))
+        return "".join(list(map(lambda l: "<p>" + l + "</p>", text_list)))
 
     @staticmethod
     def strToID(id_str):
