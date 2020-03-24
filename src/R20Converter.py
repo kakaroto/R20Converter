@@ -205,7 +205,7 @@ class GUI(object):
         self.parser.add_argument(argument, **kwargs)
         if not argument.startswith("--") or argument in ["--interactive", "--debug-page", "--fvtt-data-path", "--max-path", \
             "--disable-module-journal", "--disable-module-actors", "--disable-module-scenes", "--disable-module-playlists", \
-            "--disable-module-tables", "--disable-module-decks", "--use-original-image-urls"]:
+            "--disable-module-tables", "--disable-module-decks"]:
             return
         self.options[argument] = kwargs
         if argument in ["--json", "--export-as-module"]:
@@ -216,6 +216,7 @@ class GUI(object):
             "--npc-source": "NPC Source",
             "--no-compendium-overwrite": "Overwrite actor items and feats with data from SRD Compendium",
             "--folder-as-items": "List of handout folders to convert into items (comma separated)",
+            "--use-original-image-urls": "Use Roll 20 Image URLs (NOT Recommended)",
             "--force-hp-for-token-bar1": "Force HP attribute on all tokens' first bar",
             "--force-hp-for-token-bar2": "Force HP attribute on all tokens' second bar"
         }
