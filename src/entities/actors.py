@@ -2097,6 +2097,13 @@ class Actor(Entity):
                 if higherlevel != "":
                     description += "\n<strong>Higher Level.</strong>" + higherlevel
                     scaling.mode = ItemSpellScaling.LEVEL if level > 0 else ItemSpellScaling.CANTRIP
+                hldie = str(hldie)
+                hlbonus = str(hlbonus)
+                if hldie == "0":
+                    hldie = ""
+                    hldice = ""
+                if hlbonus == "0":
+                    hlbonus == ""
                 if hldie != "" or hldice != "" or hlbonus != "":
                     scaling.formula = hldie + hldice + ((" + " + hlbonus) if hlbonus != "" else "")
                     scaling.mode = ItemSpellScaling.LEVEL if level > 0 else ItemSpellScaling.CANTRIP
