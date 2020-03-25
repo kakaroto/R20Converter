@@ -7,6 +7,7 @@ import argparse
 import sys
 import os
 import platform
+from slugify import slugify
 from collections import OrderedDict
 from version import version
 from world import World
@@ -268,7 +269,8 @@ class GUI(object):
                     else:
                         sg.Popup(self.parser.description, "Specified FVTT directory does not seem to be a valid FVTT Data directory : ", fvtt_path)
                         continue
-                path = os.path.join(fvtt_path, "Data", directory, values["world-name"])
+                world_name = slugify(values["world-name"])
+                path = os.path.join(fvtt_path, "Data", directory, world_name)
                 args = [path, values["zip_file"]]
                 args.extend(["--fvtt-data-path", fvtt_path])
                 for option in self.options:
