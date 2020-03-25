@@ -107,9 +107,7 @@ class Scene(Entity):
             else:
                 (thumb_filename, thumb_image) = self.copyZipFile(filename, dest)
             try:
-                im = Image.open(thumb_filename)
-                im.thumbnail((300, 100))
-                im.save(thumb_filename)
+                self.createThumbnail(thumb_filename)
             except Exception as e:
                 print("Unable to create thumbnail : %s" % e)
         
@@ -676,3 +674,18 @@ class Scene(Entity):
                         "points": points,
                     })
         return drawing
+
+    def createThumbnail(self, filename):
+        im = Image.open(filename)
+        ratio = im.width / im.height
+        if ratio > 3:
+            thumb_size = (int(100 * ratio), 100)
+            left = int((thumb_size[0] - 300) / 2)
+            crop_region = (left, 0, left + 300, 100)
+        else:
+            thumb_size = (300, int(300 / ratio))
+            top = int((thumb_size[1] - 100) / 2)
+            crop_region = (0, top, 300, top + 100)
+        im = im.resize(thumb_size)
+        im = im.crop(crop_region)
+        im.save(filename)
