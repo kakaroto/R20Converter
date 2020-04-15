@@ -65,7 +65,7 @@ class Token(Entity):
                 try:
                     val = token.get(name, default)
                     return int(val)
-                except ValueError:
+                except:
                     return default
             self.width = parseInt("width", self.width)
             self.height = parseInt("height", self.height)
@@ -966,6 +966,16 @@ class Actor(Entity):
             size = self.getNPCType()[0]
         else:
             size = self.getAttribute("size", "Medium")[0]
+        if type(size) == int or type(size) == float:
+            dnd5e_sizes_float = {
+                4: "grg",
+                3: "huge",
+                2: "lg",
+                1: "med",
+                1: "sm",
+                0.5: "tiny"
+            }
+            return dnd5e_sizes_float.get(size, "med")
 
         return dnd5e_sizes.get(size.lower(), "med")
 
@@ -1033,7 +1043,9 @@ class Actor(Entity):
                     language = self.getAttribute("name", "", from_dict=prof)[0]
                     for lang in language.split(","):
                         self._addKnownToArray(known_languages, lang, languages, custom)
-        for lang in character_languages.split(","):
+        if type(character_languages) == str:
+            character_languages = character_languages.split(",")
+        for lang in character_languages:
             self._addKnownToArray(known_languages, lang, languages, custom)
 
         return {

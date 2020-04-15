@@ -50,7 +50,13 @@ class Scene(Entity):
             safe_name = safe_name[0] + "_" + safe_name[2:]
         print("Creating Scene : %s" % name)
         # Snapping increment gets set to 0 if grid is disabled
-        orig_grid_size = 70 * (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
+        snapping_increment = 0
+        try:
+            snapping_increment = int(page["snapping_increment"])
+        except:
+            pass
+
+        orig_grid_size = 70 * (snapping_increment if snapping_increment else 1)
         # Page grid size is hardcoded to 70px in Roll20
         width = 70 * int(page["width"])
         height = 70 * int(page["height"])
