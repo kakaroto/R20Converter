@@ -17,17 +17,19 @@ Select the options you would like to use, then press the "Convert Campaign" butt
 
 ### Linux
 
-If using Linux, you can run it with `python3 src/R20Converter.py` in a terminal. Use the --help option to see which options are available to you during conversion.
+If using Linux, you will need `Python 3.6` or later to use R20Converter.
 
-Install dependencies : `requests`, `pillow`
+You can run it with `python3 src/R20Converter.py` in a terminal. Use the --help option to see which options are available to you during conversion.
+
+Install dependencies : `requests`, `pillow`, `slugify`
  
-`pip3 install requests pillow`
+`pip3 install requests pillow slugify`
 
 If no arguments are provided and the appropriate dependencies are installed, the program will launch in GUI mode.
 
 Dependencies for the GUI : `pysimplegui`, `pysimpleguiqt` and `pyside2`.
 
-`pip3 install requests pillow pysimplegui pysimpleguiqt pyside2`
+`pip3 install requests pillow slugify pysimplegui pysimpleguiqt pyside2`
 
 
 ## Campaign Conversion
