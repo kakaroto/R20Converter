@@ -22,7 +22,7 @@ Although this video is slightly outdated, it shows the basic usage of R20Convert
 
 https://www.youtube.com/watch?v=Q_BmlA7wBvQ
 
-[![R20Converter 0.6 Conversion demo](https://img.youtube.com/vi/Q_BmlA7wBvQ/0.jpg)](https://www.youtube.com/watch?v=Q_BmlA7wBvQ)
+[![R20Converter 0.6 Conversion demo](https://user-images.githubusercontent.com/27990/82268394-dcd11980-993c-11ea-967f-c780814506cd.png)](https://www.youtube.com/watch?v=Q_BmlA7wBvQ)
 
 ### Windows
 
