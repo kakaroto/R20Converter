@@ -4,7 +4,7 @@ This application converts a Roll20 campaign into a Foundry VTT world or module.
 
 It will automate the entire conversion process and all(*) of your campaign will be setup just the way it was in Roll 20
 
-(*) While macros will be converted, they will be sent as chat message only, since inline rolls and other Roll20 specific macros are not supported in Foundry VTT. You also need to be using the OGL character sheet ("D&D 5e by Roll20") or the Shaped Sheet template for conversion of characters to work. 
+(*) While macros will be converted, they will be sent as chat message only, since inline rolls and other Roll20 specific macros are not supported in Foundry VTT. You also need to be using the OGL character sheet ("D&D 5e by Roll20") or the Shaped Sheet template for conversion of characters to work. It does not work with other sheets, meaning that non-dnd5e games will have broken character sheets and items (though everything else should be converted without issues).
 
 ## How to use
 
@@ -21,9 +21,9 @@ If using Linux, you will need `Python 3.6` or later to use R20Converter.
 
 You can run it with `python3 src/R20Converter.py` in a terminal. Use the --help option to see which options are available to you during conversion.
 
-Install dependencies : `requests`, `pillow`, `slugify`
+Install dependencies : `requests`, `pillow`, `python-slugify`
  
-`pip3 install requests pillow slugify`
+`pip3 install requests pillow python-slugify`
 
 If no arguments are provided and the appropriate dependencies are installed, the program will launch in GUI mode.
 
@@ -55,7 +55,7 @@ windows\R20Converter.exe "lmop" "The Lost Mine of Phandelver.zip"
 Here's another example with a bit more options given to it in order to fine tune the converted result.
 
 ```
-./src/R20Converter.py "C:\FVTT\resources\app\public\worlds\CoS" "C:\Downloads\Curse of Strahd.zip" --door-color #ff0000 --enable-fog --restrict-movement --gm-password "strahd-is-my-hero" --player-password "prepare-to-die"
+./src/R20Converter.py "C:\FVTT\Data\worlds\CoS" "C:\Downloads\Curse of Strahd.zip" --door-color #ff0000 --enable-fog --restrict-movement --gm-password "strahd-is-my-hero" --player-password "prepare-to-die"
 ```
 
 In the above example, the script (which is run on linux) will convert the "Curse of Strahd.zip" campaign (from the C:\Downloads directory) into the directory "CoS" (in the FVTT worlds directory) and will automatically replace all walls from the dynamic lighting layer which are red (RGB color #ff0000) into doors, will enable Exploration Fog on all maps, make all walls restrict movement (even if the page settings in Roll20 did not have the "restrict movement" option enabled) and will set the GM and player passwords to the values provided.
@@ -63,10 +63,10 @@ In the above example, the script (which is run on linux) will convert the "Curse
 Finally, here's a more complex command which uses many of the available options
 
 ```
-windows\R20Converter.exe "STSS" "Stranger Things.zip" --campaign-title "Stranger Things Starter Set" --description "Get your fireballs ready as you investigate the mysterious castle and battle the ferocious Demogorgon. Prepare for just about anything, because the game just got stranger" --auto-doors --enable-fog --restrict-movement --npc-source "PHB" --minimum-wall-length 35 --maximum-wall-angle 30 --fvtt-public-path "C:\FVTT\resources\app\public" --add-walls-around-map --cleanup-scenes
+windows\R20Converter.exe "STSS" "Stranger Things.zip" --campaign-title "Stranger Things Starter Set" --description "Get your fireballs ready as you investigate the mysterious castle and battle the ferocious Demogorgon. Prepare for just about anything, because the game just got stranger" --auto-doors --enable-fog --restrict-movement --npc-source "PHB" --minimum-wall-length 35 --maximum-wall-angle 30 --fvtt-data-path "C:\FVTT\Data" --add-walls-around-map --cleanup-scenes
 ```
 
-In this last example, we convert the "Stranger Things.zip" file into the STSS directory, we set the campaign title to "Stranger Things Starter Set", replace the default world description, ask the script to automatically detect doors and secret doors from the dynamic lighting walls, and make sure that small walls get removed if they are less than 35 pixels long, are contiguous to other walls and don't have an angle of over 30 degrees with the neighboring walls (this can be very useful in dropping the number of walls in cave-like maps where the Roll20 team made thousands of walls instead of a few hundred). Finally we give it the path to the FVTT public directory so it can auto-import spells, items and class features, we ask for walls to be added around each map and for any elements (tiles, walls, tokens) that are outside the bounds of the map to be removed.
+In this last example, we convert the "Stranger Things.zip" file into the STSS directory, we set the campaign title to "Stranger Things Starter Set", replace the default world description, ask the script to automatically detect doors and secret doors from the dynamic lighting walls, and make sure that small walls get removed if they are less than 35 pixels long, are contiguous to other walls and don't have an angle of over 30 degrees with the neighboring walls (this can be very useful in dropping the number of walls in cave-like maps where the Roll20 team made thousands of walls instead of a few hundred). Finally we give it the path to the FVTT Data directory so it can auto-import spells, items and class features, we ask for walls to be added around each map and for any elements (tiles, walls, tokens) that are outside the bounds of the map to be removed.
 
 ## Full options
 
