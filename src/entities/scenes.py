@@ -52,7 +52,7 @@ class Scene(Entity):
         # Snapping increment gets set to 0 if grid is disabled
         snapping_increment = 0
         try:
-            snapping_increment = int(page["snapping_increment"])
+            snapping_increment = float(page["snapping_increment"])
         except:
             pass
 
