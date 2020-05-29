@@ -236,8 +236,8 @@ Convert Roll20 campaigns into Foundry VTT worlds or modules.
 
 When the script is done, your campaign will be converted and availableif to use in Foundry VTT.
 
-The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer), [Furnace](https://github.com/kakaroto/fvtt-module-furnace) and [Chat Autoloader](https://gitlab.com/moerills-fvtt-modules/chat-autoloader) FVTT modules in the generated world. It is strongly suggest to have those modules installed.
+The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) and [Furnace](https://github.com/kakaroto/fvtt-module-furnace) FVTT modules in the generated world. It is strongly suggest to have those modules installed.
 
-The `permission viewer` FVTT module is helpful for those coming from Roll 20 to see which handouts/character sheets are shared with whom, while the Furnace module is only really required if you use the `--images-as-drawings` option. The `Chat Autoloader` module will make chat messages load progressively instead of all at once, making the startup time of the world immensely faster if you have a lot of chat messages in your game.
+The `permission viewer` FVTT module is helpful for those coming from Roll 20 to see which handouts/character sheets are shared with whom, while the Furnace module is only really required if you use the `--images-as-drawings` option.
 
 If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info), another project of mine which lets you roll from monster stat blocks and character sheets directly in D&D Beyond and get the result in your VTT application.
