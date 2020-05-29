@@ -919,8 +919,10 @@ class Actor(Entity):
                 ability_key = self.getAttribute("ability_key", ability, from_dict=skill)[0]
                 mod = self.getAttributeInt("total_with_sign", 0, from_dict=skill)
                 base_mod = 0
-                if ability_key:
-                    base_mod = self._actor_abilities[ability_key.lower()[0:3]]["mod"]
+                if ability_key and ability_key != "0":
+                    ability_key = ability_key.lower()[0:3]
+                    if ability_key in self._actor_abilities:
+                        base_mod = self._actor_abilities[ability_key]["mod"]
                     
                 if mod >= base_mod + prof * 2:
                     value = 2
