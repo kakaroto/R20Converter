@@ -49,13 +49,13 @@ class Scene(Entity):
         if safe_name[1:2] == ":":
             safe_name = safe_name[0] + "_" + safe_name[2:]
         print("Creating Scene : %s" % name)
+        def safeCast(t, v, d):
+            try:
+                return t(v)
+            except:
+                return d
         # Snapping increment gets set to 0 if grid is disabled
-        snapping_increment = 0
-        try:
-            snapping_increment = float(page["snapping_increment"])
-        except:
-            pass
-
+        snapping_increment = safeCast(float, page["snapping_increment"], 0)
         orig_grid_size = 70 * (snapping_increment if snapping_increment else 1)
         # Page grid size is hardcoded to 70px in Roll20
         width = 70 * int(page["width"])
@@ -224,11 +224,11 @@ class Scene(Entity):
                 continue
             tile_image = None
             layer = obj["layer"]
-            left = obj["left"]
-            top = obj["top"]
-            tile_width = obj["width"]
-            tile_height = obj["height"]
-            rotation = obj["rotation"]
+            left = safeCast(int, obj["left"], 0)
+            top = safeCast(int, obj["top"], 0)
+            tile_width = safeCast(int, obj["width"], 0)
+            tile_height = safeCast(int, obj["height"], 0)
+            rotation = safeCast(float, obj["rotation"], 0)
             tiles = (map_tiles if layer == "map" else objects_tiles)
 
             if graphic and layer != "walls" and (bg is None or graphic != bg):
