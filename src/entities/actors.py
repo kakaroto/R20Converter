@@ -1651,7 +1651,8 @@ class Actor(Entity):
                 if len(trait) == 0:
                     continue
                 name = self.getAttribute("name", "", from_dict=trait)[0]
-                description = self.getAttribute("desc", "", from_dict=trait)[0]
+                desc = self.getAttribute("desc", "", from_dict=trait)[0]
+                description = self.getAttribute("description", "", from_dict=trait)[0] or desc
                 self.createItemFeat(items, name, description, None, None, None)
 
             npc_reactions = self.getRepeatingAttributes("npcreaction")
@@ -1659,7 +1660,8 @@ class Actor(Entity):
                 if len(trait) == 0:
                     continue
                 name = self.getAttribute("name", "", from_dict=trait)[0]
-                description = self.getAttribute("desc", "", from_dict=trait)[0]
+                desc = self.getAttribute("desc", "", from_dict=trait)[0]
+                description = self.getAttribute("description", "", from_dict=trait)[0] or desc
                 activation = ItemActivation(ItemActivation.REACTION, 1)
                 self.createItemFeat(items, name, description, activation, None, None)
         else:
@@ -1668,7 +1670,8 @@ class Actor(Entity):
                 if len(trait) == 0:
                     continue
                 name = self.getAttribute("name", "", from_dict=trait)[0]
-                description = self.getAttribute("description", "", from_dict=trait)[0]
+                desc = self.getAttribute("desc", "", from_dict=trait)[0]
+                description = self.getAttribute("description", "", from_dict=trait)[0] or desc
                 source = self.getAttribute("source", "Racial", from_dict=trait)[0]
                 source_type = self.getAttribute("source_type", "", from_dict=trait)[0]
                 self.createItemFeat(items, name, description, None, None, None, source=source, requirements=source_type)
@@ -1676,7 +1679,8 @@ class Actor(Entity):
     def addNPCAction(self, items, action, activation_type):
         name = self.getAttribute("name", "", from_dict=action)[0]
         name_display = self.getAttribute("name_display", "", from_dict=action)[0]
-        description = self.getAttribute("description", "", from_dict=action)[0]
+        desc = self.getAttribute("desc", "", from_dict=action)[0]
+        description = self.getAttribute("description", "", from_dict=action)[0] or desc
         tohit = self.getAttributeInt("attack_tohit", 0, from_dict=action)
         onhit = self.getAttribute("attack_onhit", "", from_dict=action)[0]
         atk_range = self.getAttribute("attack_range", "", from_dict=action)[0]
