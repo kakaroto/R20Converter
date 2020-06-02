@@ -476,7 +476,11 @@ class Actor(Entity):
             if attr["name"].startswith("_reporder_repeating_"):
                 pass
             elif attr["name"].startswith("repeating_"):
-                (_, repeating_type, id, name) = attr["name"].split("_", 3)
+                try:
+                    (_, repeating_type, id, name) = attr["name"].split("_", 3)
+                except:
+                    # Apparently, it's also possible to have attributes that aren't repeating but start with the string "repeating_".
+                    continue
                 rep = self._repeating.get(repeating_type, None)
                 if rep is None:
                     rep = self._repeating[repeating_type] = OrderedDict()
