@@ -45,7 +45,7 @@ If no arguments are provided and the appropriate dependencies are installed, the
 
 Dependencies for the GUI : `pysimplegui`, `pysimpleguiqt` and `pyside2`.
 
-`pip3 install requests pillow slugify pysimplegui pysimpleguiqt pyside2`
+`pip3 install requests pillow python-slugify pysimplegui pysimpleguiqt pyside2`
 
 
 ## Campaign Conversion
