@@ -4,6 +4,8 @@ R20Converter is a Windows/Linux/Mac application that does the entire conversion 
 
 This tool is currently only available to my [Patreon subscribers](https://patreon.com/kakaroto).
 
+You can see it in action here : https://www.youtube.com/watch?v=Q_BmlA7wBvQ
+
 This repository is used for keeping track of issues and feature requests.
 
 # R20Converter
