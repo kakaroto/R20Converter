@@ -950,9 +950,12 @@ class Actor(Entity):
                     # An NPC might have overriden the PP in its senses
                     if key == "prc" and self.isNPC():
                         senses = self.getAttribute("npc_senses", "")[0]
-                        match = re.search(r"passive perception (\d+)", senses)
-                        if match:
-                            passive = int(match.group(1))
+                        try:
+                            match = re.search(r"passive perception (\d+)", senses)
+                            if match:
+                                passive = int(match.group(1))
+                        except:
+                            pass
                     skills.update([(key, {
                         "value": value,
                         "ability": ability.lower()[0:3],
@@ -989,16 +992,18 @@ class Actor(Entity):
         return dnd5e_sizes.get(size.lower(), "med")
 
     def createTraitSenses(self):
+        senses = ""
         if self.isNPC():
-            npc_senses = self.getAttribute("npc_senses", "")[0].split(",")
-            npc_senses = list(map(lambda x: x.strip(), npc_senses))
-            for i, sense in enumerate(npc_senses):
-                if sense.strip().startswith("passive perception"):
-                    npc_senses.pop(i)
-                    break
-            senses = ", ".join(npc_senses)
-        else:
-            senses = ""
+            try:
+                npc_senses = self.getAttribute("npc_senses", "")[0].split(",")
+                npc_senses = list(map(lambda x: x.strip(), npc_senses))
+                for i, sense in enumerate(npc_senses):
+                    if sense.strip().startswith("passive perception"):
+                        npc_senses.pop(i)
+                        break
+                senses = ", ".join(npc_senses)
+            except:
+                pass
 
         return senses
 
