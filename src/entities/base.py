@@ -210,7 +210,11 @@ class Entity(object):
         else:
             text_list = text.split("\n")
         # Replace each line with <p>line</p>
-        return "".join(list(map(lambda l: "<p>" + l + "</p>", text_list)))
+        try:
+            return "".join(list(map(lambda l: "<p>" + l + "</p>", text_list)))
+        except:
+            # Ignore description in the case of a non list of strings, which can happen apparently.
+            return ""
 
     @staticmethod
     def strToID(id_str):

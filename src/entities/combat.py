@@ -4,12 +4,17 @@ from .scenes import Scene
 class Combat(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "combat.db")
-        self.entities = self.genEntities()
+        try:
+            self.entities = self.genEntities()
+        except:
+            self.entities = []
 
     def genEntities(self):
         encounters = []
         per_page = {}
         for order in self._campaign["turnorder"]:
+            if order is None:
+                continue
             per_page.setdefault(order.get("_pageid", self._campaign["playerpageid"]), []).append(order)
         for page in per_page:
             active = (page == self._campaign["playerpageid"])

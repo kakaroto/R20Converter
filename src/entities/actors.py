@@ -859,9 +859,12 @@ class Actor(Entity):
         # An NPC might have overriden the PP in its senses
         if label == "Perception" and self.isNPC():
             senses = self.getAttribute("npc_senses", "")[0]
-            match = re.search(r"passive perception (\d+)", senses)
-            if match:
-                passive = int(match.group(1))
+            try:
+                match = re.search(r"passive perception (\d+)", senses)
+                if match:
+                    passive = int(match.group(1))
+            except:
+                pass
 
         return {
             "value": value,
