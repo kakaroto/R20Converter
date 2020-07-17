@@ -353,14 +353,19 @@ parser.add_argument("--dont-export-actor-items", action="store_true", help="Item
 parser.add_argument("--no-duplicate-actor-items", action="store_true", help="This option causes items with the same name from different actors to be exported under a single item. The first processed actor with the item of that name gets their item in the item entities.")
 parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
 parser.add_argument("--max-path", default=256, type=int, help="Set the maximum allowed length for the asset's absolute file paths. Most File Systems will have a limit of 256 characters, but you can set it to lower (or higher) if you plan on moving the worlds directory to a different FVTT path. Files that don't fit will be written in an 'assets' directory instead of the usual hierarchy.")
+parser.add_argument("--overwrite", action="store_true", help="Overwrite the destination directory if it exists.")
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
 
     if os.path.exists(args.path):
-        print("Destination directory must not exist")
-        sys.exit(-1)
+        if args.overwrite:
+            import shutil
+            shutil.rmtree(args.path)
+        else:
+            print("Destination directory must not exist")
+            sys.exit(-1)
 
     if args.use_original_image_urls:
         print("*** WARNING ***")
