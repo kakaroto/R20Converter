@@ -192,6 +192,8 @@ class Item(Entity):
         attack = attack if attack else ItemAttack()
         attributes = attributes if attributes else ItemInventoryAttributes()
         weapon = weapon if weapon else ItemWeapon()
+        kwargs.update(ItemConsume().getDict()) 
+        kwargs.update(ItemObject().getDict()) 
         kwargs.update(attributes.getDict())
         kwargs.update(weapon.getDict())
         data = Item.createStandardData(description, source, activation, attack, **kwargs)
@@ -204,6 +206,8 @@ class Item(Entity):
         attack = attack if attack else ItemAttack()
         attributes = attributes if attributes else ItemInventoryAttributes()
         equipment = equipment if equipment else ItemEquipment()
+        kwargs.update(ItemConsume().getDict()) 
+        kwargs.update(ItemObject().getDict()) 
         kwargs.update(attributes.getDict())
         kwargs.update(equipment.getDict())
         data = Item.createStandardData(description, source, activation, attack, **kwargs)
@@ -216,6 +220,7 @@ class Item(Entity):
         attack = attack if attack else ItemAttack()
         attributes = attributes if attributes else ItemInventoryAttributes()
         consumable = consumable if consumable else ItemConsumable()
+        kwargs.update(ItemConsume().getDict()) 
         kwargs.update(attributes.getDict())
         kwargs.update(consumable.getDict())
         data = Item.createStandardData(description, source, activation, attack, **kwargs)
@@ -248,6 +253,7 @@ class Item(Entity):
         activation = activation if activation else ItemActivation()
         attack = attack if attack else ItemAttack()
         recharge = recharge if recharge else ItemFeatRecharge()
+        kwargs.update(ItemConsume().getDict()) 
         kwargs.update(recharge.getDict())
         data = Item.createStandardData(description, source, activation, attack, **kwargs)
         return Item(database, id, name, "feat", None, data)
@@ -263,6 +269,7 @@ class Item(Entity):
         scaling = scaling if scaling else ItemSpellScaling()
         kwargs.setdefault("level", level)
         kwargs.setdefault("school", school)
+        kwargs.update(ItemConsume().getDict()) 
         kwargs.update(components.getDict())
         kwargs.update(preparation.getDict())
         kwargs.update(scaling.getDict())
@@ -329,6 +336,38 @@ class ItemSave:
                 "ability": self.ability,
                 "dc": self.dc,
                 "scaling": self.scaling
+            }
+        }
+
+        
+# Unused
+class ItemConsume:
+    def __init__(self):
+        pass
+
+    def getDict(self):
+        return {
+            "consume": {
+                "type": "",
+                "target": None,
+                "amount": None
+            }
+        }
+# Unused
+class ItemObject:
+    def __init__(self):
+        pass
+
+    def getDict(self):
+        return {
+            "armor": {
+                "value": 10
+            },
+            "hp": {
+                "value": 0,
+                "max": 0,
+                "dt": None,
+                "conditions": ""
             }
         }
 

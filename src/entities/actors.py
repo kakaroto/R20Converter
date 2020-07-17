@@ -55,6 +55,7 @@ class Token(Entity):
         self.sight_angle = 360
         self.mirrorX = False
         self.mirrorY = False
+        self.tint = None
 
         if token:
             self.token_name = token.get("name", self.token_name)
@@ -84,6 +85,7 @@ class Token(Entity):
             self.setupLighting(lradius, ldimradius)
             self.mirrorX = bool(token.get("fliph", self.mirrorX))
             self.mirrorY = bool(token.get("flipv", self.mirrorY))
+            self.tint = self.color(token.get("tint_color", "transparent"), None, True)
 
         if self.bar1_max > 0 or self.bar2_max > 0:
             all_see_bars = all_see_bar1 or all_see_bar2
@@ -164,7 +166,7 @@ class Token(Entity):
         return {"flags": {},
                 "name": self.token_name,
                 "displayName": self.display_name,
-                "img": self.token_filename if self.token_filename != "" else "icons/svg/mystery-man.svg",
+                "img": self.token_filename if self.token_filename != "" else "",
                 "width": self.width / 70.0,
                 "height": self.height / 70.0,
                 "mirrorX": self.mirrorX,
@@ -180,6 +182,7 @@ class Token(Entity):
                 "brightSight": self.bright_sight,
                 "sightAngle": self.sight_angle,
                 "lightAngle": self.light_angle,
+                "lightAlpha": 1,
                 "vision": self.has_vision,
                 "actorId": self.actor_id,
                 "actorLink": False,
@@ -187,6 +190,7 @@ class Token(Entity):
                 "displayBars": self.display_bars,
                 "bar1": {"attribute": "attributes.bar1" if self.bar1_max != 0 or self.bar1_val != 0 else None},
                 "bar2": {"attribute": "attributes.bar2" if self.bar2_max != 0 or self.bar2_val != 0 else None},
+                "tint": self.tint,
                 "actorData": {
                     "data": {
                         "attributes": {
@@ -370,7 +374,7 @@ class Actor(Entity):
                        "permission": permissions,
                        "data": actor_data,
                        "folder": Entity.normalizeID(folder),
-                       "flags": {"dnd5e": {"saveBonus": self._save_bonus}},
+                       "flags": {},
                        "sort": index * Entity.SORT_ORDER,
                        "type": "npc" if npc else "character",
                        "token": token,
@@ -820,7 +824,8 @@ class Actor(Entity):
                     ("environment", ""),
                     ("cr", self.getChallengeRating()),
                     ("xp", self.createAttributeNumber("Kill Experience", "npc_xp", 0)),
-                    ("source", self.getArgument("npc_source", "Roll 20"))
+                    ("source", self.getArgument("npc_source", "Roll 20")),
+                    ("spellLevel", 0)
                     ])
         else:
             details.update([
@@ -1295,7 +1300,8 @@ class Actor(Entity):
         for level in range(1, 10):
             current = self.getAttribute("lvl%d_slots_expended" % level, 0)[0]
             max = self.getAttribute("lvl%d_slots_total" % level, current)[0]
-            spells["spell%d" % level]  = {"value": current, "max": max}
+            spells["spell%d" % level]  = {"value": current, "max": max, "override": None}
+        spells["pact"] = {"value": 0, "max": 0, "override": None}
         return spells
 
     def createCharacterResource(self, label, resource, from_dict=None):
@@ -1413,15 +1419,29 @@ class Actor(Entity):
     def createActorBonuses(self):
         # Unused for now
         return {
-            "bonuses": {
-                "mwak": "",
-                "rwak": "",
-                "msak": "",
-                "rsak": "",
-                "damage": "",
-                "abilityCheck": "",
-                "abilitySave": "",
-                "skillCheck": ""
+            "mwak": {
+                "attack": "",
+                "damage": ""
+            },
+            "rwak": {
+                "attack": "",
+                "damage": ""
+            },
+            "msak": {
+                "attack": "",
+                "damage": ""
+            },
+            "rsak": {
+                "attack": "",
+                "damage": ""
+            },
+            "abilities": {
+                "check": "",
+                "save": str(self._save_bonus) if self._save_bonus != 0 else "",
+                "skill": ""
+            },
+            "spell": {
+                "dc": ""
             }
         }
 
@@ -1955,6 +1975,7 @@ class Actor(Entity):
         compendium_item = self.findCompendiumItem("Spells", name)
         item = self._converter.items.createItemSpell(None, name, description,  activation, attack,
                                                     level, school, components, preparation, scaling, **kwargs)
+
         if compendium_item and compendium_item.entity["type"] != "loot":
             item = self._converter.items.createItemFromCompendium(None, compendium_item, item.entity["data"])
         else:

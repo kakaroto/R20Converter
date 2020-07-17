@@ -210,7 +210,8 @@ class Scene(Entity):
                         ],
                         "move": 1,
                         "sense": 1,
-                        "door": 0
+                        "door": 0,
+                        "ds": 0
                         }
                 walls.append(wall)
                 
@@ -272,7 +273,9 @@ class Scene(Entity):
                             token["bar1"]["attribute"] = "attributes.hp"
                         if bar2_link == hp_id or self.getArgument("force_hp_for_token_bar2", False):
                             token["bar2"]["attribute"] = "attributes.hp"
-                        token["actorLink"] = not npc
+                        if not npc:
+                            token["actorLink"] = True
+                            del token["actorData"]
                     token["_id"] = self.genID()
                     token["hidden"] = (layer == "gmlayer")
                     x = (left - (tile_width / 2))
@@ -328,7 +331,9 @@ class Scene(Entity):
                              "dim": dim,
                              "bright": bright,
                              "angle": angle,
-                             "rotation": rotation
+                             "rotation": rotation,
+                             "tintAlpha": 0.5,
+                             "darknessThreshold": 0
                              }
                     x = (left - (tile_width / 2))
                     y = (top - (tile_height / 2))
@@ -415,18 +420,20 @@ class Scene(Entity):
                                 top + previous_point[1]]
                     wall_b = [left + point[0],
                                 top + point[1]]
-                    wall = {"_id": self.genID(),
-                            "flags": {},
-                            "c": [
-                                    int(margin_left + wall_a[0] * grid_multiplier),
-                                    int(margin_top + wall_a[1] * grid_multiplier),
-                                    int(margin_left + wall_b[0] * grid_multiplier),
-                                    int(margin_top + wall_b[1] * grid_multiplier),
-                            ],
-                            "move": 1 if page["lightrestrictmove"] or self.getArgument("restrict_movement", False) else 0,
-                            "sense": 1,
-                            "door": door_type
-                            }
+                    wall = {
+                        "_id": self.genID(),
+                        "flags": {},
+                        "c": [
+                                int(margin_left + wall_a[0] * grid_multiplier),
+                                int(margin_top + wall_a[1] * grid_multiplier),
+                                int(margin_left + wall_b[0] * grid_multiplier),
+                                int(margin_top + wall_b[1] * grid_multiplier),
+                        ],
+                        "move": 1 if page["lightrestrictmove"] or self.getArgument("restrict_movement", False) else 0,
+                        "sense": 1,
+                        "door": door_type,
+                        "ds": 0
+                    }
                     if door_type != 0:
                         wall["ds"] = 0
                     wall_x = min(wall_a[0], wall_b[0])
@@ -539,6 +546,7 @@ class Scene(Entity):
                        "tokenVision": page["showlighting"] and page["lightenforcelos"],
                        "fogExploration": not self.getArgument("disable_fog", False) and (self.getArgument("enable_fog", False) or page["adv_fow_enabled"]),
                        "globalLight": page["lightglobalillum"],
+                       "darkness": 0,
                        "tiles": tiles,
                        "tokens": tokens,
                        "walls": walls,
