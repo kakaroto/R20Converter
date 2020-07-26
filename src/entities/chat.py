@@ -68,7 +68,7 @@ class ChatMessage(Entity):
             "flags": {},
             "type": roll_type,
             "user": Entity.normalizeID(message["playerid"]),
-            "timestamp": {"$$date": message[".priority"]},
+            "timestamp": message[".priority"],
             "content": content,
             "speaker": {"alias": who},
             "whisper": whispers,
