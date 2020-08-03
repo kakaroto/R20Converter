@@ -1,10 +1,10 @@
 <template>
   <div>
-<!--
+    <!--
 ### Fine Tuned
 parser.add_argument("--folder-as-items", action="append", default=["Magic Items"], help="Converts each entry in a journal folder into items. Useful for 'Magic Items' folders. Can be passed multiple times to convert more than one folder.")
 
--->
+    -->
     <b-form>
       <div>
         <p>Congratulations, you are done with all the hard questions!</p>
@@ -15,12 +15,7 @@ parser.add_argument("--folder-as-items", action="append", default=["Magic Items"
           <b-card-header header-tag="header" class="p-1" role="tab">
             <b-button block v-b-toggle.fine-tune-settings variant="info">Fine Tune Settings</b-button>
           </b-card-header>
-          <b-collapse
-            id="fine-tune-settings"
-            visible
-            accordion="settings-accordion"
-            role="tabpanel"
-          >
+          <b-collapse id="fine-tune-settings" accordion="settings-accordion" role="tabpanel">
             <b-card-body>
               <boolean-option
                 label="Restrict movement"
@@ -40,13 +35,13 @@ parser.add_argument("--folder-as-items", action="append", default=["Magic Items"
               <boolean-option
                 label="Set HP for token Bar 1"
                 description="Force Bar 1 of all tokens to represent the character's HP attribute"
-                v-model="form.forceHpTokenBar1"
+                v-model="form.forceHpForTokenBar1"
               />
 
               <boolean-option
                 label="Set HP for token Bar 2"
                 description="Force Bar 2 of all tokens to represent the character's HP attribute"
-                v-model="form.forceHpTokenBar2"
+                v-model="form.forceHpForTokenBar2"
               />
               <boolean-option
                 label="Add walls around the map"
@@ -68,48 +63,41 @@ parser.add_argument("--folder-as-items", action="append", default=["Magic Items"
                 description="Automatically detect which walls represent doors or secret doors based on the occurence of that wall's color in the dynamic layer"
                 v-model="form.autoDoors"
               />
-                <b-form-group
-                    label="Custom Door Color"
-                    label-cols
-                    label-align="right"
-                    description="Sets the exact color string of the dynamic lighting walls to convert into doors. For example, set it to '#ff0000' to consider Red walls as doors."
-                    :disabled="form.autoDoors"
-                >
-                    <b-form-input v-model="form.doorColor" placeholder="#ff0000"></b-form-input>
-                </b-form-group>
-                <b-form-group
-                    label="Custom Secret Door Color"
-                    label-cols
-                    label-align="right"
-                    description="Sets the exact color string of the dynamic lighting walls to convert into secret doors."
-                    :disabled="form.autoDoors"
-                >
-                    <b-form-input v-model="form.secretDoorColor" placeholder="#0000ff"></b-form-input>
-                </b-form-group>
-              
               <b-form-group
-                label="Minimum Wall Length"
+                label="Custom Door Color"
                 label-cols
                 label-align="right"
+                description="Sets the exact color string of the dynamic lighting walls to convert into doors. For example, set it to '#ff0000' to consider Red walls as doors."
+                :disabled="form.autoDoors"
               >
+                <b-form-input v-model="form.doorColor" placeholder="#ff0000"></b-form-input>
+              </b-form-group>
+              <b-form-group
+                label="Custom Secret Door Color"
+                label-cols
+                label-align="right"
+                description="Sets the exact color string of the dynamic lighting walls to convert into secret doors."
+                :disabled="form.autoDoors"
+              >
+                <b-form-input v-model="form.secretDoorColor" placeholder="#0000ff"></b-form-input>
+              </b-form-group>
+
+              <b-form-group label="Minimum Wall Length" label-cols label-align="right">
                 <template v-slot:description>
-                    <p>Minimum distance for walls (in pixels).<p>
-                    <p>If a wall is smaller and part of a longer chain of walls, it will get merged with the adjacent wall.</p>
-                    <p>This is useful if there are a lot of small/jagged walls or freehand-drawn walls such as in large caves (Set to 0 to disable it)</p>
+                  <p>Minimum distance for walls (in pixels).</p>
+                  <p></p>
+                  <p>If a wall is smaller and part of a longer chain of walls, it will get merged with the adjacent wall.</p>
+                  <p>This is useful if there are a lot of small/jagged walls or freehand-drawn walls such as in large caves (Set to 0 to disable it)</p>
                 </template>
                 <b-form-spinbutton v-model="form.minimumWallLength" min="0" max="70"></b-form-spinbutton>
               </b-form-group>
 
-              <b-form-group
-                label="Maximum Wall Angle"
-                label-cols
-                label-align="right"
-              >
+              <b-form-group label="Maximum Wall Angle" label-cols label-align="right">
                 <template v-slot:description>
-                    <p>Maximum angle (in degrees) between walls before they are merged (when above option is used).</p>
-                    <p>This is to prevent small walls at high angles (a small triangle or U shape) from being merged and becoming a line that cuts through the map.</p>
-                    <p>The angle is calculated with every point in the wall that is skipped, so a circle drawn with small lines and small angles will not be removed.</p>
-                    <p>Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points.</p>
+                  <p>Maximum angle (in degrees) between walls before they are merged (when above option is used).</p>
+                  <p>This is to prevent small walls at high angles (a small triangle or U shape) from being merged and becoming a line that cuts through the map.</p>
+                  <p>The angle is calculated with every point in the wall that is skipped, so a circle drawn with small lines and small angles will not be removed.</p>
+                  <p>Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points.</p>
                 </template>
                 <b-form-spinbutton v-model="form.maximumWallAngle" min="0" max="90"></b-form-spinbutton>
               </b-form-group>
@@ -123,14 +111,14 @@ parser.add_argument("--folder-as-items", action="append", default=["Magic Items"
           </b-card-header>
           <b-collapse id="advanced-settings" accordion="settings-accordion" role="tabpanel">
             <b-card-body>
-                <b-form-group
-                    label="NPC Source"
-                    label-cols
-                    label-align="right"
-                    description="Source reference for NPC actors (displayed in the character sheet)"
-                >
-                    <b-form-input v-model="form.npcSource"></b-form-input>
-                </b-form-group>
+              <b-form-group
+                label="NPC Source"
+                label-cols
+                label-align="right"
+                description="Source reference for NPC actors (displayed in the character sheet)"
+              >
+                <b-form-input v-model="form.npcSource"></b-form-input>
+              </b-form-group>
               <boolean-option
                 label="Export actor items into individual item entities"
                 description="Items from actors will be exported as individual Entity Items."
@@ -203,21 +191,15 @@ parser.add_argument("--folder-as-items", action="append", default=["Magic Items"
         </b-card>
       </div>
     </b-form>
-    <r20-footer>
-      <b-button @click="$emit('previous')" class="mr-3">Back</b-button>
-      <b-button @click="next()" variant="success">Start Conversion</b-button>
-    </r20-footer>
   </div>
 </template>
 
 <script>
 import BooleanOption from "./BooleanOption.vue";
-import R20Footer from "./R20Footer.vue";
 
 export default {
   components: {
-    BooleanOption,
-    R20Footer
+    BooleanOption
   },
   data() {
     return {
@@ -257,8 +239,12 @@ export default {
       ]
     };
   },
-  methods: {
-    async next() {
+  computed: {
+    exportAsModule() {
+      return this.$store.state.options.exportAsModule;
+    }
+  },
+  destroyed() {
       this.$store.dispatch("setOption", {
         restrictMovement: this.form.restrictMovement,
         forceHpForTokenBar1: this.form.forceHpForTokenBar1,
@@ -290,13 +276,6 @@ export default {
         noDuplicateActorItems: this.form.noDuplicateActorItems,
         useOriginalImageUrls: this.form.useOriginalImageUrls
       });
-      this.$emit("next");
-    }
-  },
-  computed: {
-    exportAsModule() {
-        return this.$store.state.options.exportAsModule;
-    }
-    }
+  }
 };
 </script>

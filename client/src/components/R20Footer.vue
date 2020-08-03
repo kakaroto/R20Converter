@@ -1,8 +1,7 @@
 <template>
   <div>
     <div :style="`min-height: ${error ? 100 : 50}px;`"></div>
-    <div class="fixed-bottom bg-light">
-      <hr />
+    <div class="fixed-bottom bg-light border border-info">
       <b-alert show variant="danger" v-if="error">{{error}}</b-alert>
       <div class="float-right">
         <slot></slot>

@@ -23,13 +23,13 @@ eel.makeCB("getCampaignTitle", (file_type, path) => {return "Lost Mine of Phande
 eel.makeCB("getCampaignSlug", (file_type, path) => {return "lmop"})
 eel.makeCB("ask_file", "lmop.json")
 eel.makeCB("ask_folder", "C:/Foo/Bar/Data")
-eel.makeCB("does_file_exist", true)
+eel.makeCB("does_file_exist", (p) => p && p.endsWith(".json"))
 eel.makeCB("does_folder_exist", (p) => {
     console.log("Folder:", p)
-    return p && p.startsWith("C:")
+    return p && p.startsWith("C:") && p.endsWith("FoundryVTT")
 })
 eel.makeCB('startConversion', (options) => {
     console.log("Starting conversion with options : ", options);
     eel.__exposed.writeStdout("Hello world")
-    return "Cannot convert from within fake eel"
+    return {error: false, message: "All done!\nCongratulations!\nGood night!"}
 })

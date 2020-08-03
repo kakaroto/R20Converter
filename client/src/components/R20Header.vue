@@ -3,10 +3,10 @@
     <b-card no-body class="overflow-hidden m-2">
       <b-row no-gutters>
         <b-col cols="1">
-          <b-card-img src="https://media.discordapp.net/attachments/695361362813124698/736801108864925716/r20converter_logo.png?width=563&height=563" alt="Image" class="rounded-0"></b-card-img>
+          <b-card-img src="/logo.png" alt="Logo" class="rounded-0"></b-card-img>
         </b-col>
         <b-col cols="11">
-          <b-card-body :title="version_string">
+          <b-card-body :title="`R20Converter ${version}`">
             <b-card-text>
               Convert your Roll20 campaign into a Foundry VTT world or a compendium module
               <a
@@ -24,11 +24,6 @@
 
 <script>
 export default {
-  props: ["version"],
-  computed: {
-    version_string() {
-      return `R20Converter ${this.version}`;
-    }
-  }
+  props: ["version"]
 };
 </script>

@@ -4,7 +4,7 @@ from cx_Freeze import setup, Executable
 sys.path.append("src")
 # Dependencies are automatically detected, but it might need
 # fine tuning.
-buildOptions = dict(packages = [])
+buildOptions = dict(packages = [], includes = ["tkinter", "bottle_websocket"])
 
 base = 'Console'
 
@@ -13,7 +13,7 @@ executables = [
 ]
 
 setup(name='R20Converter',
-      version = '0.9-rc1',
+      version = '0.8.9999',
       description = 'Convert a Roll 20 Campaign into a Foundry VTT world',
       options = dict(build_exe = buildOptions),
       executables = executables,

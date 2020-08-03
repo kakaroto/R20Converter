@@ -21,4 +21,10 @@ export default {
     appendLog(state, text) {
         state.debugLog += text;
     },
+    conversionDone(state, value) {
+        state.conversionDone = value;
+    },
+    conversionError(state, value) {
+        state.conversionError = value;
+    },
 }

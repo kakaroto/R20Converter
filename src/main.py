@@ -12,8 +12,10 @@ from version import version
 from R20Converter import R20Converter
 try:
     from GUI import GUI
+    GUI.hideConsole()
 except Exception as e:
     print("Can't load GUI : ", e)
+    from GUI import GUI
     GUI = None
 
 parser = argparse.ArgumentParser(description="R20Converter v{}".format(version), epilog="Convert Roll20 campaigns into Foundry VTT worlds or modules.")

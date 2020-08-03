@@ -30,77 +30,77 @@
         :label="`${exportType} URL name :`"
         label-align="right"
         label-cols
-        :description="`Leave empty to use the suggested name for your ${exportType.toLowerCase()} : ${slug}`"
+        :description="`Leave empty to use the suggested name for your ${exportType.toLowerCase()} : ${defaultSlug}`"
       >
-        <b-form-input v-model="form.slug" required :placeholder="slug"></b-form-input>
+        <b-form-input v-model="slug" required :placeholder="defaultSlug"></b-form-input>
       </b-form-group>
+
+      <div v-if="!!folder" class="border border-info mx-5 mb-2">
+        Final {{exportType}} path is :
+        <code>{{finalPath}}</code>
+      </div>
 
       <b-form-group
         :label="`${exportType} title :`"
         label-cols
         label-align="right"
-        :description="`Leave empty to use the suggested title from your campaign : ${title}`"
+        :description="`Leave empty to use the suggested title from your campaign : ${defaultTitle}`"
       >
-        <b-form-input v-model="form.title" :placeholder="title"></b-form-input>
+        <b-form-input v-model="title" :placeholder="defaultTitle"></b-form-input>
       </b-form-group>
 
       <b-form-group :label="`${exportType} Description :`" label-align="right" label-cols>
         <b-form-textarea
-          v-model="form.description"
+          v-model="description"
           placeholder="Enter a description for your campaign..."
           rows="3"
         ></b-form-textarea>
       </b-form-group>
 
       <b-form-group label="GM Access Key" label-align="right" label-cols>
-        <b-form-input v-model="form.gmPassword"></b-form-input>
+        <b-form-input v-model="gmPassword"></b-form-input>
       </b-form-group>
       <b-form-group label="Player Access Key" label-align="right" label-cols>
-        <b-form-input v-model="form.playerPassword"></b-form-input>
+        <b-form-input v-model="playerPassword"></b-form-input>
       </b-form-group>
     </b-form>
-    <r20-footer>
-        <b-button @click="$emit('previous')" class="mr-3">Back</b-button>
-        <b-button @click="next()" :disabled="Boolean(error || !folder)" variant="info">Next Step</b-button>
-    </r20-footer>
   </div>
 </template>
 
 <script>
 import { mapState } from "vuex";
 import BooleanOption from "./BooleanOption.vue";
-import R20Footer from "./R20Footer.vue";
 
 export default {
   components: {
-    BooleanOption,
-    R20Footer
+    BooleanOption
   },
   data() {
     return {
-      form: {
-        slug: "",
-        title: "",
-        description: "",
-        gmPassword: "",
-        playerPassword: ""
-      }
+      slug: "",
+      title: "",
+      description: "",
+      gmPassword: "",
+      playerPassword: ""
     };
   },
   methods: {
     async browse() {
       this.folder = await eel.ask_folder()();
     },
-    async next() {
-      this.$store.dispatch("setOption", {
-        slug: this.form.slug || this.slug,
-        title: this.form.title || this.title,
-        description: this.form.description,
-        gmPassword: this.form.gmPassword,
-        playerPassword: this.form.playerPassword
-      });
-      this.$emit("next");
+    async checkDestinationFolder() {
+        const exists = await eel.does_folder_exist(this.finalPath)() || await eel.does_file_exist(this.finalPath)();
+        if (exists) {
+            this.$store.commit('setError', `Final destination folder ${this.finalPath} must not exist.`);
+        } else {
+            this.$store.commit('setError', null);
+        }
     }
+  },
+  watch: {
+      finalPath() {
+          this.checkDestinationFolder()
+      },
   },
   computed: {
     folder: {
@@ -122,7 +122,26 @@ export default {
     exportType() {
       return this.exportAsModule ? "Compendium" : "World";
     },
-    ...mapState(["title", "slug", "foundryDirectory", "error"])
+    finalPath() {
+      return `${this.folder}/Data/${this.exportAsModule ? "modules" : "worlds"}/${this.slug || this.defaultSlug}`;
+    },
+    ...mapState(["foundryDirectory", "error"]),
+    ...mapState({
+      defaultSlug: "slug",
+      defaultTitle: "title"
+    })
+  },
+  mounted() {
+    this.checkDestinationFolder()
+  },
+  destroyed() {
+    this.$store.dispatch("setOption", {
+      slug: this.slug || this.defaultSlug,
+      title: this.title || this.defaultTitle,
+      description: this.description,
+      gmPassword: this.gmPassword,
+      playerPassword: this.playerPassword
+    });
   }
 };
 </script>

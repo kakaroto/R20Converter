@@ -8,6 +8,7 @@ export default {
     foundryDirectory: null,
     debugLog: "",
     options: {
-        exportAsModule: false,
-    }
+    },
+    conversionDone: false,
+    conversionError: false
 }

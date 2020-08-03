@@ -18,10 +18,12 @@ rem rd /s /q "releases\R20Converter-%version%\src\entities\__pycache__"
 rem move dist\R20Converter "releases\R20Converter-%version%\windows"
 rem rd /s /q dist
 
-cd client
-npm run build
-cd ..
+
+start /d client npm run build
+pause
+
 "C:\Users\kakaroto\AppData\Local\Programs\Python\Python38-32\python.exe" setup.py build
+
 
 mkdir "releases\R20Converter-%version%-cx"
 xcopy /s src "releases\R20Converter-%version%-cx\src\"
@@ -33,4 +35,10 @@ rd /s /q "releases\R20Converter-%version%-cx\src\__pycache__"
 rd /s /q "releases\R20Converter-%version%-cx\src\entities\__pycache__"
 move "build\exe.win32-3.8" "releases\R20Converter-%version%-cx\windows"
 xcopy /s templates "releases\R20Converter-%version%-cx\windows\templates\"
+mkdir "releases\R20Converter-%version%-cx\client"
+mkdir "releases\R20Converter-%version%-cx\client\dist"
+mkdir "releases\R20Converter-%version%-cx\windows\client"
+mkdir "releases\R20Converter-%version%-cx\windows\client\dist"
+xcopy /s client\dist "releases\R20Converter-%version%-cx\client\dist\"
+xcopy /s client\dist "releases\R20Converter-%version%-cx\windows\client\dist"
 pause

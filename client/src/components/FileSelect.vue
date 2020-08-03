@@ -6,13 +6,13 @@
         href="https://github.com/kakaroto/R20Exporter"
         target="_blank"
       >R20Exporter</a>.
-      You can either select the ZIP exported file or the JSON exported file.
     </div>
     <b-form-group
-      label="Exported campaign file (ZIP or JSON) :"
+      label="Exported campaign file :"
       label-for="filename"
       label-cols
-      description
+      label-align="right"
+      description="Select the ZIP file or JSON file export of your Roll20 campaign."
       class="m-3"
     >
       <b-input-group class="mb-3">
@@ -24,20 +24,13 @@
     </b-form-group>
     <div v-if="validFile">You have selected a {{fileType}} file.</div>
     <div v-else>Please select a valid file to continue</div>
-    <r20-footer>
-      <b-button @click="$emit('next')" :disabled="!validFile" variant="info">Next Step</b-button>
-    </r20-footer>
   </div>
 </template>
 
 <script>
 import { mapGetters } from "vuex";
-import R20Footer from "./R20Footer.vue";
 
 export default {
-  components: {
-    R20Footer
-  },
   data() {
     return {};
   },

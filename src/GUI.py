@@ -5,19 +5,19 @@ import json
 import zipfile
 from slugify import slugify
 from io import StringIO
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
 from R20Converter import R20Converter
 
-try:
-    from tkinter import Tk
-    from tkinter.filedialog import askopenfilename, askdirectory
-except ImportError:
-    from Tkinter import Tk
-    from tkFileDialog import askopenfilename, askdirectory
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename, askdirectory
 
 from utils import getFVTTDataPath
 from version import version
 
+try:
+    import win32gui, win32con
+except Exception as e:
+    win32gui = win32con = None
 
 class ForwardToFunctionStream(io.TextIOBase):
     def write(self, string):
@@ -30,23 +30,34 @@ class GUIClass:
         self.campaign = None
         self.loadedPath = None
 
+    def hideConsole(self):
+        if win32gui:
+            the_program_to_hide = win32gui.GetForegroundWindow()
+            win32gui.ShowWindow(the_program_to_hide , win32con.SW_HIDE)
+
     def start(self):
-        browsers = ["chrome", "edge", "electron"]
-        mode = "user"
-        for browser in browsers:
-            eel_browser = getattr(eel, browser, None)
-            if eel_browser is None:
-                continue
-            path = eel_browser.find_path()
-            if path is True or (path is not None and os.path.exists(path)):
-                mode = browser
-                break
-        stream = ForwardToFunctionStream()
-        with redirect_stdout(stream):
-            eel.start('index.html', port=0, mode=mode)
+        stdout = ForwardToFunctionStream()
+        stderr = ForwardToFunctionStream()
+        with redirect_stderr(stderr):
+            with redirect_stdout(stdout):
+                browsers = ["chrome", "edge", "electron"]
+                found_browser = False
+                for browser in browsers:
+                    eel_browser = getattr(eel, browser, None)
+                    if eel_browser is None:
+                        continue
+                    path = eel_browser.find_path()
+                    if path is True or path is not None:
+                        try:
+                            eel.start('index.html', port=0, mode=browser)
+                            found_browser = True
+                            break
+                        except:
+                            pass
+                if not found_browser:
+                    eel.start('index.html', port=0, mode=browser)
 
     def loadCampaign(self, file_type, path):
-        print("Loading campaign : ", file_type, path)
         if path == self.loadedPath:
             return
         if file_type == "JSON":
@@ -60,7 +71,6 @@ class GUIClass:
 
 @eel.expose
 def getVersion():
-    print("Get version : ", version)
     return version
 
 
@@ -108,7 +118,6 @@ def getCampaignTitle(file_type, path):
     try:
         GUI.loadCampaign(file_type, path)
         title = GUI.campaign["campaign_title"]
-        print("Found title", title)
         return title
     except Exception as e:
         print("Exception in getCampaignTitle ", str(e))
@@ -149,13 +158,15 @@ def startConversion(args):
     if error:
         message = "Error converting campaign : \n" + str(error)
         message += "\nPlease contact the author with the log of the error from the console window"
-        return str(error)
     else:
         message = "\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'furnace' (see README file for more information)\n\n"
         message += "It is strongly suggested to check the sheets of the NPCs and player characters for any errors or missing information, or for adding special traits.\n"
         message += "Some things may not have been carried over, especially to-hit, damage, AC or saving throw modifiers or more complicated weapon or spell macros\n"
         message += "\nThank you for your support!"
-
-    return None
+    print(message)
+    return {
+        "error": error is not None,
+        "message": message
+    }
 
 GUI = GUIClass()
