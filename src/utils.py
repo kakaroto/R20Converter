@@ -9,7 +9,7 @@ def getFVTTDataPath():
         if system == "Windows":
             path = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~\\AppData\\Local")), "FoundryVTT")
         elif system == "Darwin":
-            os.path.join(os.path.expanduser("~/Library/Application Support"), "FoundryVTT")
+            path = os.path.join(os.path.expanduser("~/Library/Application Support"), "FoundryVTT")
         else:
             path = os.path.join(os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")), "FoundryVTT")
             if not os.path.exists(path):

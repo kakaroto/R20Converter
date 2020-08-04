@@ -8,28 +8,27 @@ It will automate the entire conversion process and all(*) of your campaign will 
 
 ## How to use
 
+Follow the instructions from the demo video to see it in action and how to use it : https://www.youtube.com/watch?v=Q_BmlA7wBvQ
+
 ### Windows
 
-This package comes with an executable for Windows in the `windows` subdirectory. Simply double click it to open the User Interface, then Browse for the ZIP file that was exported. If you use a custom data path for your FVTT installation, then set it as well in the appropriate space then enter a name for your world directory.
+This package comes with an executable for Windows. Simply open the R20converter.exe application and follow the instructions on screen to get select your exported zip and convert it.
 
-Select the options you would like to use, then press the "Convert Campaign" button. You can always keep your mouse still on one of the options to see a tooltip with more information on what each option does.
+### Mac OS X
 
+Open the R20Converter application and follow the instructions.
 
 ### Linux
 
 If using Linux, you will need `Python 3.6` or later to use R20Converter.
 
-You can run it with `python3 src/R20Converter.py` in a terminal. Use the --help option to see which options are available to you during conversion.
+You can run it with `python3 src/main.py` in a terminal. Use the --help option to see which options are available to you during conversion.
 
-Install dependencies : `requests`, `pillow`, `python-slugify`
+Required dependencies are : `requests`, `pillow`, `python-slugify` and for the GUI `eel`
  
-`pip3 install requests pillow python-slugify`
+`pip3 install requests pillow python-slugify eel`
 
 If no arguments are provided and the appropriate dependencies are installed, the program will launch in GUI mode.
-
-Dependencies for the GUI : `pysimplegui`, `pysimpleguiqt` and `pyside2`.
-
-`pip3 install requests pillow python-slugify pysimplegui pysimpleguiqt pyside2`
 
 
 ## Campaign Conversion
@@ -241,3 +240,25 @@ The converted world will automatically enable the [permission_viewer](https://gi
 The `permission viewer` FVTT module is helpful for those coming from Roll 20 to see which handouts/character sheets are shared with whom, while the Furnace module is only really required if you use the `--images-as-drawings` option.
 
 If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info), another project of mine which lets you roll from monster stat blocks and character sheets directly in D&D Beyond and get the result in your VTT application.
+
+# Build instructions
+
+## Windows
+- Install Python 3.8 32 bits (see path set in `build_windows.bat`)
+- Run `pip install requests pillow python-slugify eel cx_freeze`
+- Download the Electron app from https://github.com/electron/electron/releases and extract under the directory `electron`
+- Run `build_windows.bat`
+
+## Mac OS X
+- Install python using pyenv (official one doesn't work)
+- Kill yourself
+- Resurect
+- Uninstall python from pyenv and reinstall it by recompiling it with tcl-tk compilation flags : https://stackoverflow.com/questions/60469202/unable-to-install-tkinter-with-pyenv-pythons-on-macos
+- `pip install requests pillow python-slugify eel cx_freeze`
+- Replace the `eel` package in your pyenv install's site-packages/eel with the version from 
+- Realize you need to recompile gevents too, so... : `pip install -I --no-binary :all: gevents`
+- Download the Electron app from https://github.com/electron/electron/releases
+- Curse at your computer and at those who use Macs
+- Go to system settings, security, privacy, automation, and allow Terminal to send events to Finder
+- Run `python setup.py bdist_dmg`
+- Breathe really hard and unclench your fists then don't look back

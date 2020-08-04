@@ -3,18 +3,28 @@
 
 import json
 import zipfile
-import argparse
 import sys
 import os
 import platform
+import argparse
+
+# If we're in windowed mode, we need to have stdout/stderr because the
+# GUI/argparse/anything will try to write to stderr/stdout whenever it feels
+# like it and will cause a crash on import
+if sys.stdout is None:
+    sys.stdout = open('stdout.log', 'w')
+    sys.stderr = open('stderr.log', 'w')
 
 from version import version
 from R20Converter import R20Converter
 try:
     from GUI import GUI
-    GUI.hideConsole()
-except Exception as e:
-    GUI = None
+except:
+    # Because fuck you python and cx_freeze and mac and everything
+    try:
+        from GUI import GUI
+    except:
+        GUI = None
 
 parser = argparse.ArgumentParser(description="R20Converter v{}".format(version), epilog="Convert Roll20 campaigns into Foundry VTT worlds or modules.")
 parser.add_argument("path", metavar="destination-directory", help="The destination directory in Data/worlds/ or Data/modules/")
