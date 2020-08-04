@@ -39,7 +39,7 @@ class Playlist(Entity):
                  "b": 0, # Loop
                  }
         sounds = []
-        print("creating playlist %s" % playlist["n"])
+        self.logInfo("creating playlist %s" % playlist["n"])
         for index, track_id in enumerate(playlist["i"]):
             track = self.findID(track_id, "track")
             if track:
@@ -47,7 +47,7 @@ class Playlist(Entity):
                 filename = os.path.join("jukebox", folder_name, mp3_file)
                 dest = os.path.join("audio", folder_name, mp3_file)
                 if self.getArgument("json", False):
-                    print("Cannot download Jukebox Track from campaign.json file")
+                    self.logInfo("Cannot download Jukebox Track from campaign.json file")
                     mp3_path = ""
                 else:
                     (_, mp3_path) = self.copyZipFile(filename, dest)

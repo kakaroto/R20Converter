@@ -50,7 +50,7 @@ class User(Entity):
                        "sort": index * Entity.SORT_ORDER,
                        "hotbar": hotbar
                        }
-        print("Creating User : %s (%s)" % (self.entity["name"], "GM" if is_gm else "Player"))
+        self.logInfo("Creating User : %s (%s)" % (self.entity["name"], "GM" if is_gm else "Player"))
         
         self.setGM(is_gm)
 

@@ -10,7 +10,7 @@ import platform
 from slugify import slugify
 from collections import OrderedDict
 
-from utils import getFVTTDataPath
+import utils
 from version import version
 from world import World
 from module import Module
@@ -23,7 +23,8 @@ from entities import DatabaseFile, EmptyDB, \
 
 
 class R20Converter(object):
-    def __init__(self, args):
+    def __init__(self, args, logger=None):
+        self._logger = utils if logger is None else logger
         self.args = args
         self.path = args.path
         self.name = os.path.basename(os.path.dirname(os.path.join(self.path, ".")))
@@ -41,11 +42,11 @@ class R20Converter(object):
             if os.path.exists(os.path.join(potential_path, "Data", "systems", "dnd5e", "system.json")):
                 self.fvtt_path = potential_path
             else:
-                self.fvtt_path = getFVTTDataPath()
+                self.fvtt_path = utils.getFVTTDataPath()
         if self.fvtt_path is not None:
             self.loadDnD5ePacks()
         else:
-            print("Warning: Could not find the path to the FVTT Data directory, either specify a destination directory in the Data/worlds/ path\n"
+            self.logWarning("Warning: Could not find the path to the FVTT Data directory, either specify a destination directory in the Data/worlds/ path\n"
                   "or use the --fvtt-data-path argument to specify the path to the Data directory.\n"
                   "If you do not, then Item and Spell Compendium links in journal entries will not be replaced with links to SRD data from the D&D 5e packs.")
  
@@ -72,7 +73,7 @@ class R20Converter(object):
         return len(self.packs) > 0
 
     def convert(self):
-        print("*** Converting Campaign '%s' ***" % self.campaign["campaign_title"])
+        self.logInfo("*** Converting Campaign '%s' ***" % self.campaign["campaign_title"])
         os.makedirs(self.path)
         if self.getArgument("export_as_module", False):
             os.makedirs(os.path.join(self.path, "packs"))
@@ -151,6 +152,12 @@ class R20Converter(object):
             self.items.save()
             self.world = World(self).save()
 
+    def logInfo(self, msg):
+        self._logger.logInfo(msg)
+    def logWarning(self, msg):
+        self._logger.logWarning(msg)
+    def logError(self, msg):
+        self._logger.logError(msg)
 
 if __name__ == "__main__":
     print("Please use main.py to run R20Converter")

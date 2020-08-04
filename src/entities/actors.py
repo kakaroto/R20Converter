@@ -213,7 +213,7 @@ class Actor(Entity):
         self._character = character
         tables = self._database._campaign.get("tables", [])
 
-        print("Creating Character : %s" % character["name"])
+        self.logInfo("Creating Character : %s" % character["name"])
         self.parseAttributes()
         permissions = {"default": Handout.PERMISSION_NONE}
         for player in character.get("inplayerjournals", []):
@@ -404,7 +404,7 @@ class Actor(Entity):
         if self._shaped:
             shaped_key = self._convertAttributeName(key)
             if shaped_key != key and shaped_key in from_dict:
-                #print("Replacing {} with shaped key {}".format(key, shaped_key))
+                #self.logInfo("Replacing {} with shaped key {}".format(key, shaped_key))
                 key = shaped_key
         return from_dict.get(key, (default, default, None))
 
@@ -426,7 +426,7 @@ class Actor(Entity):
         if self._shaped:
             shaped_key = self._convertRepeatingAttributeName(key)
             if shaped_key != key and shaped_key in self._repeating:
-                #print("Replacing Repeating {} with shaped key {}".format(key, shaped_key))
+                #self.logInfo("Replacing Repeating {} with shaped key {}".format(key, shaped_key))
                 key = shaped_key
         return self._repeating.get(key, {})
 
@@ -510,23 +510,23 @@ class Actor(Entity):
 
 
     def displayAttributes(self):
-        print("Parsed attributes for character %s: %s" % (self._character["id"], self._character["name"]))
+        self.logInfo("Parsed attributes for character %s: %s" % (self._character["id"], self._character["name"]))
         keys = list(self._attributes.keys())
         keys.sort()
         for key in keys:
             attr = self._attributes[key]
-            print("%s: %s%s" % (key, str(attr[0]), ("(" + str(attr[1]) + ")") if attr[1] != "" else ""))
-        print("Repeated attributes for character %s: %s" % (self._character["id"], self._character["name"]))
+            self.logInfo("%s: %s%s" % (key, str(attr[0]), ("(" + str(attr[1]) + ")") if attr[1] != "" else ""))
+        self.logInfo("Repeated attributes for character %s: %s" % (self._character["id"], self._character["name"]))
         for _type in self._repeating:
-            print("\n\n****** %s ******" % _type)
+            self.logInfo("\n\n****** %s ******" % _type)
             for item in self._repeating[_type]:
-                print("\n************************\n\t%s" % item)
+                self.logInfo("\n************************\n\t%s" % item)
                 items = self._repeating[_type][item]
                 keys = list(items.keys())
                 keys.sort()
                 for key in keys:
                     attr = items[key]
-                    print("\t\t%s: %s%s" % (key, str(attr[0]), ("(" + str(attr[1]) + ")") if attr[1] != "" else ""))
+                    self.logInfo("\t\t%s: %s%s" % (key, str(attr[0]), ("(" + str(attr[1]) + ")") if attr[1] != "" else ""))
         
 
     def calculateSaveBonus(self):
@@ -1057,7 +1057,7 @@ class Actor(Entity):
         else:
             character_languages = self.getAttribute("languages", "")[0]
             for prof in self.getRepeatingAttributes("proficiencies").values():
-                #print("Proficienty : {} = {}".format(id, prof))
+                #self.logInfo("Proficienty : {} = {}".format(id, prof))
                 if self.getAttribute("prof_type", "", from_dict=prof)[0] == "LANGUAGE":
                     language = self.getAttribute("name", "", from_dict=prof)[0]
                     for lang in language.split(","):
@@ -1185,7 +1185,7 @@ class Actor(Entity):
         proficiencies = []
         custom = []
         for prof in self.getRepeatingAttributes("proficiencies").values():
-            #print("Proficienty : {} = {}".format(id, prof))
+            #self.logInfo("Proficienty : {} = {}".format(id, prof))
             if self.getAttribute("prof_type", "", from_dict=prof)[0] == "ARMOR":
                 prof_name = self.getAttribute("name", "", from_dict=prof)[0]
                 for proficiency in prof_name.split(","):
@@ -1208,7 +1208,7 @@ class Actor(Entity):
         proficiencies = []
         custom = []
         for prof in self.getRepeatingAttributes("proficiencies").values():
-            #print("Proficienty : {} = {}".format(id, prof))
+            #self.logInfo("Proficienty : {} = {}".format(id, prof))
             if self.getAttribute("prof_type", "", from_dict=prof)[0] == "WEAPON":
                 prof_name = self.getAttribute("name", "", from_dict=prof)[0]
                 for proficiency in prof_name.split(","):
@@ -1240,7 +1240,7 @@ class Actor(Entity):
         proficiencies = []
         custom = []
         for prof in self.getRepeatingAttributes("proficiencies").values():
-            #print("Proficienty : {} = {}".format(id, prof))
+            #self.logInfo("Proficienty : {} = {}".format(id, prof))
             if self.getAttribute("prof_type", "", from_dict=prof)[0] == "TOOL":
                 prof_name = self.getAttribute("name", "", from_dict=prof)[0]
                 for proficiency in prof_name.split(","):
@@ -1614,7 +1614,7 @@ class Actor(Entity):
             self.createItemInventory(items, name, content, "weapon", attributes, activation, attack, weapon)
         else:
             if item_type not in ["Adventuring Gear", "Items", "Gear"]:
-                print("Unknown item properties : ", name, modifiers)
+                self.logWarning("Unknown item properties : ", name, modifiers)
             self.createItemInventory(items, name, content, "loot", attributes)
 
     def addInventory(self, items):

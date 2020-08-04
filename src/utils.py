@@ -27,3 +27,10 @@ def getFVTTDataPath():
         pass
 
     return path
+
+def logInfo(msg):
+    print(msg)
+def logWarning(msg):
+    print(msg)
+def logError(msg):
+    print(msg)

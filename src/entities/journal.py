@@ -31,7 +31,7 @@ class Journal(DatabaseFile):
             zip_path = os.path.join(folder_path, "Orphaned Handouts")
             for handout in self._handouts:
                 if handout["id"] not in handout_ids:
-                    print("Found Orphaned handout, adding to root; ", end='')
+                    self.logInfo("Found Orphaned handout, adding to root; ", end='')
                     handouts.append(Handout(self, handout, index, folder_id, folder_path, zip_path, zip_index))
                     index += 1
                     zip_index += 1
@@ -45,7 +45,7 @@ class Journal(DatabaseFile):
 class Handout(Entity):
     def __init__(self, database, handout, index, parent, path, zip_path=None, zip_index=None):
         Entity.__init__(self, database, handout["id"])
-        print("Creating Handout : %s" % handout["name"])
+        self.logInfo("Creating Handout : %s" % handout["name"])
         zip_path = path if zip_path is None else zip_path
         zip_index = index if zip_index is None else zip_index
         content = handout["notes"]

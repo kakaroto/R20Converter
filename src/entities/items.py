@@ -79,7 +79,7 @@ class Item(Entity):
     def __init__(self, database, item_id, name, item_type="loot", img=None, data={}):
         Entity.__init__(self, database, item_id)
         # Don't want to print for every item created in a character sheet
-        #print("Creating %s Item : %s" % (item_type, name))
+        #self.logInfo("Creating %s Item : %s" % (item_type, name))
         
         self.entity = {"_id": self._id,
                 "name":  name,
@@ -116,7 +116,7 @@ class Item(Entity):
     def createItemFromHandout(database, handout, index, parent, source, path):
         item = Item(database, handout["id"], handout["name"], "loot")
         
-        print("Creating Item from Handout : %s" % item.getName())
+        item.logInfo("Creating Item from Handout : %s" % item.getName())
 
         content = handout["notes"]
         gmnotes = handout["gmnotes"]

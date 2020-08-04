@@ -48,7 +48,7 @@ class Scene(Entity):
         # so os.path.join("scenes", "backgrounds", "c:my scene", "image.png") gets written in the root
         if safe_name[1:2] == ":":
             safe_name = safe_name[0] + "_" + safe_name[2:]
-        print("Creating Scene : %s" % name)
+        self.logInfo("Creating Scene : %s" % name)
         def safeCast(t, v, d):
             try:
                 return t(v)
@@ -95,13 +95,13 @@ class Scene(Entity):
                     else:
                         (_, bg_image) = self.copyZipFile(filename, dest)
                     if bg_image == "":
-                        print("Couldn't copy background image for page '%s'" % (name))
+                        self.logInfo("Couldn't copy background image for page '%s'" % (name))
                         bg = None
                     else:
                         break
         else:
             if len(map_layer) > 0:
-                print("Background does not match scene dimensions 100%. Will be set as a tile instead")
+                self.logInfo("Background does not match scene dimensions 100%. Will be set as a tile instead")
 
         if self.getArgument("use_original_image_urls", False):
             thumb_image = page["thumbnail"]
@@ -115,7 +115,7 @@ class Scene(Entity):
             try:
                 self.createThumbnail(thumb_filename)
             except Exception as e:
-                print("Unable to create thumbnail : %s" % e)
+                self.logInfo("Unable to create thumbnail : %s" % e)
         
         map_tiles = []
         objects_tiles = []
@@ -151,10 +151,10 @@ class Scene(Entity):
                 wall_colors[path["stroke"]] += len(path["path"]) - 1
 
             if len(wall_colors) > 1:
-                print("In the page, walls are available in these colors : ")
+                self.logInfo("In the page, walls are available in these colors : ")
                 for index, color in enumerate(wall_colors):
-                    print("%d: %s (%d lines)" % (index + 1, color, wall_colors[color]))
-                print("")
+                    self.logInfo("%d: %s (%d lines)" % (index + 1, color, wall_colors[color]))
+                self.logInfo("")
                 if self.getArgument("auto_doors", False):
                     highest = None
                     second_highest = None
@@ -169,8 +169,8 @@ class Scene(Entity):
                     secret_door_colors.remove(highest)
                     secret_door_colors.remove(second_highest)
                     if len(secret_door_colors) > 0:
-                        print("Secret doors automatically chosen as these colors : %s" % secret_door_colors)
-                    print("Door color automatically chosen as : %s" % door_color)
+                        self.logInfo("Secret doors automatically chosen as these colors : %s" % secret_door_colors)
+                    self.logInfo("Door color automatically chosen as : %s" % door_color)
                 elif self.getArgument("interactive", False):
                     choice = -1
                     while choice < 0 or choice > len(wall_colors):
@@ -387,7 +387,7 @@ class Scene(Entity):
                 top = (top - (drawing_height / 2))
                 (polygon, path_type, _, _) = self.pathToPolygonList(path["path"], 0, 0)
                 if path_type == PATH_TYPE.CIRCLE:
-                    print("Circle in the dynamic layer! Not supported!")
+                    self.logInfo("Circle in the dynamic layer! Not supported!")
                     continue
                 previous_point = None
                 previous_point_idx = 0
@@ -402,9 +402,9 @@ class Scene(Entity):
                     # Finally, the Pythagore theorem from school is useful in real life
                     wall_length = math.sqrt(math.pow(point[0] - previous_point[0], 2) + math.pow(point[1] - previous_point[1], 2))
                     min_angle = 180.0 - self.getArgument("maximum_wall_angle")
-                    #print("Wall length : %.2f" % wall_length)
+                    #self.logInfo("Wall length : %.2f" % wall_length)
                     if wall_length < self.getArgument("minimum_wall_length", 0):
-                        #print("Wall is too small, skipping.")
+                        #self.logInfo("Wall is too small, skipping.")
                         next_idx = point_idx + 1
                         # Don't skip if it's the last point of the polygon
                         if next_idx != len(polygon):
@@ -511,7 +511,7 @@ class Scene(Entity):
                 
                     
         if len(walls) != total_walls:
-            print("With a minimum wall length of %d pixels and a maximum angle between continuous walls of %d degrees, the total number of walls was decreased from %d to %d walls." % (self.getArgument("minimum_wall_length", 0), self.getArgument("maximum_wall_angle", 0), total_walls, len(walls)))
+            self.logInfo("With a minimum wall length of %d pixels and a maximum angle between continuous walls of %d degrees, the total number of walls was decreased from %d to %d walls." % (self.getArgument("minimum_wall_length", 0), self.getArgument("maximum_wall_angle", 0), total_walls, len(walls)))
         tiles = map_tiles + objects_tiles
 
         folder = None
@@ -600,7 +600,7 @@ class Scene(Entity):
             elif point[0] == "C": # Circle
                 path_type = PATH_TYPE.CIRCLE
             else:
-                print("Unknown path type: %s" % str(point))
+                self.logInfo("Unknown path type: %s" % str(point))
         if path_type == PATH_TYPE.POLYGON and len(path) == 5 and \
             path[0][1] == 0 and path[0][2] == 0 and \
             path[1][1] == width and path[1][2] == 0 and \
@@ -616,8 +616,8 @@ class Scene(Entity):
         a = math.sqrt(math.pow(p1[0] - p2[0], 2) + math.pow(p1[1] - p2[1], 2))
         b = math.sqrt(math.pow(p2[0] - p3[0], 2) + math.pow(p2[1] - p3[1], 2))
         c = math.sqrt(math.pow(p1[0] - p3[0], 2) + math.pow(p1[1] - p3[1], 2))
-    	#print("Points : (%.2f, %.2f) - (%.2f, %.2f) - (%.2f, %.2f)" % (p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]))
-        #print("Lengths : %.2f - %.2f - %2.f" % (a, b, c))
+    	#self.logInfo("Points : (%.2f, %.2f) - (%.2f, %.2f) - (%.2f, %.2f)" % (p1[0], p1[1], p2[0], p2[1], p3[0], p3[1]))
+        #self.logInfo("Lengths : %.2f - %.2f - %2.f" % (a, b, c))
         # Now to get the angle : C = acos((a^2 + b^2 - c^2) / 2ab)
         if a == 0 or b == 0:
             # Avoid a division by 0
@@ -627,7 +627,7 @@ class Scene(Entity):
             cos_c = (math.pow(a, 2) + math.pow(b, 2) - math.pow(c, 2)) / (2 * a * b)
             clamped = min(max(cos_c, -1), 1)
             angle = math.degrees(math.acos(clamped))
-        #print("Angle is : %.2f" % angle )
+        #self.logInfo("Angle is : %.2f" % angle )
         return angle
 
     def createTextDrawing(self, drawing, text):

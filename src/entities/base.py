@@ -17,6 +17,13 @@ class DatabaseFile(object):
         self._campaign = converter.campaign
         self.entities = []
   
+    def logInfo(self, msg):
+        self._converter.logInfo(msg)
+    def logWarning(self, msg):
+        self._converter.logWarning(msg)
+    def logError(self, msg):
+        self._converter.logError(msg)
+
     def findID(self, id, where=None):
         if where == "handout" or where is None:
             matches = [item for item in self._campaign["handouts"] if item["id"] == id]
@@ -121,6 +128,13 @@ class Entity(object):
         self._id = self.normalizeID(self._original_id)
         self.entity = {"_id": self._id}
 
+    def logInfo(self, msg):
+        self._database.logInfo(msg)
+    def logWarning(self, msg):
+        self._database.logWarning(msg)
+    def logError(self, msg):
+        self._database.logError(msg)
+
     @staticmethod
     def createFromData(database, data):
         entity = Entity(database, data["_id"])
@@ -186,7 +200,7 @@ class Entity(object):
         if item:
             return self.replaceEntityLinks('<a %shref="http://journal.roll20.net/item/%s"%s>%s</a>' % (before_href, item.getID(), after_href, text))
         else:
-            print("Could not find compendium item of type '%s' and name '%s'" % (compendium, name))
+            self.logWarning("Could not find compendium item of type '%s' and name '%s'" % (compendium, name))
             return match.group(0)
         
 
@@ -230,7 +244,7 @@ class Entity(object):
         normalized_id = Entity.strToID(id)
         index = 0
         while normalized_id in Entity.id_database.values():
-            #print("Found an ID conflict for %s=%s\n%s" % (id, normalized_id, str(Entity.id_database)))
+            #self.logInfo("Found an ID conflict for %s=%s\n%s" % (id, normalized_id, str(Entity.id_database)))
             new_id = "%s%d" % (id, index)
             normalized_id = Entity.strToID(new_id)
             index += 1
@@ -362,7 +376,7 @@ class Entity(object):
                 f.write(content)
             return (dest_filename, config_path)
         else:
-            print("ERROR: Can't download URL : %s" % url)
+            self.logWarning("Failed to download URL : %s" % url)
             return (None, "")
 
     def copyFile(self, file, destination):
@@ -376,7 +390,7 @@ class Entity(object):
             zipfile = self._database._converter.getZipFile(filename)
             return self.copyFile(zipfile, destination)
         except Exception as e:
-            print("Error copying file '%s' from Zip: %s" % (filename, e))
+            self.logWarning("Cannot find file '%s' in Zip: %s" % (filename, e))
             return (None, "")
 
     def __str__(self):

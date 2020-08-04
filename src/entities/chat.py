@@ -19,7 +19,7 @@ class ChatLog(DatabaseFile):
                 try:
                     messages.append(ChatMessage(self, msg_id, msg_group[msg_id]))
                 except Exception as e:
-                    print("Error converting Chat message ", e)
+                    self.logWarning("Error converting Chat message ", e)
         return messages
 
 class ChatMessage(Entity):
@@ -96,8 +96,6 @@ class ChatMessage(Entity):
     def _replaceLinks(self, content):
         def repl(match):
             return "<a href='{}'>{}</a>".format(match.group(2).replace('\'', '&#39;'), match.group(1))
-        if "Song of Rest" in content:
-            print("")
         return re.sub(r'\[(.+?)\]\((.*?)\)', repl, content, flags=re.DOTALL)
 
 class Roll:

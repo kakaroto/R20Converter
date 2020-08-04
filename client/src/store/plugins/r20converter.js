@@ -1,7 +1,9 @@
 export default function (store) {
-    function writeStdout(text) {
+    function logInfo(text) {
         console.log(text);
-        store.commit('appendLog', text);
+        store.commit('appendLog', text + "\n");
     }
-    eel.expose(writeStdout, 'writeStdout');
+    eel.expose(logInfo, 'logInfo');
+    eel.expose(logInfo, 'logWarning');
+    eel.expose(logInfo, 'logError');
 }

@@ -18,7 +18,7 @@ class Folders(DatabaseFile):
                 # Found a folder
                 folder_id = folder["id"]
                 if depth >= 2:
-                    print("Folder '%s' has a depth of %d. Dropping it to parent" % (item["n"], depth))
+                    self.logInfo("Folder '%s' has a depth of %d. Dropping it to parent" % (item["n"], depth))
                     folder_id = parent
                 (children, child_handouts, child_characters, child_items) = self.addJournalFolder(item, folder_id, index + 1 + len(folders), depth + 1)
                 folders.extend(children)
@@ -31,7 +31,7 @@ class Folders(DatabaseFile):
                 elif self.findID(item, "handout") != None:
                     has_handouts = True
                 else:
-                    print("Unknown ID in Journal folder: %s"  % item)
+                    self.logInfo("Unknown ID in Journal folder: %s"  % item)
 
         # By default, an empty folder would appear in the journal
         if has_handouts or (not has_characters and not has_items):

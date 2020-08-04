@@ -27,6 +27,13 @@ class GUIClass:
         self.campaign = None
         self.loadedPath = None
 
+    def logInfo(self, msg):
+        eel.logInfo(msg)() # pylint: disable=no-member
+    def logWarning(self, msg):
+        eel.logWarning(msg)() # pylint: disable=no-member
+    def logError(self, msg):
+        eel.logError(msg)() # pylint: disable=no-member
+
     def hideConsole(self):
         if win32gui:
             the_program_to_hide = win32gui.GetForegroundWindow()
@@ -102,7 +109,6 @@ def loadCampaign(file_type, path):
         GUI.loadCampaign(file_type, path)
         return None
     except Exception as e:
-        print("Exception in loadCampaign " + str(e))
         return str(e)
 @eel.expose
 def getCampaignTitle(file_type, path):
@@ -110,8 +116,7 @@ def getCampaignTitle(file_type, path):
         GUI.loadCampaign(file_type, path)
         title = GUI.campaign["campaign_title"]
         return title
-    except Exception as e:
-        print("Exception in getCampaignTitle ", str(e))
+    except:
         return None
 @eel.expose
 def getCampaignSlug(file_type, path):
@@ -132,19 +137,13 @@ class AttrDict(dict):
 
 @eel.expose
 def startConversion(args):
-    print("Starting conversion. Received arguments : ", args)
     error = None
     try:
-        converter = R20Converter(AttrDict(args))
+        converter = R20Converter(AttrDict(args), logger=GUI)
         converter.convert()
     except Exception as e:
         error = e
-        print(e)
-        try:
-            import traceback
-            traceback.print_exc()
-        except:
-            pass
+        GUI.logError(e)
 
     if error:
         message = "Error converting campaign : \n" + str(error)
@@ -154,7 +153,7 @@ def startConversion(args):
         message += "It is strongly suggested to check the sheets of the NPCs and player characters for any errors or missing information, or for adding special traits.\n"
         message += "Some things may not have been carried over, especially to-hit, damage, AC or saving throw modifiers or more complicated weapon or spell macros\n"
         message += "\nThank you for your support!"
-    print(message)
+    GUI.logInfo(message)
     return {
         "error": error is not None,
         "message": message

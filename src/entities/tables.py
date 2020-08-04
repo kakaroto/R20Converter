@@ -96,7 +96,7 @@ class Table(Entity):
     RESULT_TYPE_COMPENDIUM = 2
     def __init__(self, database, table, index, parent, with_replacement=True):
         Entity.__init__(self, database, table["id"])
-        print("Creating Rollable Table : %s" % table["name"])
+        self.logInfo("Creating Rollable Table : %s" % table["name"])
         permissions = {"default": Table.PERMISSION_OWNER if table["showplayers"] else Table.PERMISSION_NONE}
         if self.getArgument("export_as_module", False):
             parent = None
