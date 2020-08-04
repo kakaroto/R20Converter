@@ -2,7 +2,7 @@
   <div class="h-100">
     <h2>Converting campaign {{ title }}</h2>
 
-    <b-form-textarea id="textarea" v-model="text" no-resize readonly rows="10"></b-form-textarea>
+    <b-form-textarea ref="log" v-model="log" no-resize readonly rows="10"></b-form-textarea>
     
     <b-modal :visible="conversionDone" :title="modalTitle" ok-only>
         <span v-html="message"></span>
@@ -16,16 +16,22 @@ import { mapState } from "vuex";
 export default {
   data() {
       return {
-          message: ""
+          message: "",
+          log: ""
+      }
+  },
+  watch: {
+      debugLog(value) {
+          const textarea = this.$refs.log.$el;
+          const autoScroll = textarea.scrollTop + textarea.clientHeight + 25 >= textarea.scrollHeight;
+          console.log("Updated log : ", textarea.scrollTop, textarea.clientHeight, Math.ceil(textarea.scrollTop + textarea.clientHeight), textarea.scrollHeight, autoScroll);
+          this.log = value;
+          if (autoScroll)
+            textarea.scrollTop = textarea.scrollHeight;
       }
   },
   computed: {
-    ...mapState({
-      title: "title",
-      text: "debugLog",
-      conversionDone: "conversionDone",
-      conversionError: "conversionError"
-    }),
+    ...mapState(["title", "debugLog", "conversionDone", "conversionError"]),
     modalTitle() {
         if (this.conversionError)
             return "Error converting campaign"
