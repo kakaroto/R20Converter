@@ -1,8 +1,10 @@
 import os
 import io
+import sys
 import eel
 import json
 import zipfile
+import subprocess
 from slugify import slugify
 from io import StringIO
 from contextlib import redirect_stdout, redirect_stderr
@@ -19,11 +21,6 @@ try:
 except Exception as e:
     win32gui = win32con = None
 
-class ForwardToFunctionStream(io.TextIOBase):
-    def write(self, string):
-        eel.writeStdout(string)() # pylint: disable=no-member
-        return len(string)
-
 class GUIClass:
     def __init__(self):
         eel.init("client/dist")
@@ -36,26 +33,18 @@ class GUIClass:
             win32gui.ShowWindow(the_program_to_hide , win32con.SW_HIDE)
 
     def start(self):
-        stdout = ForwardToFunctionStream()
-        stderr = ForwardToFunctionStream()
-        with redirect_stderr(stderr):
-            with redirect_stdout(stdout):
-                browsers = ["chrome", "edge", "electron"]
-                found_browser = False
-                for browser in browsers:
-                    eel_browser = getattr(eel, browser, None)
-                    if eel_browser is None:
-                        continue
-                    path = eel_browser.find_path()
-                    if path is True or path is not None:
-                        try:
-                            eel.start('index.html', port=0, mode=browser)
-                            found_browser = True
-                            break
-                        except:
-                            pass
-                if not found_browser:
-                    eel.start('index.html', port=0, mode=browser)
+        # On windows and mac, use bundled electron
+        if sys.platform in ['win32', 'win64', 'darwin']:
+            return eel.start('index.html', port=0, mode="custom", custom_callback=self.PopenElectron)
+        # On linux, try chrome then default
+        try:
+            eel.start('index.html', port=0, mode="chrome")
+        except:
+            eel.start('index.html', port=0, mode="default")
+
+    def PopenElectron(self, args, urls):
+        cmd = ["electron/electron"] + args + [';'.join(urls)]
+        return subprocess.Popen(cmd)
 
     def loadCampaign(self, file_type, path):
         if path == self.loadedPath:
@@ -69,6 +58,8 @@ class GUIClass:
         self.loadedPath = path
 
 
+GUI = GUIClass()
+
 @eel.expose
 def getVersion():
     return version
@@ -78,8 +69,8 @@ def getVersion():
 def ask_file():
     """ Ask the user to select a file """
     root = Tk()
-    root.withdraw()
     root.wm_attributes('-topmost', 1)
+    root.withdraw()
     file_path = askopenfilename(parent=root)
     root.update()
     return None if file_path == "" else file_path
@@ -88,8 +79,8 @@ def ask_file():
 def ask_folder():
     """ Ask the user to select a folder """
     root = Tk()
-    root.withdraw()
     root.wm_attributes('-topmost', 1)
+    root.withdraw()
     folder = askdirectory(parent=root)
     root.update()
     return None if folder == "" else folder
@@ -111,7 +102,7 @@ def loadCampaign(file_type, path):
         GUI.loadCampaign(file_type, path)
         return None
     except Exception as e:
-        print("loadCampaign: Exception ", str(e))
+        print("Exception in loadCampaign " + str(e))
         return str(e)
 @eel.expose
 def getCampaignTitle(file_type, path):
@@ -168,5 +159,3 @@ def startConversion(args):
         "error": error is not None,
         "message": message
     }
-
-GUI = GUIClass()

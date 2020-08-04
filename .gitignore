@@ -14,3 +14,4 @@ ogl-sheet.html
 5e-sheet.html
 client/node_modules
 client/dist
+electron/
