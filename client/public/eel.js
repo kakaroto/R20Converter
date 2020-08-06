@@ -32,7 +32,7 @@ eel.makeCB("slugifyString", (s) => `__${s}__`);
 eel.makeCB('startConversion', async (options) => {
     console.log("Starting conversion with options : ", options);
     eel.__exposed.logInfo("Hello world\n")
-    await new Promise(r => setTimeout(r, 5000))
+    await new Promise(r => setTimeout(r, 2000))
     return {error: false, message: "All done!\nCongratulations!\nGood night!"}
 })
 //setInterval(() => eel.__exposed.logInfo(`One more line ${Math.random()}\n`), 500)
