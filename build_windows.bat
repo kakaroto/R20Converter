@@ -9,18 +9,25 @@ rd /s /q "releases\R20Converter-%version%-windows"
 start /d client npm run build
 pause
 
-rd /s /q "releases\R20Converter-%version%-cx\src\__pycache__"
-rd /s /q "releases\R20Converter-%version%-cx\src\entities\__pycache__"
+rd /s /q "src\__pycache__"
+rd /s /q "src\*.pyc"
+rd /s /q "src\entities\__pycache__"
+rd /s /q "src\entities\*.pyc"
+rd /s /q "src\entities\rolltemplates\__pycache__"
+rd /s /q "src\entities\rolltemplates\*.pyc"
 
 mkdir "releases\R20Converter-%version%"
 mkdir "releases\R20Converter-%version%\client"
-mkdir "releases\R20Converter-%version%\client\dist"
 copy Changelog.md "releases\R20Converter-%version%\"
 copy README.md "releases\R20Converter-%version%\"
 copy README.html "releases\R20Converter-%version%\"
+copy setup.py "releases\R20Converter-%version%\"
 xcopy /s src "releases\R20Converter-%version%\src\"
 xcopy /s templates "releases\R20Converter-%version%\templates\"
+copy client\*.* "releases\R20Converter-%version%\client\"
 xcopy /s client\dist "releases\R20Converter-%version%\client\dist\"
+xcopy /s client\public "releases\R20Converter-%version%\client\public\"
+xcopy /s client\src "releases\R20Converter-%version%\client\src\"
 
 "C:\Users\kakaroto\AppData\Local\Programs\Python\Python38-32\python.exe" setup.py build
 

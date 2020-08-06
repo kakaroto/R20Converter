@@ -8,7 +8,7 @@ It will automate the entire conversion process and all(*) of your campaign will 
 
 ## How to use
 
-Follow the instructions from the demo video to see it in action and how to use it : https://www.youtube.com/watch?v=Q_BmlA7wBvQ
+Follow the instructions from the demo video to see it in action and how to use it : https://youtu.be/xAPS6NXZ0uM
 
 ### Windows
 

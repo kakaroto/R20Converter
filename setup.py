@@ -41,7 +41,7 @@ if sys.platform == "darwin":
     buildOptions["build_exe"]["excludes"].append("tkinter")
 
 executables = [
-    Executable('src/main.py', base=base, targetName = 'R20Converter')
+    Executable('src/main.py', base=base, targetName = 'R20Converter', icon = "client/public/logo.ico")
 ]
 
 setup(name='R20Converter',
