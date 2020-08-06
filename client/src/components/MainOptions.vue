@@ -32,7 +32,7 @@
         label-cols
         :description="`Leave empty to use the suggested name for your ${exportType.toLowerCase()} : ${defaultSlug}`"
       >
-        <b-form-input v-model="slug" required :placeholder="defaultSlug"></b-form-input>
+        <b-form-input v-model="name" required :placeholder="defaultSlug"></b-form-input>
       </b-form-group>
 
       <div v-if="!!folder" class="border border-info mx-5 mb-2">
@@ -77,7 +77,8 @@ export default {
   },
   data() {
     return {
-      slug: "",
+      name: "",
+      slugified: "",
       title: "",
       description: "",
       gmPassword: "",
@@ -101,6 +102,9 @@ export default {
       finalPath() {
           this.checkDestinationFolder()
       },
+      name() {
+          this.slug = this.name;
+      }
   },
   computed: {
     folder: {
@@ -121,6 +125,14 @@ export default {
     },
     exportType() {
       return this.exportAsModule ? "Compendium" : "World";
+    },
+    slug: {
+        get() {
+            return this.slugified;
+        },
+        async set(value) {
+            this.slugified = await eel.slugifyString(value)()
+        }
     },
     finalPath() {
       return `${this.folder}/Data/${this.exportAsModule ? "modules" : "worlds"}/${this.slug || this.defaultSlug}`;

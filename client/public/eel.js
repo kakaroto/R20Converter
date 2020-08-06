@@ -28,6 +28,7 @@ eel.makeCB("does_folder_exist", (p) => {
     console.log("Folder:", p)
     return p && p.startsWith("C:") && p.endsWith("FoundryVTT")
 })
+eel.makeCB("slugifyString", (s) => `__${s}__`);
 eel.makeCB('startConversion', async (options) => {
     console.log("Starting conversion with options : ", options);
     eel.__exposed.logInfo("Hello world\n")

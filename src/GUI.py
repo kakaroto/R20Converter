@@ -166,6 +166,10 @@ def getFoundryDirectory():
     path = getFVTTDataPath()
     return path if os.path.isdir(path) else None
 
+@eel.expose
+def slugifyString(name):
+    return slugify(name)
+
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
         super(AttrDict, self).__init__(*args, **kwargs)
