@@ -1089,7 +1089,9 @@ class Actor(Entity):
                         }
         # When they add 'piercing, bludgeoning, and slashing from non magical weapons",
         # they separate it with a ';' from the rest of the list
-        sections = damages.split(";")
+        sections = damages
+        if isinstance(damages, str):
+            sections = damages.split(";")
         for i, damage in enumerate(sections):
             if i == 0:
                 for damage2 in damage.split(","):
