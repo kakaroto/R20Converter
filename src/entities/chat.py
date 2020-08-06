@@ -95,7 +95,7 @@ class ChatMessage(Entity):
 
     def _replaceLinks(self, content):
         def repl(match):
-            return "<a href='{}'>{}</a>".format(match.group(2).replace('\'', '&#39;'), match.group(1))
+            return "<a href=\"{}\">{}</a>".format(match.group(2).replace('&', '&amp;').replace('\"', '&quot;'), match.group(1))
         return re.sub(r'\[(.+?)\]\((.*?)\)', repl, content, flags=re.DOTALL)
 
 class Roll:
@@ -172,7 +172,9 @@ class Roll:
         else:
             classes = ""
         return "<span class='fvtt-inline-roll inlinerollresult showtip {}' data-roll-total='{}' data-roll='{}' original-title='{}'>{}</span>" \
-                    .format(classes, self.total, json.dumps(self.toJSON()).replace('\"', '\\\"'), self.getTooltip(), self.total)
+                    .format(classes, self.total,
+                        json.dumps(self.toJSON()).replace("\'", '&apos;'),
+                        self.getTooltip().replace("\'", '&apos;'), self.total)
 
     def toJSON(self):
         return {
