@@ -254,11 +254,17 @@ If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info)
 - Kill yourself
 - Resurect
 - Uninstall python from pyenv and reinstall it by recompiling it with tcl-tk compilation flags : https://stackoverflow.com/questions/60469202/unable-to-install-tkinter-with-pyenv-pythons-on-macos
-- `pip install requests pillow python-slugify eel cx_freeze`
-- Replace the `eel` package in your pyenv install's site-packages/eel with the version from 
-- Realize you need to recompile gevents too, so... : `pip install -I --no-binary :all: gevents`
+- Wait! Add `--enable-framework` to the configure flags for python and recompile it again
+- No, wait! that still doesn't work, forget all that and just install the official python 3.8 which is the only one that works with wxPython: https://www.python.org/downloads/mac-osx/
+- `pip install requests pillow python-slugify`
+- Install the custom `eel` package in your pyenv with `pip install -U git+https://github.com/kakaroto/Eel.git@master`
+- Install the custom `cx_Freeze` package with `pip install -U git+https://github.com/marcelotduarte/cx_Freeze.git@master`
+- Realize you need to recompile gevent too, so... : `pip install -I --no-binary :all: gevent`
 - Download the Electron app from https://github.com/electron/electron/releases
 - Curse at your computer and at those who use Macs
 - Go to system settings, security, privacy, automation, and allow Terminal to send events to Finder
+- Run `npm run build` in the client subdirectory
+- Run `rm -rf build && python setup.py bdist_mac`
+- run `codesign --remove-signature build/*.app/Content/MacOS/Python`
 - Run `python setup.py bdist_dmg`
 - Breathe really hard and unclench your fists then don't look back

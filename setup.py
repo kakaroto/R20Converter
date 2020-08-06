@@ -7,7 +7,7 @@ sys.path.append("src")
 buildOptions = {
     "build_exe": {
         "packages": [],
-        "includes": ["tkinter", "bottle_websocket"],
+        "includes": ["bottle_websocket"],
         "excludes": ["PySide2", "PyQt5"],
         "include_files": [
             ("Changelog.md", "Changelog.md"),
@@ -17,7 +17,7 @@ buildOptions = {
             ("client/dist", "client/dist")
         ]
     },
-    "build_mac": {
+    "bdist_mac": {
         "iconfile": "client/public/logo.icns",
         "include_resources": [("Electron.app", "Electron.app")]
     },
@@ -33,6 +33,12 @@ base = None
 if sys.platform == "win32":
     base = "Win32GUI"
     buildOptions["build_exe"]["include_files"].append(("electron", "electron"))
+    buildOptions["build_exe"]["includes"].append("tkinter")
+    buildOptions["build_exe"]["excludes"].append("wx")
+    buildOptions["build_exe"]["excludes"].append("numpy")
+if sys.platform == "darwin":
+    buildOptions["build_exe"]["includes"].append("wx")
+    buildOptions["build_exe"]["excludes"].append("tkinter")
 
 executables = [
     Executable('src/main.py', base=base, targetName = 'R20Converter')

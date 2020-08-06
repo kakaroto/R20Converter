@@ -11,8 +11,13 @@ from io import StringIO
 from contextlib import redirect_stdout, redirect_stderr
 from R20Converter import R20Converter
 
-from tkinter import Tk
-from tkinter.filedialog import askopenfilename, askdirectory
+if platform.system() == 'Darwin':
+    import wx
+    useWx = True
+else:
+    from tkinter import Tk
+    from tkinter.filedialog import askopenfilename, askdirectory
+    useWx = False
 
 from utils import getFVTTDataPath
 from version import version
@@ -20,7 +25,7 @@ from version import version
 class GUIClass:
     def __init__(self):
         path = "client/dist"
-        if platform.system() == "Darwin":
+        if not os.path.exists(path) and platform.system() == "Darwin":
             path = os.path.join(os.path.dirname(sys.executable), "client/dist")
         eel.init(path)
         self.campaign = None
@@ -46,7 +51,10 @@ class GUIClass:
 
     def PopenElectron(self, args, urls):
         if platform.system() == 'Darwin':
-            cmd = ["open", "-a", os.path.join(os.path.dirname(os.path.dirname(sys.executable)), "Resources", "Electron.app"), "--args"]
+            path = "Electron.app"
+            if not os.path.exists(path):
+                path = os.path.join(os.path.dirname(os.path.dirname(sys.executable)), "Resources", "Electron.app")
+            cmd = ["open", "-a", path, "--args"]
         else:
             cmd = ["electron/electron"]
         cmd += args + [';'.join(urls)]
@@ -74,26 +82,51 @@ def getVersion():
 @eel.expose
 def ask_file():
     """ Ask the user to select a file """
-    root = Tk()
-    root.wm_attributes('-topmost', 1)
-    root.withdraw()
-    file_path = askopenfilename(parent=root)
-    if platform.system() == 'Darwin':
-        os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Python" to true' ''')
-    root.update()
-    return None if file_path == "" else file_path
+    if useWx:
+        app = wx.App(None)
+        dialog = wx.FileDialog(None, 'Browse Campaign', wildcard="Campaign File(*.json; *.zip)|*.json;*.zip", style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST)
+        app.SetTopWindow(dialog)
+        style = dialog.GetWindowStyle()
+        dialog.SetWindowStyle(style | wx.STAY_ON_TOP)
+        if platform.system() == 'Darwin':
+            os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "R20Converter-{}" to true' '''.format(version))
+        if dialog.ShowModal() == wx.ID_OK:
+            path = dialog.GetPath()
+        else:
+            path = None
+        dialog.Destroy()
+    else:
+        root = Tk()
+        root.wm_attributes('-topmost', 1)
+        root.withdraw()
+        file_path = askopenfilename(parent=root)
+        path = None if file_path == "" else file_path
+    return path
 
 @eel.expose
 def ask_folder():
     """ Ask the user to select a folder """
-    root = Tk()
-    root.wm_attributes('-topmost', 1)
-    root.withdraw()
-    folder = askdirectory(parent=root)
-    if platform.system() == 'Darwin':
-        os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "Python" to true' ''')
-    root.update()
-    return None if folder == "" else folder
+    if useWx:
+        app = wx.App(None)
+        dialog = wx.DirDialog(None, 'Browse folder', "", style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        app.SetTopWindow(dialog)
+        style = dialog.GetWindowStyle()
+        dialog.SetWindowStyle(style | wx.STAY_ON_TOP)
+        if platform.system() == 'Darwin':
+            os.system('''/usr/bin/osascript -e 'tell app "Finder" to set frontmost of process "R20Converter-{}" to true' '''.format(version))
+        if dialog.ShowModal() == wx.ID_OK:
+            path = dialog.GetPath()
+        else:
+            path = None
+        dialog.Destroy()
+    else:
+        root = Tk()
+        root.wm_attributes('-topmost', 1)
+        root.withdraw()
+        folder = askdirectory(parent=root)            
+        root.update()
+        path = None if folder == "" else folder
+    return path
 
 @eel.expose
 def does_file_exist(file_path):
