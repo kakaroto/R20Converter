@@ -31,7 +31,7 @@ class Journal(DatabaseFile):
             zip_path = os.path.join(folder_path, "Orphaned Handouts")
             for handout in self._handouts:
                 if handout["id"] not in handout_ids:
-                    self.logInfo("Found Orphaned handout, adding to root; ", end='')
+                    self.logInfo("Found Orphaned handout, adding to root; ")
                     handouts.append(Handout(self, handout, index, folder_id, folder_path, zip_path, zip_index))
                     index += 1
                     zip_index += 1

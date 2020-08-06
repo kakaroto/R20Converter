@@ -1614,7 +1614,7 @@ class Actor(Entity):
             self.createItemInventory(items, name, content, "weapon", attributes, activation, attack, weapon)
         else:
             if item_type not in ["Adventuring Gear", "Items", "Gear"]:
-                self.logWarning("Unknown item properties : ", name, modifiers)
+                self.logWarning("Unknown item properties : {} = {}".format(name, modifiers))
             self.createItemInventory(items, name, content, "loot", attributes)
 
     def addInventory(self, items):
