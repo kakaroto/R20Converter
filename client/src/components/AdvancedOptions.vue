@@ -1,10 +1,5 @@
 <template>
   <div>
-    <!--
-### Fine Tuned
-parser.add_argument("--folder-as-items", action="append", default=["Magic Items"], help="Converts each entry in a journal folder into items. Useful for 'Magic Items' folders. Can be passed multiple times to convert more than one folder.")
-
-    -->
     <b-form>
       <div>
         <p>Congratulations, you are done with all the hard questions!</p>
@@ -100,6 +95,36 @@ parser.add_argument("--folder-as-items", action="append", default=["Magic Items"
                   <p>Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points.</p>
                 </template>
                 <b-form-spinbutton v-model="form.maximumWallAngle" min="0" max="90"></b-form-spinbutton>
+              </b-form-group>
+
+              <b-form-group
+                label="Export Folder contents as Loot Items"
+                label-cols
+                label-align="right"
+                description="Converts each entry in a journal folder into items. Useful for 'Magic Items' folders."
+              >
+                <b-form-select
+                  v-model="selectedFolderAsItems"
+                  :options="form.folderAsItems"
+                  :select-size="4"
+                ></b-form-select>
+                <div>
+                  <b-button class="m-2" v-b-modal.add-folder-as-items>Add Folder</b-button>
+                  <b-button
+                    class="m-2"
+                    @click="removeFolderAsItem"
+                    :disabled="!selectedFolderAsItems"
+                  >Remove selection</b-button>
+                </div>
+                <b-modal
+                  title="Export folder contents as Items"
+                  id="add-folder-as-items"
+                  @ok="addFolderAsItem"
+                  @hide="folderItemsNameToAdd = ''"
+                >
+                  Enter the name of the folder you want to export all of its handouts into Items
+                  <b-form-input v-model="folderItemsNameToAdd"></b-form-input>
+                </b-modal>
               </b-form-group>
             </b-card-body>
           </b-collapse>
@@ -236,7 +261,9 @@ export default {
         { value: "", text: "Keep Roll20 settings" },
         { value: "enable", text: "Enable Fog of War" },
         { value: "disable", text: "Disable Fog of War" }
-      ]
+      ],
+      selectedFolderAsItems: "",
+      folderItemsNameToAdd: ""
     };
   },
   computed: {
@@ -244,38 +271,50 @@ export default {
       return this.$store.state.options.exportAsModule;
     }
   },
+  methods: {
+    addFolderAsItem() {
+      if (!this.folderItemsNameToAdd) return;
+      this.form.folderAsItems.push(this.folderItemsNameToAdd);
+    },
+    removeFolderAsItem() {
+      this.form.folderAsItems = this.form.folderAsItems.filter(
+        f => f !== this.selectedFolderAsItems
+      );
+      this.selectedFolderAsItems = "";
+    }
+  },
   destroyed() {
-      this.$store.dispatch("setOption", {
-        restrictMovement: this.form.restrictMovement,
-        forceHpForTokenBar1: this.form.forceHpForTokenBar1,
-        forceHpForTokenBar2: this.form.forceHpForTokenBar2,
-        addWallsAroundMap: this.form.addWallsAroundMap,
-        cleanupScenes: this.form.cleanupScenes,
-        autoDoors: this.form.autoDoors,
-        dontConvertChat: this.form.dontConvertChat,
+    this.$store.dispatch("setOption", {
+      restrictMovement: this.form.restrictMovement,
+      forceHpForTokenBar1: this.form.forceHpForTokenBar1,
+      forceHpForTokenBar2: this.form.forceHpForTokenBar2,
+      addWallsAroundMap: this.form.addWallsAroundMap,
+      cleanupScenes: this.form.cleanupScenes,
+      autoDoors: this.form.autoDoors,
+      dontConvertChat: this.form.dontConvertChat,
 
-        // Advanced Options
-        enableFog: this.form.fog === "enable",
-        disableFog: this.form.fog === "disable",
-        doorColor: this.form.doorColor || null,
-        secretDoorColor: this.form.secretDoorColor || null,
-        disableArchived: this.form.disableArchived,
-        allBackgroundsAsTiles: this.form.allBackgroundsAsTiles,
-        minimumWallLength: this.form.minimumWallLength,
-        maximumWallAngle: this.form.maximumWallAngle,
-        npcSource: this.form.npcSource,
-        noCompendiumOverwrite: this.form.noCompendiumOverwrite,
-        disableModuleJournal: this.form.disableModuleJournal,
-        disableModuleActors: this.form.disableModuleActors,
-        disableModuleScenes: this.form.disableModuleScenes,
-        disableModulePlaylists: this.form.disableModulePlaylists,
-        disableModuleTables: this.form.disableModuleTables,
-        disableModuleDecks: this.form.disableModuleDecks,
-        folderAsItems: this.form.folderAsItems,
-        dontExportActorItems: this.form.dontExportActorItems,
-        noDuplicateActorItems: this.form.noDuplicateActorItems,
-        useOriginalImageUrls: this.form.useOriginalImageUrls
-      });
+      // Advanced Options
+      enableFog: this.form.fog === "enable",
+      disableFog: this.form.fog === "disable",
+      doorColor: this.form.doorColor || null,
+      secretDoorColor: this.form.secretDoorColor || null,
+      disableArchived: this.form.disableArchived,
+      allBackgroundsAsTiles: this.form.allBackgroundsAsTiles,
+      minimumWallLength: this.form.minimumWallLength,
+      maximumWallAngle: this.form.maximumWallAngle,
+      npcSource: this.form.npcSource,
+      noCompendiumOverwrite: this.form.noCompendiumOverwrite,
+      disableModuleJournal: this.form.disableModuleJournal,
+      disableModuleActors: this.form.disableModuleActors,
+      disableModuleScenes: this.form.disableModuleScenes,
+      disableModulePlaylists: this.form.disableModulePlaylists,
+      disableModuleTables: this.form.disableModuleTables,
+      disableModuleDecks: this.form.disableModuleDecks,
+      folderAsItems: this.form.folderAsItems,
+      dontExportActorItems: this.form.dontExportActorItems,
+      noDuplicateActorItems: this.form.noDuplicateActorItems,
+      useOriginalImageUrls: this.form.useOriginalImageUrls
+    });
   }
 };
 </script>

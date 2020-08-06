@@ -18,7 +18,7 @@ const eel = {
 }
 eel.makeCB("getVersion", "0.9-dev");
 eel.makeCB("getFoundryDirectory", "C:/FakePath/FoundryVTT");
-eel.makeCB("loadCampaign", (file_type, path) => {eel.__exposed.writeStdout("Campaign loaded\n"); return null;})
+eel.makeCB("loadCampaign", (file_type, path) => {eel.__exposed.logInfo("Campaign loaded\n"); return null;})
 eel.makeCB("getCampaignTitle", (file_type, path) => {return "Lost Mine of Phandelver"})
 eel.makeCB("getCampaignSlug", (file_type, path) => {return "lmop"})
 eel.makeCB("ask_file", "lmop.json")
@@ -28,9 +28,10 @@ eel.makeCB("does_folder_exist", (p) => {
     console.log("Folder:", p)
     return p && p.startsWith("C:") && p.endsWith("FoundryVTT")
 })
-eel.makeCB('startConversion', (options) => {
+eel.makeCB('startConversion', async (options) => {
     console.log("Starting conversion with options : ", options);
-    eel.__exposed.writeStdout("Hello world\n")
+    eel.__exposed.logInfo("Hello world\n")
+    await new Promise(r => setTimeout(r, 5000))
     return {error: false, message: "All done!\nCongratulations!\nGood night!"}
 })
-//setInterval(() => eel.__exposed.writeStdout(`One more line ${Math.random()}\n`), 500)
+//setInterval(() => eel.__exposed.logInfo(`One more line ${Math.random()}\n`), 500)

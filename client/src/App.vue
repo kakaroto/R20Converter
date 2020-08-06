@@ -27,7 +27,8 @@
         @click="close"
         :disabled="!conversionDone"
         :variant="conversionDone ? (conversionError ? 'danger' : 'success') : 'primary'">
-        <span v-if="!conversionDone"><b-spinner></b-spinner>Conversion in progress...</span>
+        <span v-if="!conversionDone">
+            <b-spinner small class="mr-1"></b-spinner>Conversion in progress...</span>
         <span v-else>Exit</span>
       </b-button>
     </r20-footer>
