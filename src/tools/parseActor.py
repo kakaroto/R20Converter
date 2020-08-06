@@ -27,6 +27,13 @@ class R20Converter(object):
     def hasSystemPacks(self):
         return False
 
+    def logInfo(self, msg):
+        print(msg)
+    def logWarning(self, msg):
+        print(msg)
+    def logError(self, msg):
+        print(msg)
+
     def parse(self, path):
         self.journal = entities.EmptyDB(self, "journal")
         self.items = entities.Items(self)
@@ -37,7 +44,9 @@ class R20Converter(object):
             if "oldId" in character:
                 character["id"] = character["oldId"]
                 character["attributes"] = character["attribs"]
-            entities.Actor(self.actors, character, 0)
+            actor = entities.Actor(self.actors, character, 0)
+            with open(path + ".fvtt.json", "w", encoding="utf-8") as fw:
+                json.dump(actor.entity, fw)
 
 if __name__ == "__main__":
     R20Converter(sys.argv[1])

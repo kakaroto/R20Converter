@@ -1019,7 +1019,7 @@ class Actor(Entity):
         known = known_list.get(name, None)
         if known:
             array.append(known)
-        elif custom:
+        elif custom is not None:
             custom.append(name)
 
     def createTraitLanguages(self):
@@ -1093,6 +1093,10 @@ class Actor(Entity):
         if isinstance(damages, str):
             sections = damages.split(";")
         for i, damage in enumerate(sections):
+            if isinstance(damage, dict) and damage.get("special", None) is not None:
+                damage = damage["special"]
+            if not isinstance(damage, str):
+                continue
             if i == 0:
                 for damage2 in damage.split(","):
                     self._addKnownToArray(known_damages, damage2, damages_array, custom)
@@ -1676,6 +1680,18 @@ class Actor(Entity):
         self.exportItem(item, "Abilities & Feats")
         return owned_item
 
+    def _descriptionToString(self, desc):
+        if isinstance(desc, str):
+            return desc
+        if isinstance(desc, list):
+            description = ""
+            for line in desc:
+                description += self._descriptionToString(line) + "\n"
+            return description
+        if isinstance(desc, dict) and desc.get("entries", None):
+            return self._descriptionToString(desc["entries"])
+        return ""
+
     def addTraits(self, items):
         if self._shaped:
             # Shaped sheet doesn't have a name+description only trait, so we handle traits and reactions
@@ -1688,7 +1704,8 @@ class Actor(Entity):
                     continue
                 name = self.getAttribute("name", "", from_dict=trait)[0]
                 desc = self.getAttribute("desc", "", from_dict=trait)[0]
-                description = self.getAttribute("description", "", from_dict=trait)[0] or desc
+                description = self.getAttribute("description", "", from_dict=trait)[0]
+                description = self._descriptionToString(description or desc)
                 self.createItemFeat(items, name, description, None, None, None)
 
             npc_reactions = self.getRepeatingAttributes("npcreaction")
