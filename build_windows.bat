@@ -3,7 +3,7 @@ set version=%version_py:~11,-1%
 rd /s /q dist
 rd /s /q windows
 rd /s /q build
-rd /s /q "releases\R20Converter-%version%"
+rd /s /q "releases\R20Converter-%version%-linux"
 rd /s /q "releases\R20Converter-%version%-windows"
 
 start /d client npm run build
@@ -16,18 +16,18 @@ rd /s /q "src\entities\*.pyc"
 rd /s /q "src\entities\rolltemplates\__pycache__"
 rd /s /q "src\entities\rolltemplates\*.pyc"
 
-mkdir "releases\R20Converter-%version%"
-mkdir "releases\R20Converter-%version%\client"
-copy Changelog.md "releases\R20Converter-%version%\"
-copy README.md "releases\R20Converter-%version%\"
-copy README.html "releases\R20Converter-%version%\"
-copy setup.py "releases\R20Converter-%version%\"
-xcopy /s src "releases\R20Converter-%version%\src\"
-xcopy /s templates "releases\R20Converter-%version%\templates\"
-copy client\*.* "releases\R20Converter-%version%\client\"
-xcopy /s client\dist "releases\R20Converter-%version%\client\dist\"
-xcopy /s client\public "releases\R20Converter-%version%\client\public\"
-xcopy /s client\src "releases\R20Converter-%version%\client\src\"
+mkdir "releases\R20Converter-%version%-linux"
+mkdir "releases\R20Converter-%version%-linux\client"
+copy Changelog.md "releases\R20Converter-%version%-linux\"
+copy README.md "releases\R20Converter-%version%-linux\"
+copy README.html "releases\R20Converter-%version%-linux\"
+copy setup.py "releases\R20Converter-%version%-linux\"
+xcopy /s src "releases\R20Converter-%version%-linux\src\"
+xcopy /s templates "releases\R20Converter-%version%-linux\templates\"
+copy client\*.* "releases\R20Converter-%version%-linux\client\"
+xcopy /s client\dist "releases\R20Converter-%version%-linux\client\dist\"
+xcopy /s client\public "releases\R20Converter-%version%-linux\client\public\"
+xcopy /s client\src "releases\R20Converter-%version%-linux\client\src\"
 
 "C:\Users\kakaroto\AppData\Local\Programs\Python\Python38-32\python.exe" setup.py build
 

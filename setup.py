@@ -1,5 +1,6 @@
 import sys
 from cx_Freeze import setup, Executable
+from src.version import version
 
 sys.path.append("src")
 # Dependencies are automatically detected, but it might need
@@ -22,7 +23,7 @@ buildOptions = {
         "include_resources": [("Electron.app", "Electron.app")]
     },
     "bdist_dmg": {
-        "volume_label": "R20Converter-0.9",
+        "volume_label": "R20Converter-{}".format(version),
         "applications_shortcut": True
     }
 }
@@ -45,7 +46,7 @@ executables = [
 ]
 
 setup(name='R20Converter',
-      version = '0.9',
+      version = version,
       description = 'Convert a Roll 20 Campaign into a Foundry VTT world',
       options = buildOptions,
       executables = executables
