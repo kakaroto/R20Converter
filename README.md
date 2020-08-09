@@ -4,7 +4,7 @@ R20Converter is a Windows/Linux/Mac application that does the entire conversion 
 
 This tool is currently only available to my [Patreon subscribers](https://patreon.com/kakaroto).
 
-You can see it in action here : https://youtu.be/xAPS6NXZ0uM
+You can see it in action here : https://youtu.be/fngH2te2TJE
 
 This repository is used for keeping track of issues and feature requests.
 
@@ -23,14 +23,11 @@ It will automate the entire conversion process and all(*) of your campaign will 
 
 Follow the instructions from the demo video to see it in action and how to use it : 
 
-https://youtu.be/xAPS6NXZ0uM
+- Quick overview: https://youtu.be/fngH2te2TJE
+- Detailed instructions : https://youtu.be/xAPS6NXZ0uM
 
 [![R20Converter 0.9 demo](https://user-images.githubusercontent.com/27990/82268394-dcd11980-993c-11ea-967f-c780814506cd.png)]https://youtu.be/xAPS6NXZ0uM)
 
-
-## How to use
-
-Follow the instructions from the demo video to see it in action and how to use it : https://youtu.be/xAPS6NXZ0uM
 
 ### Windows
 
