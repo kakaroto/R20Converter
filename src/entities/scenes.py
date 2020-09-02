@@ -238,6 +238,19 @@ class Scene(Entity):
                 emits_light = graphic["light_otherplayers"]
                 shows_name = graphic["showname"] and graphic["name"] != ""
                 
+                if emits_light:
+                    lradius = graphic.get("light_radius", 0)
+                    dradius = graphic.get("light_dimradius", 0)
+                    try:
+                        lradius = float(lradius)
+                    except ValueError:
+                        lradius = 0
+                    try:
+                        dradius = float(dradius)
+                    except ValueError:
+                        dradius = 0
+                    if lradius == 0 and dradius == 0:
+                        emits_light = False
                 # This is a token, not a tile
                 if char_id != "" or emits_light or shows_name:
                     token = Token(Entity.normalizeID(char_id), "", graphic)
