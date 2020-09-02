@@ -5,6 +5,7 @@ rd /s /q windows
 rd /s /q build
 rd /s /q "releases\R20Converter-%version%-linux"
 rd /s /q "releases\R20Converter-%version%-windows"
+rd /s /q "releases\R20Converter-%version%-windows-x64"
 
 start /d client npm run build
 pause
@@ -32,4 +33,8 @@ xcopy /s client\src "releases\R20Converter-%version%-linux\client\src\"
 "C:\Users\kakaroto\AppData\Local\Programs\Python\Python38-32\python.exe" setup.py build
 
 move "build\exe.win32-3.8" "releases\R20Converter-%version%-windows"
+
+"C:\Users\kakaroto\AppData\Local\Programs\Python\Python38\python.exe" setup.py build
+
+move "build\exe.win-amd64-3.8" "releases\R20Converter-%version%-windows-x64"
 pause
