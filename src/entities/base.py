@@ -191,6 +191,9 @@ class Entity(object):
             elif compendium == "Items":
                 folder = "D&D 5e Items (SRD)"
                 folder_id = "r20converter-dnd5e-items"
+            else:
+                folder = "Compendium"
+                folder_id = "r20converter-dnd5e-compendium"
             compendium_item = self.findCompendiumItem(compendium, name)
             if compendium_item:
                 converter.folders.ensureFolder(folder_id, folder, "Item")
