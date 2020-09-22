@@ -253,7 +253,7 @@ export default {
         disableModuleTables: false,
         disableModuleDecks: false,
         folderAsItems: ["Magic Items"],
-        dontExportActorItems: true,
+        exportActorItems: false,
         noDuplicateActorItems: false,
         useOriginalImageUrls: false
       },
@@ -311,7 +311,7 @@ export default {
       disableModuleTables: this.form.disableModuleTables,
       disableModuleDecks: this.form.disableModuleDecks,
       folderAsItems: this.form.folderAsItems,
-      dontExportActorItems: this.form.dontExportActorItems,
+      dontExportActorItems: !this.form.exportActorItems, // Use inverse of option for the UI
       noDuplicateActorItems: this.form.noDuplicateActorItems,
       useOriginalImageUrls: this.form.useOriginalImageUrls
     });
