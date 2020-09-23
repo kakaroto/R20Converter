@@ -22,7 +22,7 @@ class World(object):
                 "version": "1.0.0",
                 "system": self._converter.game_system,
                 "coreVersion": "0.6.5",
-                "systemVersion": 0.93,
+                "systemVersion": self._converter.game_system_version,
                 "minimumCoreVersion": "0.0.0",
                 "compatibleCoreVersion": "1.0.0",
                 "authors": ["R20Converter"],

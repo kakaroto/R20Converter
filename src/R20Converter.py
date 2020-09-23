@@ -38,6 +38,7 @@ class R20Converter(object):
         self.packs = {}
         self.system_templates = {}
         self.game_system = self.getArgument("game_system", "dnd5e")
+        self.game_system_version = 0.96
         if (self.game_system == ""):
             self.game_system = "dnd5e"
         self.fvtt_path = self.getArgument("fvtt_data_path", None)
@@ -59,8 +60,10 @@ class R20Converter(object):
                 loaded_templates = False
                 if self.fvtt_path is not None:
                     self.loadSystemTemplate()
+                    self.loadSystemVersion()
                     loaded_templates = True
-            except:
+            except Exception as e:
+                self.logWarning(str(e))
                 pass
             if not loaded_templates:
                 self.logWarning("Warning: Could not find the path to the FVTT Data directory or the system you specified is not installed locally.\n"
@@ -84,6 +87,13 @@ class R20Converter(object):
                 self.packs[file] = db
             except:
                 pass
+
+    def loadSystemVersion(self):
+        path = os.path.join(self.fvtt_path, "Data", "systems", self.game_system, "system.json")
+        with open(path, "r", encoding='utf-8') as f:
+            module = json.load(f)
+        self.game_system_version = module.get("version", self.game_system_version)
+
     def loadSystemTemplate(self):
         path = os.path.join(self.fvtt_path, "Data", "systems", self.game_system, "template.json")
         with open(path, "r", encoding='utf-8') as f:

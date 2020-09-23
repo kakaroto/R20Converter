@@ -59,7 +59,7 @@
 
       <b-form-group label="Override Game System" label-align="right" label-cols
         description="Set the game system name to override the system if different from 'dnd5e' (for example 'pf1' or 'pf2e' or 'wfrp4e'). Note that only dnd5e character sheets will be converted.">
-        <b-form-input v-model="gameSystem" :placeholder="dnd5e"></b-form-input>
+        <b-form-input v-model="gameSystemInput" placeholder="dnd5e"></b-form-input>
       </b-form-group>
 
       <b-form-group label="GM Access Key" label-align="right" label-cols>
@@ -88,7 +88,7 @@ export default {
       description: "",
       gmPassword: "",
       playerPassword: "",
-      gameSystem: "dnd5e"
+      gameSystemInput: "dnd5e"
     };
   },
   methods: {
@@ -116,11 +116,15 @@ export default {
     }
   },
   watch: {
-      finalPath() {
-          this.checkDestinationFolder()
+      async finalPath() {
+          await this.checkDestinationFolder();
+          if (this.error === null)
+              await this.checkSystemExists();
       },
-      gameSystem() {
-        this.checkSystemExists();
+      async gameSystem() {
+          await this.checkDestinationFolder();
+          if (this.error === null)
+              await this.checkSystemExists();
       },
       name() {
           this.slug = this.name;
@@ -156,6 +160,9 @@ export default {
     },
     finalPath() {
       return `${this.folder}/Data/${this.exportAsModule ? "modules" : "worlds"}/${this.slug || this.defaultSlug}`;
+    },
+    gameSystem() {
+      return this.gameSystemInput || "dnd5e";
     },
     ...mapState(["foundryDirectory", "error"]),
     ...mapState({
