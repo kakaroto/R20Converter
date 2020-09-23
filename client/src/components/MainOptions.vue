@@ -57,6 +57,11 @@
         ></b-form-textarea>
       </b-form-group>
 
+      <b-form-group label="Override Game System" label-align="right" label-cols
+        description="Set the game system name to override the system if different from 'dnd5e' (for example 'pf1' or 'pf2e' or 'wfrp4e'). Note that only dnd5e character sheets will be converted.">
+        <b-form-input v-model="gameSystem" :placeholder="dnd5e"></b-form-input>
+      </b-form-group>
+
       <b-form-group label="GM Access Key" label-align="right" label-cols>
         <b-form-input v-model="gmPassword"></b-form-input>
       </b-form-group>
@@ -82,7 +87,8 @@ export default {
       title: "",
       description: "",
       gmPassword: "",
-      playerPassword: ""
+      playerPassword: "",
+      gameSystem: "dnd5e"
     };
   },
   methods: {
@@ -96,11 +102,25 @@ export default {
         } else {
             this.$store.commit('setError', null);
         }
+    },
+    async checkSystemExists() {
+        let exists = this.gameSystem === "dnd5e";
+        if (!exists) {
+            exists = await eel.does_file_exist(`${this.folder}/Data/systems/${this.gameSystem}/template.json`)();
+        }
+        if (!exists) {
+            this.$store.commit('setError', `Game system ${this.gameSystem} doest not exist. Make sure Foundry and the system is installed locally`);
+        } else {
+            this.$store.commit('setError', null);
+        }
     }
   },
   watch: {
       finalPath() {
           this.checkDestinationFolder()
+      },
+      gameSystem() {
+        this.checkSystemExists();
       },
       name() {
           this.slug = this.name;
@@ -152,7 +172,8 @@ export default {
       title: this.title || this.defaultTitle,
       description: this.description,
       gmPassword: this.gmPassword,
-      playerPassword: this.playerPassword
+      playerPassword: this.playerPassword,
+      gameSystem: this.gameSystem
     });
   }
 };

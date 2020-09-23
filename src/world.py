@@ -20,7 +20,7 @@ class World(object):
                 "title": self._title,
                 "description": self._description,
                 "version": "1.0.0",
-                "system": "dnd5e",
+                "system": self._converter.game_system,
                 "coreVersion": "0.6.5",
                 "systemVersion": 0.93,
                 "minimumCoreVersion": "0.0.0",

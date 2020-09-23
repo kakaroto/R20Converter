@@ -36,20 +36,36 @@ class R20Converter(object):
             self.zip = zipfile.ZipFile(args.zip_file, "r")
             self.campaign = json.load(self.getZipFile("campaign.json"), object_pairs_hook=OrderedDict)
         self.packs = {}
+        self.system_templates = {}
+        self.game_system = self.getArgument("game_system", "dnd5e")
+        if (self.game_system == ""):
+            self.game_system = "dnd5e"
         self.fvtt_path = self.getArgument("fvtt_data_path", None)
         if self.fvtt_path is None:
             potential_path = os.path.abspath(os.path.join(self.path, "..", "..", ".."))
-            if os.path.exists(os.path.join(potential_path, "Data", "systems", "dnd5e", "system.json")):
+            if os.path.exists(os.path.join(potential_path, "Data", "systems", self.game_system, "system.json")):
                 self.fvtt_path = potential_path
             else:
                 self.fvtt_path = utils.getFVTTDataPath()
-        if self.fvtt_path is not None:
-            self.loadDnD5ePacks()
-        else:
-            self.logWarning("Warning: Could not find the path to the FVTT Data directory, either specify a destination directory in the Data/worlds/ path\n"
+        if self.game_system == "dnd5e":
+            if self.fvtt_path is not None:
+                self.loadDnD5ePacks()
+            else:
+                self.logWarning("Warning: Could not find the path to the FVTT Data directory, either specify a destination directory in the Data/worlds/ path\n"
                   "or use the --fvtt-data-path argument to specify the path to the Data directory.\n"
                   "If you do not, then Item and Spell Compendium links in journal entries will not be replaced with links to SRD data from the D&D 5e packs.")
- 
+        else:
+            try:
+                loaded_templates = False
+                if self.fvtt_path is not None:
+                    self.loadSystemTemplate()
+                    loaded_templates = True
+            except:
+                pass
+            if not loaded_templates:
+                self.logWarning("Warning: Could not find the path to the FVTT Data directory or the system you specified is not installed locally.\n"
+                  "Your character sheets may fail to open.")
+
     def getZipFile(self, filename):
         # On japanese systems, path separator is actually '¥' which won't work
         # when opening the files in the zip.
@@ -68,7 +84,18 @@ class R20Converter(object):
                 self.packs[file] = db
             except:
                 pass
-
+    def loadSystemTemplate(self):
+        path = os.path.join(self.fvtt_path, "Data", "systems", self.game_system, "template.json")
+        with open(path, "r", encoding='utf-8') as f:
+            template = json.load(f)
+        self.system_templates = {}
+        for actor_type in template["Actor"]["types"]:
+            actor_template = template["Actor"][actor_type]
+            actor_templates = actor_template.get("templates", [])
+            del actor_template["templates"]
+            for sub_template in actor_templates:
+                actor_template.update(template["Actor"]["templates"].get(sub_template, {}))
+            self.system_templates[actor_type] = actor_template
     def hasSystemPacks(self):
         return len(self.packs) > 0
 

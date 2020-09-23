@@ -73,6 +73,7 @@ parser.add_argument("--no-duplicate-actor-items", action="store_true", help="Thi
 parser.add_argument("--use-original-image-urls", action="store_true", help="Do not copy images to the world folder but use Roll20 URL instead. (NOT recommended)")
 parser.add_argument("--max-path", default=256, type=int, help="Set the maximum allowed length for the asset's absolute file paths. Most File Systems will have a limit of 256 characters, but you can set it to lower (or higher) if you plan on moving the worlds directory to a different FVTT path. Files that don't fit will be written in an 'assets' directory instead of the usual hierarchy.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite the destination directory if it exists.")
+parser.add_argument("--game-system", default="dnd5e", help="Set the game system to use for actors and items's sheets (only dnd5e sheets will be converted)")
 
 
 if __name__ == "__main__":

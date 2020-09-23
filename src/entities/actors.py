@@ -340,26 +340,38 @@ class Actor(Entity):
         if token["actorLink"]:
             del token["actorData"]["data"]
 
-        self._save_bonus = self.calculateSaveBonus()
-        self._actor_abilities = self.createActorAbilities()
-        actor_data = OrderedDict([
-            ("abilities", self._actor_abilities),
-            ("attributes", self.createActorAttributes()),
-            ("details", self.createActorDetails()),
-            ("skills", self.createActorSkills()),
-            ("traits", self.createActorTraits()),
-            ("currency", self.createActorCurrency()),
-            ("spells", self.createActorSpells()),
-            ("resources", self.createActorResources()),
-            ("bonuses", self.createActorBonuses()),
-        ])
+        actor_data = {}
         owned_items = []
-        self.addClasses(owned_items)
-        self.addTraits(owned_items)
-        self.addSpells(owned_items)
-        # Add actions before inventory so attack items get added first
-        self.addActions(owned_items)
-        self.addInventory(owned_items)
+        actor_type = "npc" if npc else "character"
+        if self._converter.game_system == "dnd5e":
+            self._save_bonus = self.calculateSaveBonus()
+            self._actor_abilities = self.createActorAbilities()
+            actor_data = OrderedDict([
+                ("abilities", self._actor_abilities),
+                ("attributes", self.createActorAttributes()),
+                ("details", self.createActorDetails()),
+                ("skills", self.createActorSkills()),
+                ("traits", self.createActorTraits()),
+                ("currency", self.createActorCurrency()),
+                ("spells", self.createActorSpells()),
+                ("resources", self.createActorResources()),
+                ("bonuses", self.createActorBonuses()),
+            ])
+            self.addClasses(owned_items)
+            self.addTraits(owned_items)
+            self.addSpells(owned_items)
+            # Add actions before inventory so attack items get added first
+            self.addActions(owned_items)
+            self.addInventory(owned_items)
+        else:
+            templates = self._converter.system_templates
+            if actor_type not in templates:
+                if "character" in templates:
+                    actor_type = "character"
+                else:
+                    types = list(templates.keys())
+                    actor_type = types[0] if len(types) > 0 else actor_type
+            actor_data = templates.get(actor_type, {})
 
         if self.getArgument("export_as_module", False):
             folder = None
@@ -376,7 +388,7 @@ class Actor(Entity):
                        "folder": Entity.normalizeID(folder),
                        "flags": {},
                        "sort": index * Entity.SORT_ORDER,
-                       "type": "npc" if npc else "character",
+                       "type": actor_type,
                        "token": token,
                        "items": owned_items
                        }

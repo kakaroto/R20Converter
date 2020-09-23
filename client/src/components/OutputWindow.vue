@@ -52,6 +52,7 @@ export default {
         campaign_title: opt.title,
         description: opt.description,
 
+        game_system: opt.gameSystem,
         gm_password: opt.gmPassword,
         player_password: opt.playerPassword,
         restrict_movement: opt.restrictMovement,
