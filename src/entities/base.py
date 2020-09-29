@@ -285,9 +285,10 @@ class Entity(object):
     @staticmethod
     def urlsafe(filename):
         url = urllib.parse.quote(filename.replace(os.path.sep, "/").replace(" ", "_"))
-        url.replace("/", os.path.sep)
         # Url encoded characters won't resolve, since the URL would become invalid, so we replace them
-        return re.sub("%([0-9A-F]{2})", "_\\1", url)
+        urlsafe = re.sub("%([0-9A-F]{2})", "_\\1", url)
+        urlsafe = re.sub("\.+/", "_/", urlsafe)
+        return urlsafe
 
     def getDirectoryName(self):
         world_dir_name = os.path.basename(os.path.dirname(os.path.join(self._database._path, ".")))
