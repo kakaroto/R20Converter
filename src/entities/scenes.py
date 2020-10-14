@@ -296,8 +296,8 @@ class Scene(Entity):
                     token["x"] = margin_left + x * grid_multiplier
                     token["y"] = margin_top + y * grid_multiplier
                     # Token size is in grid units, so we use snapping_increment instead of grid_multiplier
-                    token["width"] = token["width"] / (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
-                    token["height"] = token["height"] / (page["snapping_increment"] if page["snapping_increment"] > 0 else 1)
+                    token["width"] = token["width"] / (snapping_increment if snapping_increment else 1)
+                    token["height"] = token["height"] / (snapping_increment if snapping_increment else 1)
                     # Store the token id mapping for the Combat database
                     page_tokens = self.token_ids.setdefault(page["id"], {})
                     page_tokens[graphic["id"]] = token["_id"]
