@@ -162,6 +162,7 @@ class R20Converter(object):
             self.module = Module(self).save()
         else:
             os.makedirs(os.path.join(self.path, "data"))
+            os.makedirs(os.path.join(self.path, "scenes", "thumbs"))
 
             self.settings = SettingsDB(self).save()
             self.users = Users(self).save()
