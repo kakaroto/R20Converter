@@ -15,3 +15,5 @@ ogl-sheet.html
 client/node_modules
 client/dist
 electron/
+stdout.log
+stderr.log
