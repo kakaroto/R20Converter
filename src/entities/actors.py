@@ -2236,7 +2236,7 @@ class Actor(Entity):
                     if len(pc_class) == 0:
                         continue
                     name = self.getAttribute("name", "", from_dict=pc_class)[0]
-                    level = self.getAttributeInt("level", "", from_dict=pc_class)
+                    level = self.getAttributeInt("level", 1, from_dict=pc_class)
                     self.createItemClass(items, name, level)
             else:
                 pc_class = self.getAttribute("class", "")[0]
