@@ -166,7 +166,7 @@ class Token(Entity):
         return {"flags": {},
                 "name": self.token_name,
                 "displayName": self.display_name,
-                "img": self.token_filename if self.token_filename != "" else "",
+                "img": self.token_filename if self.token_filename != "" else "icons/svg/mystery-man.svg",
                 "width": self.width / 70.0,
                 "height": self.height / 70.0,
                 "mirrorX": self.mirrorX,
