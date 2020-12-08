@@ -12,8 +12,14 @@ import argparse
 # GUI/argparse/anything will try to write to stderr/stdout whenever it feels
 # like it and will cause a crash on import
 if sys.stdout is None:
-    sys.stdout = open('stdout.log', 'w')
-    sys.stderr = open('stderr.log', 'w')
+    try:
+        sys.stdout = open('stdout.log', 'w')
+        sys.stderr = open('stderr.log', 'w')
+    except:
+        # Installing to C:\Program Files (for example) or other permission error could cause this to fail
+        import io
+        sys.stdout = io.BytesIO()
+        sys.stderr = io.BytesIO()
 
 from version import version
 from R20Converter import R20Converter
