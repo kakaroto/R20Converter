@@ -164,7 +164,7 @@ class Token(Entity):
             rotation = self.rotation
             lockRotation = False
         return {"flags": {},
-                "name": self.token_name,
+                "name": self.token_name or "Unnamed token",
                 "displayName": self.display_name,
                 "img": self.token_filename if self.token_filename != "" else "icons/svg/mystery-man.svg",
                 "width": self.width / 70.0,
