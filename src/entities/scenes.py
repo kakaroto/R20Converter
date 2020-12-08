@@ -68,6 +68,7 @@ class Scene(Entity):
         if grid_size < 50:
             grid_multiplier = 50.0 / orig_grid_size
             grid_size = 50
+        grid_size = int(grid_size)
 
         margin_left = math.ceil(width * grid_multiplier / grid_size * 0.25) * grid_size
         margin_top = math.ceil(height * grid_multiplier / grid_size * 0.25) * grid_size
@@ -295,8 +296,8 @@ class Scene(Entity):
                     token["hidden"] = (layer == "gmlayer")
                     x = (left - (tile_width / 2))
                     y = (top - (tile_height / 2))
-                    token["x"] = margin_left + x * grid_multiplier
-                    token["y"] = margin_top + y * grid_multiplier
+                    token["x"] = int(margin_left + x * grid_multiplier)
+                    token["y"] = int(margin_top + y * grid_multiplier)
                     # Token size is in grid units, so we use snapping_increment instead of grid_multiplier
                     token["width"] = token["width"] / (snapping_increment if snapping_increment else 1)
                     token["height"] = token["height"] / (snapping_increment if snapping_increment else 1)
@@ -547,8 +548,8 @@ class Scene(Entity):
                        "img": bg_image,
                        "initial": None,
                        "thumb": thumb_image,
-                       "width": width * grid_multiplier,
-                       "height": height * grid_multiplier,
+                       "width": int(width * grid_multiplier),
+                       "height": int(height * grid_multiplier),
                        "backgroundColor": self.color(page["background_color"]),
                        "gridType": grid_type,
                        "grid": grid_size,
