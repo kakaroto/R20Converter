@@ -219,6 +219,7 @@ Convert Roll20 campaigns into Foundry VTT worlds or modules.
 - Install the custom `cx_Freeze` package with `pip install -U git+https://github.com/marcelotduarte/cx_Freeze.git@master`
 - Realize you need to recompile gevent too, so... : `pip install -I --no-binary :all: gevent`
 - Download the Electron app from https://github.com/electron/electron/releases
+- Use `cp -R` and not `cp -r` otherwise symlinks get dereferenced, and your 120MB Electron.app becomes 550MB
 - Curse at your computer and at those who use Macs
 - Go to system settings, security, privacy, automation, and allow Terminal to send events to Finder
 - Run `npm run build` in the client subdirectory

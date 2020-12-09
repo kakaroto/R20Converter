@@ -19,8 +19,7 @@ buildOptions = {
         ]
     },
     "bdist_mac": {
-        "iconfile": "client/public/logo.icns",
-        "include_resources": [("Electron.app", "Electron.app")]
+        "iconfile": "client/public/logo.icns"
     },
     "bdist_dmg": {
         "volume_label": "R20Converter-{}".format(version),
