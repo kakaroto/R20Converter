@@ -28,6 +28,9 @@ Required dependencies are : `requests`, `pillow`, `python-slugify` and for the G
  
 `pip3 install requests pillow python-slugify eel`
 
+In order to run the Graphics User Interface, you will also need to have python-tk installed. That one can be installed from your distribution's package manager using `sudo apt install python3-tk` or `sudo dnf install python3-tkinter`.
+Installing Google Chrome's browser is also recommended.
+
 If no arguments are provided and the appropriate dependencies are installed, the program will launch in GUI mode.
 
 
