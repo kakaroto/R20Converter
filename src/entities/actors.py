@@ -163,6 +163,8 @@ class Token(Entity):
         else:
             rotation = self.rotation
             lockRotation = False
+        def roundSight(v):
+            return int(v * 10) / 10
         return {"flags": {},
                 "name": self.token_name or "Unnamed token",
                 "displayName": self.display_name,
@@ -176,10 +178,10 @@ class Token(Entity):
                 "lockRotation": lockRotation,
                 "effects": [], #TODO : support effects. Format is : ["icons/svg/frozen.svg", "icons/svg/skull.svg"], etc..
                 "hidden": False,
-                "dimLight": self.emits_dim_light,
-                "brightLight": self.emits_bright_light,
-                "dimSight": self.dim_sight,
-                "brightSight": self.bright_sight,
+                "dimLight": roundSight(self.emits_dim_light),
+                "brightLight": roundSight(self.emits_bright_light),
+                "dimSight": roundSight(self.dim_sight),
+                "brightSight": roundSight(self.bright_sight),
                 "sightAngle": self.sight_angle,
                 "lightAngle": self.light_angle,
                 "lightAlpha": 1,
