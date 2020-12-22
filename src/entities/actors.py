@@ -123,11 +123,11 @@ class Token(Entity):
     def computeLighting(light_radius, light_dimradius, width, height, scale=5, scale_units="ft", grid_size=70):
         try:
             g_light_radius = float(light_radius)
-        except ValueError:
+        except:
             g_light_radius = ""
         try:
             g_light_dimradius = float(light_dimradius)
-        except ValueError:
+        except:
             g_light_dimradius = 0.25 * g_light_radius if g_light_radius != "" else ""
         if g_light_radius != "":
             # The way light works in R20 is weird, the light_radius is from the edges of the token, but the
@@ -143,7 +143,7 @@ class Token(Entity):
                     token_radius = float(scale) * token_radius / grid_size
                 else:
                     token_radius = 0
-            except ValueError:
+            except:
                 token_radius = 0
             light_radius = token_radius + g_light_radius
             if light_radius < 0:
@@ -617,7 +617,6 @@ class Actor(Entity):
         ac = self.getAttribute("npc_ac" if self.isNPC() else "ac", 10)[0]
         
         res = {
-            "min": 0,
             "value": ac
         }
         if self.isNPC():
