@@ -61,6 +61,7 @@ parser.add_argument("--maximum-wall-angle", default=30, type=float, help="Maximu
                     "This is to prevent small walls at high angles (a small triangle or U shape) from being merged and becoming a line that cuts through the map.\n"
                     "The angle is calculated with every point in the wall that is skipped, so a circle drawn with small lines and small angles will not be removed.\n"
                     "Note that the angle here is related to a straight line, so a maximum angle of 30 means an angle between 150 and 210 degrees between the 3 points (Default: 30)")
+parser.add_argument("--scene-padding", default=0.25, type=float, help="Side-table padding around each scene")
 parser.add_argument("--debug-page", default=None, help="Only convert a specific page. Useful for debugging")
 parser.add_argument("--fvtt-data-path", default=None, help="Path to the FVTT Data directory (used for importing items and spells from dnd5e system)")
 parser.add_argument("--npc-source", default="Roll 20", help="Source reference for NPC actors (displayed in the character sheet)")

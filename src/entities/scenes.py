@@ -70,8 +70,9 @@ class Scene(Entity):
             grid_size = 50
         grid_size = int(grid_size)
 
-        margin_left = math.ceil(width * grid_multiplier / grid_size * 0.25) * grid_size
-        margin_top = math.ceil(height * grid_multiplier / grid_size * 0.25) * grid_size
+        padding = self.getArgument("scene_padding", 0.25)
+        margin_left = math.ceil(width * grid_multiplier / grid_size * padding) * grid_size
+        margin_top = math.ceil(height * grid_multiplier / grid_size * padding) * grid_size
         grid_type = self.GRID_TYPES[page["grid_type"]]
         if not page["showgrid"]:
             grid_type = 0
@@ -550,6 +551,7 @@ class Scene(Entity):
                        "thumb": thumb_image,
                        "width": int(width * grid_multiplier),
                        "height": int(height * grid_multiplier),
+                       "padding": padding,
                        "backgroundColor": self.color(page["background_color"]),
                        "gridType": grid_type,
                        "grid": grid_size,
