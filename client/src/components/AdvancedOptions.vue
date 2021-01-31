@@ -38,6 +38,21 @@
                 description="Force Bar 2 of all tokens to represent the character's HP attribute"
                 v-model="form.forceHpForTokenBar2"
               />
+              <b-form-group
+                label="Scene Padding"
+                label-cols
+                label-align="right"
+                description="Sets a 'side table' padding area around each scene."
+              >
+                <b-input-group>
+                  <b-form-input v-model="form.padding" type="range" min="0" max="0.5" step="0.05"></b-form-input>
+                  <b-input-group-append>
+                    <b-input-group-text>
+                      {{form.padding * 100}}%
+                    </b-input-group-text>
+                  </b-input-group-append>
+                </b-input-group>
+              </b-form-group>
               <boolean-option
                 label="Add walls around the map"
                 description="Add 4 walls to enclose the map and cut off view/movement to the side table"
@@ -237,6 +252,7 @@ export default {
         autoDoors: true,
         dontConvertChat: false,
         fog: "enable",
+        padding: 0.25,
 
         doorColor: "",
         secretDoorColor: "",
@@ -292,6 +308,7 @@ export default {
       cleanupScenes: this.form.cleanupScenes,
       autoDoors: this.form.autoDoors,
       dontConvertChat: this.form.dontConvertChat,
+      scenePadding: parseFloat(this.form.padding),
 
       // Advanced Options
       enableFog: this.form.fog === "enable",

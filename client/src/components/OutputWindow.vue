@@ -58,30 +58,31 @@ export default {
         restrict_movement: opt.restrictMovement,
         force_hp_for_token_bar1: opt.forceHpForTokenBar1,
         force_hp_for_token_bar2: opt.forceHpForTokenBar2,
+        scene_padding: opt.scenePadding,
         add_walls_around_map: opt.addWallsAroundMap,
-        enable_fog: opt.enableFog, //
-        disable_fog: opt.disableFog, //
+        enable_fog: opt.enableFog,
+        disable_fog: opt.disableFog,
         cleanup_scenes: opt.cleanupScenes,
         auto_doors: opt.autoDoors,
-        door_color: opt.doorColor, //
-        secret_door_color: opt.secretDoorColor, //
-        disable_archived: opt.disableArchived, //
-        all_backgrounds_as_tiles: opt.allBackgroundsAsTiles, //
-        minimum_wall_length: opt.minimumWallLength, //
-        maximum_wall_angle: opt.maximumWallAngle, //
-        npc_source: opt.npcSource, //
-        no_compendium_overwrite: opt.noCompendiumOverwrite, //
-        disable_module_journal: opt.disableModuleJournal, //
-        disable_module_actors: opt.disableModuleActors, //
-        disable_module_scenes: opt.disableModuleScenes, //
-        disable_module_playlists: opt.disableModulePlaylists, //
-        disable_module_tables: opt.disableModuleTables, //
-        disable_module_decks: opt.disableModuleDecks, //
-        dont_convert_chat: opt.dontConvertChat, //
-        folder_as_items: opt.folderAsItems, //
-        dont_export_actor_items: opt.dontExportActorItems, //
-        no_duplicate_actor_items: opt.noDuplicateActorItems, //
-        use_original_image_urls: opt.useOriginalImageUrls, //
+        door_color: opt.doorColor,
+        secret_door_color: opt.secretDoorColor,
+        disable_archived: opt.disableArchived,
+        all_backgrounds_as_tiles: opt.allBackgroundsAsTiles,
+        minimum_wall_length: opt.minimumWallLength,
+        maximum_wall_angle: opt.maximumWallAngle,
+        npc_source: opt.npcSource,
+        no_compendium_overwrite: opt.noCompendiumOverwrite,
+        disable_module_journal: opt.disableModuleJournal,
+        disable_module_actors: opt.disableModuleActors,
+        disable_module_scenes: opt.disableModuleScenes,
+        disable_module_playlists: opt.disableModulePlaylists,
+        disable_module_tables: opt.disableModuleTables,
+        disable_module_decks: opt.disableModuleDecks,
+        dont_convert_chat: opt.dontConvertChat,
+        folder_as_items: opt.folderAsItems,
+        dont_export_actor_items: opt.dontExportActorItems,
+        no_duplicate_actor_items: opt.noDuplicateActorItems,
+        use_original_image_urls: opt.useOriginalImageUrls,
         interactive: false,
         debug_page: null,
         images_as_drawings: false,
