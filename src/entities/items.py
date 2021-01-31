@@ -449,8 +449,9 @@ class ItemTarget:
     LINE = "line"
     WALL = "wall"
 
-    def __init__(self, type=EMPTY, range=None):
+    def __init__(self, type=EMPTY, range=None, width=None):
         self.range = range if range else ItemRange()
+        self.width = width
         self.type = type
 
     def getDict(self):
@@ -458,6 +459,7 @@ class ItemTarget:
         return {
             "target": {
                 "value": range["value"],
+                "width": self.width,
                 "units": range["units"],
                 "type": self.type
             }
