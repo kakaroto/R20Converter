@@ -764,12 +764,7 @@ class Actor(Entity):
     def createDetailBio(self):
         bio = self._character["bio"]
         gmnotes = self._character["gmnotes"]
-        for (attrib, label) in [("personality_traits", "Personality Traits"),
-                                ("ideals", "Ideals"),
-                                ("bonds", "Bonds"),
-                                ("flaws", "Flaws"),
-                                ("character_appearance", "Character Appearance"),
-                                ("character_backstory", "Character Backstory"),
+        for (attrib, label) in [("character_backstory", "Character Backstory"),
                                 ("additional_feature_and_traits", "Additional Features and Traits"),
                                 ("allies_and_organizations", "Allies & Organizations"),
                                 ("treasure", "Treasure"),
@@ -845,6 +840,7 @@ class Actor(Entity):
                     ("background", self.getAttribute("background", "")[0]),
                     ("level", self.createAttributeNumber("Character Level", "level", 1, {"min": 1, "max": 20})),
                     ("xp", self.createDetailXP()),
+                    ("appearance", self.getAttribute("character_appearance", "")[0]),
                     ("trait", self.getAttribute("personality_traits", "")[0]),
                     ("ideal", self.getAttribute("ideals", "")[0]),
                     ("bond", self.getAttribute("bonds", "")[0]),
