@@ -5,7 +5,7 @@ class SettingsDB(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "settings.db")
         self.entities = [Setting(self, "core.moduleConfiguration", {"permission_viewer":True, "furnace":True}),
-                         Setting(self, "dnd5e.systemMigrationVersion", "0.93"),
+                         Setting(self, "dnd5e.systemMigrationVersion", "1.2.4"),
                          Setting(self, "permission_viewer.migrated", "1"),
                          Setting(self, "core.permissions", {})]
 
