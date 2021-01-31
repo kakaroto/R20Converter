@@ -163,14 +163,14 @@ class Token(Entity):
         else:
             rotation = self.rotation
             lockRotation = False
-        def roundSight(v):
+        def roundTenthStep(v):
             return int(v * 10) / 10
         return {"flags": {},
                 "name": self.token_name or "Unnamed token",
                 "displayName": self.display_name,
                 "img": self.token_filename if self.token_filename != "" else "icons/svg/mystery-man.svg",
-                "width": self.width / 70.0,
-                "height": self.height / 70.0,
+                "width": roundTenthStep(self.width / 70.0),
+                "height": roundTenthStep(self.height / 70.0),
                 "mirrorX": self.mirrorX,
                 "scale": 1,
                 "elevation": 0,
@@ -178,13 +178,17 @@ class Token(Entity):
                 "lockRotation": lockRotation,
                 "effects": [], #TODO : support effects. Format is : ["icons/svg/frozen.svg", "icons/svg/skull.svg"], etc..
                 "hidden": False,
-                "dimLight": roundSight(self.emits_dim_light),
-                "brightLight": roundSight(self.emits_bright_light),
-                "dimSight": roundSight(self.dim_sight),
-                "brightSight": roundSight(self.bright_sight),
+                "dimLight": roundTenthStep(self.emits_dim_light),
+                "brightLight": roundTenthStep(self.emits_bright_light),
+                "dimSight": roundTenthStep(self.dim_sight),
+                "brightSight": roundTenthStep(self.bright_sight),
                 "sightAngle": self.sight_angle,
                 "lightAngle": self.light_angle,
                 "lightAlpha": 1,
+                "lightAnimation": {
+                    "speed": 5,
+                    "intensity": 5
+                },
                 "vision": self.has_vision,
                 "actorId": self.actor_id,
                 "actorLink": False,
@@ -392,7 +396,8 @@ class Actor(Entity):
                        "sort": index * Entity.SORT_ORDER,
                        "type": actor_type,
                        "token": token,
-                       "items": owned_items
+                       "items": owned_items,
+                       "effects": []
                        }
 
     def getName(self):

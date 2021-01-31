@@ -292,7 +292,7 @@ class Scene(Entity):
                             token["bar2"]["attribute"] = "attributes.hp"
                         if not npc:
                             token["actorLink"] = True
-                            del token["actorData"]
+                            token["actorData"] = {}
                     token["_id"] = self.genID()
                     token["hidden"] = (layer == "gmlayer")
                     x = (left - (tile_width / 2))
@@ -346,11 +346,16 @@ class Scene(Entity):
                              "x": int(margin_left + left * grid_multiplier),
                              "y": int(margin_top + top * grid_multiplier),
                              "dim": dim,
+                             "hidden": False,
                              "bright": bright,
                              "angle": angle,
                              "rotation": rotation,
                              "tintAlpha": 0.5,
-                             "darknessThreshold": 0
+                             "darknessThreshold": 0,
+                             "lightAnimation": {
+                                "speed": 5,
+                                "intensity": 5
+                             },
                              }
                     x = (left - (tile_width / 2))
                     y = (top - (tile_height / 2))
@@ -564,6 +569,7 @@ class Scene(Entity):
                        "tokenVision": page["showlighting"] and page["lightenforcelos"],
                        "fogExploration": not self.getArgument("disable_fog", False) and (self.getArgument("enable_fog", False) or page["adv_fow_enabled"]),
                        "globalLight": page["lightglobalillum"],
+                       "globalLightThreshold": None,
                        "darkness": 0,
                        "tiles": tiles,
                        "tokens": tokens,

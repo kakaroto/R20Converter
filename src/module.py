@@ -53,7 +53,7 @@ class Module(object):
                 "description": self._description,
                 "author": "R20Converter",
                 "version": version,
-                "minimumCoreVersion": "0.6.0",
+                "minimumCoreVersion": "0.7.5",
                 "compatibleCoreVersion": "1.0.0",
                 "packs": self._packs
             } 

@@ -21,7 +21,7 @@ class World(object):
                 "description": self._description,
                 "version": "1.0.0",
                 "system": self._converter.game_system,
-                "coreVersion": "0.6.5",
+                "coreVersion": "0.7.9",
                 "systemVersion": self._converter.game_system_version,
                 "minimumCoreVersion": "0.0.0",
                 "compatibleCoreVersion": "1.0.0",

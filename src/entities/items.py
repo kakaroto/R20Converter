@@ -89,7 +89,8 @@ class Item(Entity):
                 "type": item_type,
                 "img": img,
                 "data": data,
-                "sort": 0
+                "sort": 0,
+                "effects": []
                 }
 
     def getName(self):
@@ -417,7 +418,7 @@ class ItemRange:
     SPECIAL = "spec"
     ANY = "any"
 
-    def __init__(self, range="", max="", units=EMPTY):
+    def __init__(self, range=None, max=None, units=EMPTY):
         self.range = range
         self.max = max
         self.units = units
