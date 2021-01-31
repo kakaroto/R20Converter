@@ -696,6 +696,26 @@ class Actor(Entity):
                 movement[movementType] = int(match.group(1))
 
         return movement
+    def createAttributeSenses(self):
+        senses = {
+            "darkvision": 0,
+            "blindsight": 0,
+            "tremorsense": 0,
+            "truesight": 0,
+            "units": "ft"
+        }
+        if self.isNPC():
+            try:
+                npc_senses = self.getAttribute("npc_senses", "")[0].lower()
+                for senseType in senses:
+                    match = re.search(senseType + r"\s+(\d+)", npc_senses)
+                    if match:
+                        senses[senseType] = int(match.group(1))
+            except:
+                pass
+
+        return senses
+
 
     def getSpellcastingAbility(self):
         attribute = self.getAttribute("spellcasting_ability", "")[0]
@@ -747,6 +767,7 @@ class Actor(Entity):
             ("init", self.createAttributeInitiative()),
             ("prof", self.getProficiencyBonus()),
             ("movement", self.createAttributeMovement()),
+            ("senses", self.createAttributeSenses()),
             ("spellcasting", self.getSpellcastingAbility()),
             ("spelldc", self.getAttributeInt("npc_spelldc" if self.isNPC() else "spell_save_dc", 10)),
             ("spellLevel", 0),
@@ -1019,22 +1040,6 @@ class Actor(Entity):
 
         return dnd5e_sizes.get(size.lower(), "med")
 
-    def createTraitSenses(self):
-        senses = ""
-        if self.isNPC():
-            try:
-                npc_senses = self.getAttribute("npc_senses", "")[0].split(",")
-                npc_senses = list(map(lambda x: x.strip(), npc_senses))
-                for i, sense in enumerate(npc_senses):
-                    if sense.strip().startswith("passive perception"):
-                        npc_senses.pop(i)
-                        break
-                senses = ", ".join(npc_senses)
-            except:
-                pass
-
-        return senses
-
     def _addKnownToArray(self, known_list, name, array, custom):
         name = self._capitalizeAll(name.strip())
         if name == "":
@@ -1290,7 +1295,6 @@ class Actor(Entity):
     def createActorTraits(self):
         traits =  OrderedDict([
             ("size", self.createTraitSize()),
-            ("senses", self.createTraitSenses()),
             ("languages", self.createTraitLanguages()),
             ("di", self.createTraitDamageImmunities()),
             ("dr", self.createTraitDamageResistances()),
