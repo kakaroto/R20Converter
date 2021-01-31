@@ -1316,7 +1316,7 @@ class Actor(Entity):
             current = self.getAttribute("lvl%d_slots_expended" % level, 0)[0]
             max = self.getAttribute("lvl%d_slots_total" % level, current)[0]
             spells["spell%d" % level]  = {"value": current, "max": max, "override": None}
-        spells["pact"] = {"value": 0, "max": 0, "override": None}
+        spells["pact"] = {"value": 0, "override": None}
         return spells
 
     def createCharacterResource(self, label, resource, from_dict=None):
