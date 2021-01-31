@@ -689,7 +689,7 @@ class Actor(Entity):
         if match:
             movement["walk"] = int(match.group(1))
 
-        for movementType in ["burrow", "climb", "fly", "swim"]: 
+        for movementType in ["burrow", "climb", "fly", "swim"]:
             movement[movementType] = 0
             match = re.search(movementType + r"\s+(\d+)", special)
             if match:
@@ -702,15 +702,30 @@ class Actor(Entity):
             "blindsight": 0,
             "tremorsense": 0,
             "truesight": 0,
-            "units": "ft"
+            "units": "ft",
+            "special": ""
         }
         if self.isNPC():
             try:
+                senseTypes = ["darkvision", "blindsight", "tremorsense", "truesight"]
                 npc_senses = self.getAttribute("npc_senses", "")[0].lower()
-                for senseType in senses:
+                for senseType in senseTypes:
+                    senses[senseType] = 0
                     match = re.search(senseType + r"\s+(\d+)", npc_senses)
                     if match:
                         senses[senseType] = int(match.group(1))
+                # Find special senses
+                npc_senses = self.getAttribute("npc_senses", "")[0].split(",")
+                npc_senses = list(map(lambda x: x.strip(), npc_senses))
+                for i, sense in enumerate(npc_senses):
+                    if sense.strip().startswith("passive perception"):
+                        npc_senses.pop(i)
+                        continue
+                    for senseType in senseTypes:
+                        if senseType in sense.lower():
+                            npc_senses.pop(i)
+                            break
+                senses["special"] = ", ".join(npc_senses)
             except:
                 pass
 
