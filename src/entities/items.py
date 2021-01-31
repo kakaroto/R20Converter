@@ -647,12 +647,11 @@ class ItemSpellPreparation:
 # Physical Item specific attributes
 class ItemInventoryAttributes:
     def __init__(self, rarity="", quantity=1, weight=1, price=0,
-                 attuned=False, equipped=False, identified=True, attunement=0):
+                equipped=False, identified=True, attunement=0):
         self.rarity = rarity
         self.quantity = quantity
         self.weight = weight
         self.price = price
-        self.attuned = attuned
         self.attunement = attunement
         self.equipped = equipped
         self.identified = identified
@@ -663,7 +662,6 @@ class ItemInventoryAttributes:
             "quantity": self.quantity,
             "weight": self.weight,
             "price": self.price,
-            "attuned": self.attuned,
             "attunement": self.attunement,
             "equipped": self.equipped,
             "identified": self.identified
