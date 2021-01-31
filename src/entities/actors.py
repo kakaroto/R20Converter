@@ -668,7 +668,7 @@ class Actor(Entity):
             "total": init
         }
 
-    def createAttributeSpeed(self):
+    def createAttributeMovement(self):
         speed = self.getAttribute("npc_speed" if self.isNPC() else "speed", "30 ft")[0]
         if type(speed) == int:
             speed = "%d ft" % speed
@@ -679,10 +679,24 @@ class Actor(Entity):
         else:
             speed = parts[0].strip()
             special = ""
-        return {
-            "value": speed,
-            "special": special
+
+        movement = {
+            "walk": 30,
+            "units": "ft",
+            "hover": "hover" in special
         }
+        match = re.search(r"(\d+)", speed)
+        if match:
+            movement["walk"] = int(match.group(1))
+
+        for movementType in ["burrow", "climb", "fly", "swim"]: 
+            movement[movementType] = 0
+            match = re.search(movementType + r"\s+(\d+)", special)
+            if match:
+                movement[movementType] = int(match.group(1))
+
+        return movement
+
     def getSpellcastingAbility(self):
         attribute = self.getAttribute("spellcasting_ability", "")[0]
         return ItemAbility.fromString(attribute)
@@ -732,7 +746,7 @@ class Actor(Entity):
             ("hp", self.createAttributeHP()),
             ("init", self.createAttributeInitiative()),
             ("prof", self.getProficiencyBonus()),
-            ("speed", self.createAttributeSpeed()),
+            ("movement", self.createAttributeMovement()),
             ("spellcasting", self.getSpellcastingAbility()),
             ("spelldc", self.getAttributeInt("npc_spelldc" if self.isNPC() else "spell_save_dc", 10)),
             ("spellLevel", 0),
