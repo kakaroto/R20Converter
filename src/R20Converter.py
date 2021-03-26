@@ -94,6 +94,22 @@ class R20Converter(object):
             module = json.load(f)
         self.game_system_version = module.get("version", self.game_system_version)
 
+    def mergeDictionaries(self, destination, source):
+        """
+        >>> a = { 'first' : { 'all_rows' : { 'pass' : 'dog', 'number' : '1' } } }
+        >>> b = { 'first' : { 'all_rows' : { 'fail' : 'cat', 'number' : '5' } } }
+        >>> merge(b, a) == { 'first' : { 'all_rows' : { 'pass' : 'dog', 'fail' : 'cat', 'number' : '5' } } }
+        """
+        for key, value in source.items():
+            if isinstance(value, dict):
+                # get node or create one
+                node = destination.setdefault(key, {})
+                self.mergeDictionaries(node, value)
+            else:
+                destination[key] = value
+
+        return destination
+
     def loadSystemTemplate(self):
         path = os.path.join(self.fvtt_path, "Data", "systems", self.game_system, "template.json")
         with open(path, "r", encoding='utf-8') as f:
@@ -104,8 +120,9 @@ class R20Converter(object):
             actor_templates = actor_template.get("templates", [])
             del actor_template["templates"]
             for sub_template in actor_templates:
-                actor_template.update(template["Actor"]["templates"].get(sub_template, {}))
+                self.mergeDictionaries(actor_template, template["Actor"]["templates"].get(sub_template, {}))
             self.system_templates[actor_type] = actor_template
+            print("Actor template ", actor_type, self.system_templates[actor_type])
     def hasSystemPacks(self):
         return len(self.packs) > 0
 
