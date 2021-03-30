@@ -81,6 +81,21 @@ class DatabaseFile(object):
                 return item
         return None
 
+    def findCompendiumActor(self, actor_name):
+        converter = self._converter
+        if converter.system_manifest is not None and converter.hasSystemPacks():
+            packs = converter.system_manifest.get("packs", [])
+            for pack in packs:
+                if pack['entity'] != "Actor":
+                    continue
+                db = converter.packs.get(pack['name'], None)
+                if db is None:
+                    continue
+                actor = db.getByName(actor_name, False)
+                if actor:
+                    return actor
+        return None
+            
     def getArgument(self, name, default=None):
         return self._converter.getArgument(name, default)
 
@@ -163,6 +178,8 @@ class Entity(object):
 
     def findCompendiumItem(self, compendium, item_name):
         return self._database.findCompendiumItem(compendium, item_name)
+    def findCompendiumActor(self, actor_name):
+        return self._database.findCompendiumActor(actor_name)
 
     def getArgument(self, name, default=None):
         return self._database.getArgument(name, default)

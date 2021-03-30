@@ -378,6 +378,11 @@ class Actor(Entity):
                     types = list(templates.keys())
                     actor_type = types[0] if len(types) > 0 else actor_type
             actor_data = templates.get(actor_type, {})
+            compendium_actor = self.findCompendiumActor(character["name"])
+            if compendium_actor:
+                actor_type = compendium_actor.entity['type']
+                actor_data = compendium_actor.entity['data']
+                owned_items = compendium_actor.entity['items']
 
         if self.getArgument("export_as_module", False):
             folder = None

@@ -36,6 +36,7 @@ class R20Converter(object):
             self.zip = zipfile.ZipFile(args.zip_file, "r")
             self.campaign = json.load(self.getZipFile("campaign.json"), object_pairs_hook=OrderedDict)
         self.packs = {}
+        self.system_manifest = None
         self.system_templates = {}
         self.game_system = self.getArgument("game_system", "dnd5e")
         self.game_system_version = "1.2.4"
@@ -48,6 +49,7 @@ class R20Converter(object):
                 self.fvtt_path = potential_path
             else:
                 self.fvtt_path = utils.getFVTTDataPath()
+        self.loadSystemManifest()
         if self.game_system == "dnd5e":
             if self.fvtt_path is not None:
                 self.loadDnD5ePacks()
@@ -60,6 +62,7 @@ class R20Converter(object):
                 loaded_templates = False
                 if self.fvtt_path is not None:
                     self.loadSystemTemplate()
+                    self.loadSystemPacks()
                     self.loadSystemVersion()
                     loaded_templates = True
             except Exception as e:
@@ -77,6 +80,14 @@ class R20Converter(object):
     def getArgument(self, name, default=None):
         return getattr(self.args, name, default)
 
+    def loadSystemManifest(self):
+        path = os.path.join(self.fvtt_path, "Data", "systems", self.game_system, "system.json")
+        try:
+            with open(path, "r", encoding='utf-8') as f:
+                self.system_manifest = json.load(f)
+        except:
+            pass
+
     def loadDnD5ePacks(self):
         self.packs = {}
         for file in ["items", "spells", "classfeatures", "classes", "monsters"]:
@@ -88,6 +99,17 @@ class R20Converter(object):
             except:
                 pass
 
+    def loadSystemPacks(self):
+        self.packs = {}
+        self.logInfo("Loading System Compendium Packs...")
+        for pack in self.system_manifest.get('packs', []):
+            db  = DatabaseFile(self, "%s.db" % pack['name'])
+            path = os.path.join(self.fvtt_path, "Data", "systems", self.game_system, pack['path'])
+            try:
+                db.load(path)
+                self.packs[pack['name']] = db
+            except:
+                pass
     def loadSystemVersion(self):
         path = os.path.join(self.fvtt_path, "Data", "systems", self.game_system, "system.json")
         with open(path, "r", encoding='utf-8') as f:
@@ -122,7 +144,6 @@ class R20Converter(object):
             for sub_template in actor_templates:
                 self.mergeDictionaries(actor_template, template["Actor"]["templates"].get(sub_template, {}))
             self.system_templates[actor_type] = actor_template
-            print("Actor template ", actor_type, self.system_templates[actor_type])
     def hasSystemPacks(self):
         return len(self.packs) > 0
 
