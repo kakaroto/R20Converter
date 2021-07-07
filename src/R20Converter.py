@@ -115,6 +115,8 @@ class R20Converter(object):
         with open(path, "r", encoding='utf-8') as f:
             module = json.load(f)
         self.game_system_version = module.get("version", self.game_system_version)
+        # Ensure the system matches case sensitivity of the name
+        self.game_system = module.get("name", self.game_system)
 
     def mergeDictionaries(self, destination, source):
         """
