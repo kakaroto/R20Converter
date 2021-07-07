@@ -123,10 +123,10 @@ if __name__ == "__main__":
             pass
 
     if error:
-        message = "Error converting campaign : \n" + str(error)
+        message = "Error converting campaign with R20Converter v" + version + ": \n" + str(error)
         message += "\nPlease contact the author with the log of the error from the console window"
     else:
-        message = "\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'furnace' (see README file for more information)\n\n"
+        message = "\nConversion completed.\n\n"
         message += "It is strongly suggested to check the sheets of the NPCs and player characters for any errors or missing information, or for adding special traits.\n"
         message += "Some things may not have been carried over, especially to-hit, damage, AC or saving throw modifiers or more complicated weapon or spell macros\n"
         message += "If using The Forge (https://forge-vtt.com) for hosting your Foundry games, you can now import the generated world using the Import Wizard.\n"
