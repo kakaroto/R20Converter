@@ -82,7 +82,7 @@ class Handout(Entity):
         if self.getArgument("export_as_module", False):
             parent = None
         self.entity = {"_id": self._id,
-                       "name": handout["name"],
+                       "name": handout["name"] or "Handout",
                        "permission": permissions,
                        "folder": Entity.normalizeID(parent),
                        "flags": {"R20Converter": 

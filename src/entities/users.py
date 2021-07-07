@@ -41,7 +41,7 @@ class User(Entity):
                 macro = {"src": macro_src, "id": macro_id}
             hotbar[str(index + 1)] = Entity.normalizeID(macro["id"])
         self.entity = {"_id": self._id,
-                       "name": player["displayname"],
+                       "name": player["displayname"] or "Player",
                        "flags":{},
                        "color": self.color(player["color"]),
                        "scene": Entity.normalizeID(scene),
