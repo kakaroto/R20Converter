@@ -321,7 +321,7 @@ class Entity(object):
         destination = re.sub(" +", " ", destination).strip()
         destination_safe = self.urlsafe(destination)
         while True:
-            dest_filename = os.path.join(self._database._path, destination_safe)
+            dest_filename = os.path.join(self._database._path, destination_safe).replace(os.path.sep, "/")
             # Check for conflicts
             if os.path.exists(dest_filename):
                 splitext = os.path.splitext(destination)
@@ -347,7 +347,7 @@ class Entity(object):
                 new_destination = os.path.join("assets", "%d%s" % (index, splitext[1]))
                 destination_safe = self.urlsafe(new_destination)
                 while True:
-                    dest_filename = os.path.join(self._database._path, destination_safe)
+                    dest_filename = os.path.join(self._database._path, destination_safe).replace(os.path.sep, "/")
                     # Check for conflicts
                     if os.path.exists(dest_filename):
                         index += 1
