@@ -240,6 +240,7 @@ class Scene(Entity):
                 # The character might have been deleted, but the graphic still represents a token
                 char_id = graphic["represents"]
                 emits_light = graphic["light_otherplayers"]
+                has_status_markers = graphic.get("statusmarkers", "") != ""
                 shows_name = graphic["showname"] and graphic["name"] != ""
                 
                 if emits_light:
@@ -256,7 +257,7 @@ class Scene(Entity):
                     if lradius == 0 and dradius == 0:
                         emits_light = False
                 # This is a token, not a tile
-                if char_id != "" or emits_light or shows_name:
+                if char_id != "" or emits_light or shows_name or has_status_markers:
                     token = Token(Entity.normalizeID(char_id), "", graphic)
                     # Redo the dim/bright depending on the token size in this map
                     token.setupLighting(graphic["light_radius"], graphic["light_dimradius"], 
