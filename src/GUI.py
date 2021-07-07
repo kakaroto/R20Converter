@@ -190,7 +190,7 @@ def startConversion(args):
         GUI.logError(e)
 
     if error:
-        message = "Error converting campaign : \n" + error
+        message = "Error converting campaign with R20Converter v" + version + ": \n" + error
         message += "\nPlease contact the author with the log of the error from the console window"
     else:
         message = "\nConversion completed.\nMake sure to install the FVTT modules 'permission_viewer' and 'furnace' (see README file for more information)\n\n"
