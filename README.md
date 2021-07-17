@@ -26,8 +26,9 @@ You can run it with `python3 src/main.py` in a terminal. Use the --help option t
 
 Required dependencies are : `requests`, `pillow`, `python-slugify` and for the GUI `eel`
  
-`pip3 install requests pillow python-slugify eel`
+`sudo pip3 install requests pillow python-slugify eel`
 
+If you are running raspbian on a Raspberry Pi, you may also need to run the command `sudo apt-get install libopenjp2-7` to install one of the dependencies.
 In order to run the Graphics User Interface, you will also need to have python-tk installed. That one can be installed from your distribution's package manager using `sudo apt install python3-tk` or `sudo dnf install python3-tkinter`.
 Installing Google Chrome's browser is also recommended.
 
