@@ -624,7 +624,7 @@ class Actor(Entity):
         return ret
 
     def createAttributeAC(self):
-        ac = self.getAttribute("npc_ac" if self.isNPC() else "ac", 10)[0]
+        ac = self.getAttributeInt("npc_ac" if self.isNPC() else "ac", 10)
         
         res = {
             "value": ac
