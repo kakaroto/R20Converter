@@ -62,7 +62,7 @@ You need to select your output directory. This should ideally be your existing l
 
 When the script is done, your campaign will be converted and available to use in Foundry VTT.
 
-The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) and [Furnace](https://github.com/kakaroto/fvtt-module-furnace) FVTT modules in the generated world. It is strongly suggested to have those modules installed.
+The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) FVTT modules in the generated world. It is a recommended module from people coming from Roll20.
 
 The `permission viewer` FVTT module is helpful for those coming from Roll 20 to see which handouts/character sheets are shared with whom, while the Furnace module adds various Quality of life improvements.
 
