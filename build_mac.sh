@@ -7,7 +7,7 @@ if [[ ! -d Electron.app ]] ; then
 fi
 
 rm -rf build
-# (cd client && npm run build)
+(cd client && npm install && npm run build)
 
 python3 setup.py bdist_mac
 cp -R Electron.app build/R20Converter-*.app/Contents/Resources/
