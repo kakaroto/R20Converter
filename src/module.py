@@ -44,7 +44,8 @@ class Module(object):
                 "label": label + " (" + self._title + ")",
                 "path": os.path.join("packs", filename).replace(os.path.sep, "/"),
                 "module": self._name,
-                "entity": entity
+                "entity": entity,
+                "type": entity,
             }
 
     def toDict(self):

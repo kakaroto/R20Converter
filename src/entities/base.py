@@ -86,7 +86,8 @@ class DatabaseFile(object):
         if converter.system_manifest is not None and converter.hasSystemPacks():
             packs = converter.system_manifest.get("packs", [])
             for pack in packs:
-                if pack['entity'] != "Actor":
+                entityType = pack.get('entity', None) or pack.get('type', None)
+                if entityType != "Actor":
                     continue
                 db = converter.packs.get(pack['name'], None)
                 if db is None:
