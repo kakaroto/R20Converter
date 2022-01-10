@@ -234,7 +234,9 @@ class Entity(object):
         if journal in ["handout", "character", "item"]:
             icon = {"handout": "fa-book-open", "character": "fa-user", "item": "fa-suitcase"}[journal]
             entity = {"handout": "JournalEntry", "character": "Actor", "item": "Item"}[journal]
-            return '<a class="entity-link" data-entity=%s data-id=%s %s%s><i class="fas %s"></i>%s</a>' % (entity, self.normalizeID(id), before_href, after_href, icon, text)
+            #return '<a class="entity-link" data-entity=%s data-id=%s %s%s><i class="fas %s"></i>%s</a>' % (entity, self.normalizeID(id), before_href, after_href, icon, text)
+            label = re.sub("[<>}{]", "_", text)
+            return '@%s[%s]{%s}' % (entity, self.normalizeID(id), label)
         else:
             return match.group(0)
 
