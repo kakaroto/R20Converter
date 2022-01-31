@@ -137,7 +137,7 @@ class Item(Entity):
             elif player != "":
                 player_id = Entity.normalizeID(player)
                 permissions[player_id] = Item.PERMISSION_OWNER
-        avatar_filename = ""
+        avatar_filename = None
         if handout["avatar"] != "":
             if item.getArgument("use_original_image_urls", False):
                 avatar_filename = handout["avatar"]
@@ -147,6 +147,8 @@ class Item(Entity):
                     (_, avatar_filename) = item.downloadResource(handout["avatar"], filename)
                 else:
                     (_, avatar_filename) = item.copyZipFile(filename, filename)
+                if avatar_filename == "":
+                    avatar_filename = None
         if item.getArgument("export_as_module", False):
             parent = None
 
@@ -280,7 +282,9 @@ class Item(Entity):
         
     @staticmethod
     def createItemClass(database, id, name, description, level, subclass, **kwargs):
-        data = Item.createStandardData(description, levels=level, subclass=subclass, **kwargs)
+        classData = ItemClass(name, level, subclass)
+        kwargs.update(classData.getDict())
+        data = Item.createStandardData(description, **kwargs)
         return Item(database, id, name, "class", None, data)
 
 
@@ -400,9 +404,12 @@ class ItemAttack:
             "actionType": self.type,
             "ability": self.ability,
             "attackBonus": self.bonus,
-            "critical": self.critical,
             "formula": self.formula,
-            "chatFlavor": self.chatFlavor
+            "chatFlavor": self.chatFlavor,
+            "critical": {
+                "threshold": self.critical,
+                "damage": None
+            }
         }
         data.update(self.damages.getDict())
         data.update(self.save.getDict())
@@ -750,6 +757,7 @@ class ItemWeapon:
     def getDict(self):
         data = {
             "weaponType": self.type,
+            "baseItem": "",
             "proficient": self.proficient
         }
         data.update(self.properties.getDict())
@@ -816,6 +824,11 @@ class ItemEquipment:
                 "dex": self.dexterity,
                 "value": self.ac
             },
+            "baseItem": "",
+            "speed": {
+                "value": None,
+                "conditions": ""
+            },
             "strength": self.strength,
             "stealth": self.stealth,
             "proficient": self.proficient
@@ -833,7 +846,10 @@ class ItemTool:
         return {
             "proficient": self.proficiency,
             "ability": self.ability,
-            "chatFlavor": self.flavor
+            "chatFlavor": self.flavor,
+            "toolType": "",
+            "baseItem": "",
+            "bonus": ""
         }
 
 # Tool specific item variables
@@ -864,5 +880,40 @@ class ItemBackpack:
                 "ep": self.ep,
                 "gp": self.gp,
                 "pp": self.pp
+            }
+        }
+
+# Class specific item variables
+class ItemClass:
+    def __init__(self, name, level, subclass, hitdice=None):
+        self.level = level
+        self.subclass = subclass
+        self.hitdice = hitdice
+        if self.hitdice is None:
+            cl = name.strip().lower()
+            if cl in ["artificer", "bard", "cleric", "druid", "monk", "rogue", "warlock"]:
+                self.hitdice = "d8"
+            elif cl in ["fighter", "paladin", "ranger"]:
+                self.hitdice = "d10"
+            elif cl == "barbarian":
+                self.hitdice = "d12"
+            else: # name == "sorcerer" or name == "wizard" or default:
+                self.hitdice = "d6"
+
+    def getDict(self):
+        return {
+            "levels": self.level,
+            "subclass": self.subclass,
+            "hitDice": self.hitdice,
+            "hitDiceUsed": 0,
+            "saves": [],
+            "skills": {
+                "number": 2,
+                "choices": [],
+                "value": []
+            },
+            "spellcasting": {
+                "progression": "none",
+                "ability": ""
             }
         }

@@ -51,8 +51,8 @@ class Token(Entity):
         self.emits_bright_light = 0
         self.emits_light = False
         self.has_vision = False
-        self.light_angle = 360
-        self.sight_angle = 360
+        self.light_angle = 0
+        self.sight_angle = 0
         self.mirrorX = False
         self.mirrorY = False
         self.tint = None
@@ -70,6 +70,11 @@ class Token(Entity):
                     return default
             self.width = parseInt("width", self.width)
             self.height = parseInt("height", self.height)
+            # Minimum width/height in Foundry is 0.1 so we can't have a width/height less than 10% of the 70 grid
+            if self.width < 7:
+                self.width = 7
+            if self.height < 7:
+                self.height = 7
             self.rotation = parseInt("rotation", self.rotation)
             self.bar1_val = parseInt("bar1_value", self.bar1_val)
             self.bar1_max = parseInt("bar1_max", self.bar1_max)
@@ -157,12 +162,15 @@ class Token(Entity):
 
     def getDict(self):
         # Roll20 light/sight angles are going downward, FVTT's are going upward... do some magic
-        if self.sight_angle != 360 or self.light_angle != 360:
+        if self.sight_angle != 0 or self.light_angle != 0:
             rotation = (self.rotation + 180) % 360
             lockRotation = (self.rotation == 0)
         else:
             rotation = self.rotation
             lockRotation = False
+        if rotation == 360:
+            rotation = 0
+
         def roundTenthStep(v):
             return int(v * 10) / 10
         return {"flags": {},
@@ -172,6 +180,8 @@ class Token(Entity):
                 "width": roundTenthStep(self.width / 70.0),
                 "height": roundTenthStep(self.height / 70.0),
                 "mirrorX": self.mirrorX,
+                "mirrorY": self.mirrorY,
+		        "alpha": 1,
                 "scale": 1,
                 "elevation": 0,
                 "rotation": rotation,
@@ -187,7 +197,29 @@ class Token(Entity):
                 "lightAlpha": 1,
                 "lightAnimation": {
                     "speed": 5,
-                    "intensity": 5
+                    "intensity": 5,
+			        "reverse": False
+                },
+                "light": {
+                    "dim": roundTenthStep(self.emits_dim_light),
+                    "bright": roundTenthStep(self.emits_bright_light),
+                    "angle": self.light_angle,
+                    "alpha": 1,
+                    "animation": {
+                        "speed": 5,
+                        "intensity": 5,
+                        "reverse": False
+                    },
+                    "coloration": 1,
+                    "gradual": True,
+                    "luminosity": 0.5,
+                    "saturation": 0,
+                    "contrast": 0,
+                    "shadows": 0,
+                    "darkness": {
+                        "min": 0,
+                        "max": 1
+                    }
                 },
                 "vision": self.has_vision,
                 "actorId": self.actor_id,
@@ -237,7 +269,7 @@ class Actor(Entity):
 
         npc = self.isNPC()
 
-        self._avatar_filename = ""
+        self._avatar_filename = None
         base_path = os.path.join("characters", "%03d - %s" % (index, character["name"]))
         if character["avatar"] != "":
             if self.getArgument("use_original_image_urls", False):
@@ -248,7 +280,8 @@ class Actor(Entity):
                     (_, self._avatar_filename) = self.downloadResource(character["avatar"], filename)
                 else:
                     (_, self._avatar_filename) = self.copyZipFile(filename, filename)
-
+                if self._avatar_filename == "":
+                    self._avatar_filename = None
         default_token = character["defaulttoken"] if character["defaulttoken"] != "" else None
         self.token = Token(self._id, character["name"], default_token)
         token_filename = ""
@@ -262,7 +295,7 @@ class Actor(Entity):
                     (_, token_filename) = self.downloadResource(default_token["imgsrc"], filename)
                 else:
                     (_, token_filename) = self.copyZipFile(filename, filename)
-                if self._avatar_filename == "":
+                if self._avatar_filename is None:
                     self._avatar_filename = token_filename
                 if "sides" in default_token and len(default_token["sides"]) > 0:
                     randomImg = True
@@ -298,9 +331,9 @@ class Actor(Entity):
                         else:
                             (_, token_filename) = self.copyZipFile(zip_filename, filename)
                         token_filename = os.path.dirname(token_filename) + "/*.png"
-            if self._avatar_filename == "":
+            if self._avatar_filename is None:
                 self._avatar_filename = token_filename
-        if token_filename == "":
+        if token_filename is None:
             token_filename = self._avatar_filename
         self.token.token_filename = token_filename
 
@@ -581,13 +614,19 @@ class Actor(Entity):
             save = self.getAttributeInt("npc_" + name.lower()[0:3] + "_save", 0)
         else:
             save = self.getAttributeInt(name.lower() + "_save_bonus", mod)
-        proficient = (save == mod + proficiency_bonus + self._save_bonus)
-        return {"value": ability,
-                "min": 3,
-                "proficient": 1 if proficient else 0,
-                "mod": mod,
-                "save": save
-                }
+        proficient = (save >= mod + proficiency_bonus + self._save_bonus)
+
+        return {
+            "value": ability,
+            "min": 3,
+            "proficient": 1 if proficient else 0,
+            "mod": mod,
+            "save": save,
+            "bonuses": {
+                "check": "",
+                "save": ""
+            },
+        }
 
     def createActorAbilities(self):
         return OrderedDict([("str", self.createActorAbility("Strength")),
@@ -627,7 +666,9 @@ class Actor(Entity):
         ac = self.getAttributeInt("npc_ac" if self.isNPC() else "ac", 10)
         
         res = {
-            "value": ac
+            "flat": ac,
+            "calc": "flat",
+            "formula": ""
         }
         if self.isNPC():
             res["formula"] = self.getAttribute("npc_actype", "")[0]
@@ -888,7 +929,7 @@ class Actor(Entity):
         ])
         if self.isNPC():
             details.update([
-                    ("type", self.getNPCType()[1]),
+                    ("type", {"value": self.getNPCType()[1], "subtype": "", "swarm": "", "custom": ""}),
                     ("environment", ""),
                     ("cr", self.getChallengeRating()),
                     ("xp", self.createAttributeNumber("Kill Experience", "npc_xp", 0)),
@@ -898,6 +939,7 @@ class Actor(Entity):
         else:
             details.update([
                     ("background", self.getAttribute("background", "")[0]),
+                    ("originalClass", ""),
                     ("level", self.createAttributeNumber("Character Level", "level", 1, {"min": 1, "max": 20})),
                     ("xp", self.createDetailXP()),
                     ("appearance", self.getAttribute("character_appearance", "")[0]),
@@ -943,9 +985,11 @@ class Actor(Entity):
         return {
             "value": value,
             "ability": ability.lower()[0:3],
-            "bonus": bonus,
             "mod": mod,
-            "passive": passive
+            "bonuses": {
+                "check": bonus,
+                "passive": (passive - mod - 10)
+            },
         }
     def createActorSkills(self):
         skills = OrderedDict([

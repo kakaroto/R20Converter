@@ -39,7 +39,7 @@ class R20Converter(object):
         self.system_manifest = None
         self.system_templates = {}
         self.game_system = self.getArgument("game_system", "dnd5e")
-        self.game_system_version = "1.2.4"
+        self.game_system_version = "1.5.6"
         if (self.game_system == ""):
             self.game_system = "dnd5e"
         self.fvtt_path = self.getArgument("fvtt_data_path", None)

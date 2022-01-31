@@ -15,34 +15,29 @@ class World(object):
             
 
     def toDict(self):
-        return {"id": self._name,
-                "name": self._name,
-                "title": self._title,
-                "description": self._description,
-                "version": "1.0.0",
-                "system": self._converter.game_system,
-                "coreVersion": "0.7.9",
-                "systemVersion": self._converter.game_system_version,
-                "minimumCoreVersion": "0.0.0",
-                "compatibleCoreVersion": "1.0.0",
-                "authors": ["R20Converter"],
-                "keywords": ["R20Converter"],
-                "packs": [],
-                "scripts":  ["templates/roll20-templates.js"] if self._copy_templates else [],
-                "esmodules": [],
-                "styles": ["templates/roll20-templates.css"] if self._copy_templates else [],
-                "unavailable": False,
-                "availability": 1,
-                "languages": [],
-                "socket": False,
-                "url": "",
-                "manifest": "",
-                "download": "",
-                "license": "",
-                "readme": "",
-                "bugs": "",
-                "changelog": "",  
-                }
+        return {
+            "name": self._name,
+            "title": self._title,
+            "description": self._description,
+            "version": "1.0.0",
+            "system": self._converter.game_system,
+            "coreVersion": "9.245",
+            "systemVersion": self._converter.game_system_version,
+            "minimumCoreVersion": "0.0.0",
+            "compatibleCoreVersion": "1.0.0",
+            "authors": ["R20Converter"],
+            "packs": [],
+            "scripts":  ["templates/roll20-templates.js"] if self._copy_templates else [],
+            "esmodules": [],
+            "styles": ["templates/roll20-templates.css"] if self._copy_templates else [],
+            "languages": [],
+            "socket": False,
+            "flags": {},
+            "dependencies": [],
+            "protected": False,
+            "resetKeys": False,
+            "safeMode": False
+        }
 
     # This is a json file, not a db file, so let's override the __str__ method
     def __str__(self):

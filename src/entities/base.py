@@ -166,12 +166,6 @@ class Entity(object):
 
     def addToOwnedList(self, parent_list):
         entity = copy.deepcopy(self.entity)
-        try:
-            del entity["_id"]
-            del entity["permission"]
-            del entity["folder"]
-        except:
-            pass
         entity["_id"] = self.genID()
         entity["sort"] = (len(parent_list) + 1) * Entity.SORT_ORDER
         parent_list.append(entity)

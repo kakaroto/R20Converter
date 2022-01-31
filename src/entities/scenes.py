@@ -335,15 +335,15 @@ class Scene(Entity):
                 if dim > 0 or bright > 0:
                     try:
                         angle = int(graphic["light_angle"])
-                        if angle == 0:
-                            angle = 360
+                        if angle == 360:
+                            angle = 0
                     except:
-                        angle = 360
+                        angle = 0
                     try:
                         rotation = graphic["rotation"]
                     except:
                         rotation = 0
-                    if angle != 360:
+                    if angle != 0:
                         rotation = (rotation + 180) % 360
                     light = {"_id": self.genID(),
                              "flags": {},
