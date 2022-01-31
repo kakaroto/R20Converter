@@ -1,4 +1,6 @@
 from .base import DatabaseFile, Entity
+import secrets
+import hashlib
 
 class Users(DatabaseFile):
     def __init__(self, converter):
@@ -44,11 +46,9 @@ class User(Entity):
                        "name": player["displayname"] or "Player",
                        "flags":{},
                        "color": self.color(player["color"]),
-                       "scene": Entity.normalizeID(scene),
-                       "permission": 0,
                        "permissions": {},
-                       "sort": index * Entity.SORT_ORDER,
-                       "hotbar": hotbar
+                       "hotbar": hotbar,
+                       "character": None
                        }
         self.logInfo("Creating User : %s (%s)" % (self.entity["name"], "GM" if is_gm else "Player"))
         
@@ -56,4 +56,11 @@ class User(Entity):
 
     def setGM(self, gm):
         self.entity["role"] = User.ROLE_GM if gm else User.ROLE_PLAYER
-        self.entity["password"] = self.getArgument("gm_password" if gm else "player_password", "")
+        self.setPassword(self.getArgument("gm_password" if gm else "player_password", ""))
+
+    def setPassword(self, password):
+        salt = secrets.token_hex(32)
+        hashedPassword = hashlib.pbkdf2_hmac('sha512', bytearray(password, 'utf-8'), bytearray(salt, 'utf-8'), 1000)
+        self.entity["passwordSalt"] = salt
+        self.entity["password"] = hashedPassword.hex()
+
