@@ -6,7 +6,7 @@ from .rolltemplates import RollTemplate
 
 class ChatLog(DatabaseFile):
     def __init__(self, converter):
-        DatabaseFile.__init__(self, converter, "chat.db")
+        DatabaseFile.__init__(self, converter, "messages.db")
         self._archive = self._campaign.get("chat_archive", [])
         self.entities = self.genEntities()
 
