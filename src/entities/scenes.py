@@ -5,6 +5,7 @@ from PIL import Image
 
 import os
 import math
+import time
 
 class PATH_TYPE:
     POLYGON = 0
@@ -80,7 +81,7 @@ class Scene(Entity):
 
         zip_page_path = os.path.join("pages", "%03d - %s" % (index, name))
         bg = None
-        bg_image = ""
+        bg_image = None
         for m in map_layer:
             if self.getArgument("all_backgrounds_as_tiles", False):
                 break
@@ -101,6 +102,7 @@ class Scene(Entity):
                     if bg_image == "":
                         self.logInfo("Couldn't copy background image for page '%s'" % (name))
                         bg = None
+                        bg_image = None
                     else:
                         break
         else:
@@ -212,10 +214,13 @@ class Scene(Entity):
                                 int(margin_left + x1[0] * grid_multiplier),
                                 int(margin_top + x1[1] * grid_multiplier),
                         ],
-                        "move": 1,
-                        "sense": 1,
+                        "move": 20,
+                        "light": 20,
+                        "sight": 20,
+                        "sound": 20,
                         "door": 0,
-                        "ds": 0
+                        "ds": 0,
+                        "dir": 0
                         }
                 walls.append(wall)
                 
@@ -452,10 +457,14 @@ class Scene(Entity):
                                 int(margin_left + wall_b[0] * grid_multiplier),
                                 int(margin_top + wall_b[1] * grid_multiplier),
                         ],
-                        "move": 1 if page["lightrestrictmove"] or self.getArgument("restrict_movement", False) else 0,
-                        "sense": 1,
+                        "move": 20 if page["lightrestrictmove"] or self.getArgument("restrict_movement", False) else 0,
                         "door": door_type,
-                        "ds": 0
+                        "light": 20,
+                        "sight": 20,
+                        "sound": 20,
+                        "door": 0,
+                        "ds": 0,
+                        "dir": 0
                     }
                     if door_type != 0:
                         wall["ds"] = 0
@@ -517,19 +526,31 @@ class Scene(Entity):
                         if graphic["fliph"]:
                             x = x + tile_width
                             tile_width *= -1
-                        tile = {"_id": self.genID(),
-                                "flags": {},
-                                "img": tile_image,
-                                "width": int(tile_width * grid_multiplier),
-                                "height": int(tile_height * grid_multiplier),
-                                "scale": 1, # Also seems unused
-                                "x": int(margin_left + x * grid_multiplier),
-                                "y": int(margin_top + y * grid_multiplier),
-                                "z": 10 * len(tiles),
-                                "rotation": rotation,
-                                "locked": layer == "map",
-                                "hidden": layer == "gmlayer" or layer == "walls"
-                                }
+                        tile = {
+                            "_id": self.genID(),
+                            "flags": {},
+                            "img": tile_image,
+                            "width": int(tile_width * grid_multiplier),
+                            "height": int(tile_height * grid_multiplier),
+                            "scale": 1, # Also seems unused
+                            "x": int(margin_left + x * grid_multiplier),
+                            "y": int(margin_top + y * grid_multiplier),
+                            "z": 10 * len(tiles),
+                            "rotation": rotation,
+                            "locked": layer == "map",
+                            "hidden": layer == "gmlayer" or layer == "walls",
+                            "alpha": 1,
+                            "overhead": False,
+                            "occlusion": {
+                                "mode": 1,
+                                "alpha": 0
+                            },
+                            "video": {
+                                "loop": True,
+                                "autoplay": True,
+                                "volume": 0
+                            }
+                        }
                         tiles.append(tile)
                 
                     
@@ -544,12 +565,12 @@ class Scene(Entity):
             folder = None
         self.entity = {"_id": self._id,
                        "name": name,
+                       "navName": name,
                        "permission": {"default": 0},
                        "folder": Entity.normalizeID(folder),
                        "flags": {},
                        "sort": page.get("placement", 0) * Entity.SORT_ORDER,
                        "navOrder": page.get("placement", 0),
-                       "description": "",
                        "navigation": not page["archived"],
                        "active": active_page == page["id"],
                        "img": bg_image,
@@ -579,8 +600,14 @@ class Scene(Entity):
                        "drawings": drawings,
                        "sounds": [],
                        "templates": [],
-                       "notes": []
-                       }
+                       "notes": [],
+                       "fogReset": int(time.time() * 1000),
+                       "playlist": None,
+                       "playlistSound": None,
+                       "journal": None,
+                       "weather": "",
+                       "folder": None,
+                    }
 
     def filterItems(self, type, layer=None, exclude=None):
         return [i for i in self._page[type] if (layer is None or i["layer"] == layer) and (exclude is None or i["id"] not in exclude)]
@@ -706,7 +733,6 @@ class Scene(Entity):
                         "texture": None,
                         "fontFamily": "Signika",
                         "fontSize": 45,
-                        "text": "",
                         "textAlpha": 1,
                         "textColor": "#ffffff",
                         "bezierFactor": 0.5 if drawing_type == "f" else 0,
