@@ -521,10 +521,8 @@ class Scene(Entity):
                         drawings.append(drawing)
                     else:
                         if graphic["flipv"]:
-                            y = y + tile_height
                             tile_height *= -1
                         if graphic["fliph"]:
-                            x = x + tile_width
                             tile_width *= -1
                         tile = {
                             "_id": self.genID(),
