@@ -14,20 +14,17 @@ This application converts a Roll20 campaign into a Foundry VTT world or module.
 
 It will automate the entire conversion process and all(*) of your campaign will be setup just the way it was in Roll 20
 
-(*) While macros will be converted, they will be sent as chat message only, since inline rolls and other Roll20 specific macros are not supported in Foundry VTT. You also need to be using the OGL character sheet ("D&D 5e by Roll20") or the Shaped Sheet template for conversion of characters to work. **It does not work with other sheets, meaning that non-dnd5e games will have broken character sheets and items (though everything else should be converted without issues).**
+(*) While macros will be converted, they will be sent as chat message only, since inline rolls and other Roll20 specific macros are not supported in Foundry VTT. You also need to be using the OGL character sheet ("D&D 5e by Roll20") or the Shaped Sheet template for conversion of characters to work. **This tool does not convert other character sheets, meaning that non-dnd5e games will have blank character sheets for actors and NPCs (though if a NPC of the same name exists in the system's compendiums, it will be imported from the game system compendium)**.
 
-![image](https://user-images.githubusercontent.com/27990/89517404-a7073880-d7a7-11ea-887b-c6e783620956.png)
-
+![image](https://user-images.githubusercontent.com/27990/156877520-f350e333-4fd3-4dc4-9234-298818cf3231.png)
 
 ## How to use
-
 Follow the instructions from the demo video to see it in action and how to use it : 
 
 - Quick overview: https://youtu.be/fngH2te2TJE
 - Detailed instructions : https://youtu.be/xAPS6NXZ0uM
 
-[![R20Converter 0.9 demo](https://user-images.githubusercontent.com/27990/82268394-dcd11980-993c-11ea-967f-c780814506cd.png)]https://youtu.be/xAPS6NXZ0uM)
-
+[![R20Converter 0.9 demo](https://user-images.githubusercontent.com/27990/82268394-dcd11980-993c-11ea-967f-c780814506cd.png)](https://youtu.be/xAPS6NXZ0uM)
 
 ### Windows
 
@@ -45,7 +42,11 @@ You can run it with `python3 src/main.py` in a terminal. Use the --help option t
 
 Required dependencies are : `requests`, `pillow`, `python-slugify` and for the GUI `eel`
  
-`pip3 install requests pillow python-slugify eel`
+`sudo pip3 install requests pillow python-slugify eel`
+
+If you are running raspbian on a Raspberry Pi, you may also need to run the command `sudo apt-get install libopenjp2-7` to install one of the dependencies.
+In order to run the Graphics User Interface, you will also need to have python-tk installed. That one can be installed from your distribution's package manager using `sudo apt install python3-tk` or `sudo dnf install python3-tkinter`.
+Installing Google Chrome's browser is also recommended.
 
 If no arguments are provided and the appropriate dependencies are installed, the program will launch in GUI mode.
 
@@ -62,9 +63,9 @@ You need to select your output directory. This should ideally be your existing l
 
 When the script is done, your campaign will be converted and available to use in Foundry VTT.
 
-The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) FVTT modules in the generated world. It is a recommended module from people coming from Roll20.
+The converted world will automatically enable the [permission_viewer](https://github.com/kakaroto/fvtt-module-permission-viewer) FVTT module in the generated world. It is suggested to have that module installed.
 
-The `permission viewer` FVTT module is helpful for those coming from Roll 20 to see which handouts/character sheets are shared with whom, while the Furnace module adds various Quality of life improvements.
+The `permission viewer` FVTT module is helpful for those coming from Roll 20 to see which handouts/character sheets are shared with whom.
 
 If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info), another project of mine which lets you roll from monster stat blocks and character sheets directly in D&D Beyond and get the result in your VTT application.
 
