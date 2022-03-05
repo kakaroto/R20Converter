@@ -169,7 +169,7 @@ class R20Converter(object):
             else:
                 self.actors = Actors(self)
 
-            if self.getArgument("disable_module_items", False):
+            if self.game_system == "dnd5e" and self.getArgument("disable_module_items", False):
                 self.items = EmptyDB(self, "items")
             else:
                 self.items.createEntities()
