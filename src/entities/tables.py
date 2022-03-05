@@ -102,7 +102,7 @@ class Table(Entity):
             parent = None
         self.entity = {
             "_id": self._id,
-            "name": table["name"],
+            "name": table["name"] or "Unnamed Table",
             "permission": permissions,
             "folder": Entity.normalizeID(parent),
             "flags": {},

@@ -34,7 +34,7 @@ class Macro(Entity):
                 permissions[player_id] = Macro.PERMISSION_OBSERVER
         self.entity = {
             "_id":self._id,
-            "name": macro["name"],
+            "name": macro["name"] or "Unnamed Macro",
             "permission": permissions,
             "type": "chat",
             "sort": index * Entity.SORT_ORDER,

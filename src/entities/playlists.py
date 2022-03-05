@@ -66,7 +66,7 @@ class Playlist(Entity):
                                    })
 
         self.entity = {"_id": self._id,
-                       "name": playlist["n"],
+                       "name": playlist["n"] or "Unnamed Playlist",
                        "permission": {"default": 0},
                        "flags": {},
                        "sounds": sounds,

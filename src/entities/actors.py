@@ -456,7 +456,7 @@ class Actor(Entity):
             folder = self.findFolder(character["id"],  self._database._campaign["journalfolder"])
 
         self.entity = {"_id": self._id,
-                       "name": character["name"] or "Character",
+                       "name": self.getName(),
                        "img": self._avatar_filename,
                        "permission": permissions,
                        "data": actor_data,
@@ -470,7 +470,7 @@ class Actor(Entity):
                        }
 
     def getName(self):
-        return self._character["name"]
+        return self._character["name"] or "Unknown Actor",
 
     def findFolder(self, id, folder, folder_id=None):
         for item in folder:

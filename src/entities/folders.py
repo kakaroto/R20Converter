@@ -8,7 +8,8 @@ class Folders(DatabaseFile):
         
     def addJournalFolder(self, folder, parent, index, depth=0):
         folders = []
-        is_items_folder = folder["n"].strip() in self.getArgument("folder_as_items", [])
+        name = folder["n"].strip()
+        is_items_folder = name in self.getArgument("folder_as_items", [])
         has_characters = False
         has_handouts = False
         has_items = is_items_folder
@@ -36,11 +37,11 @@ class Folders(DatabaseFile):
         # By default, an empty folder would appear in the journal
         if has_handouts or (not has_characters and not has_items):
             has_handouts = True
-            folders.append(Folder(self, "handout" + folder["id"], folder["n"], "JournalEntry", ("handout" + parent) if parent else None, index))
+            folders.append(Folder(self, "handout" + folder["id"], name or "Handouts", "JournalEntry", ("handout" + parent) if parent else None, index))
         if has_characters:
-            folders.append(Folder(self, "character" + folder["id"], folder["n"], "Actor", ("character" + parent) if parent else None, index))
+            folders.append(Folder(self, "character" + folder["id"], name or "Characters", "Actor", ("character" + parent) if parent else None, index))
         if has_items:
-            folders.append(Folder(self, "item" + folder["id"], folder["n"], "Item", ("item" + parent) if parent else None, index))
+            folders.append(Folder(self, "item" + folder["id"], name or "Items", "Item", ("item" + parent) if parent else None, index))
         return (folders, has_handouts, has_characters, has_items)
 
     def ensureFolder(self, id, name, folder_type, parent=None):

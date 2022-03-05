@@ -82,7 +82,7 @@ class Item(Entity):
         #self.logInfo("Creating %s Item : %s" % (item_type, name))
         
         self.entity = {"_id": self._id,
-                "name":  name,
+                "name":  name or "Unknown Item",
                 "permission": {"default": Item.PERMISSION_NONE},
                 "folder": None,
                 "flags": {},

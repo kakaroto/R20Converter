@@ -553,7 +553,7 @@ class Scene(Entity):
         if self.getArgument("export_as_module", False):
             folder = None
         self.entity = {"_id": self._id,
-                       "name": name,
+                       "name": name or "Unnamed Scene",
                        "navName": name,
                        "permission": {"default": 0},
                        "folder": Entity.normalizeID(folder),
