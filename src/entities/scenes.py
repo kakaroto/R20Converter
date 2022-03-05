@@ -244,28 +244,19 @@ class Scene(Entity):
             if graphic and layer != "walls" and (bg is None or graphic != bg):
                 # The character might have been deleted, but the graphic still represents a token
                 char_id = graphic["represents"]
-                emits_light = graphic["light_otherplayers"]
+                emits_light = Token.emitsLight(graphic)
                 has_status_markers = graphic.get("statusmarkers", "") != ""
+                (dradius, lradius) = Token.getLightRadius(graphic)
                 shows_name = graphic["showname"] and graphic["name"] != ""
                 
                 if emits_light:
-                    lradius = graphic.get("light_radius", 0)
-                    dradius = graphic.get("light_dimradius", 0)
-                    try:
-                        lradius = float(lradius)
-                    except ValueError:
-                        lradius = 0
-                    try:
-                        dradius = float(dradius)
-                    except ValueError:
-                        dradius = 0
                     if lradius == 0 and dradius == 0:
                         emits_light = False
                 # This is a token, not a tile
                 if char_id != "" or emits_light or shows_name or has_status_markers:
                     token = Token(Entity.normalizeID(char_id), "", graphic)
                     # Redo the dim/bright depending on the token size in this map
-                    token.setupLighting(graphic["light_radius"], graphic["light_dimradius"], 
+                    token.setupLighting(lradius, dradius, 
                                         page["scale_number"], page["scale_units"], orig_grid_size)
 
                     if self.getArgument("use_original_image_urls", False):
@@ -329,7 +320,7 @@ class Scene(Entity):
                             (_, tile_image) = self.copyZipFile(filename, dest)
             elif graphic and layer == "walls" and graphic["light_otherplayers"]:
                 # NOTE: We ignore tokens in the dynamic layer that are not emitting light.
-                (dim, bright) = Token.computeLighting(graphic["light_radius"], graphic["light_dimradius"],
+                (dim, bright) = Token.computeLighting(lradius, dradius,
                                                       tile_width, tile_height,
                                                       page["scale_number"], page["scale_units"], orig_grid_size)
                 if dim > 0 or bright > 0:

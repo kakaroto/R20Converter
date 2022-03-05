@@ -160,6 +160,37 @@ class Token(Entity):
             return (dim, bright)
         return (0, 0)
 
+    @staticmethod
+    def emitsLight(token):
+        legacy = token.get("legacy_lighting_enabled", True)
+        if legacy:
+            return token.get("light_otherplayers", False)
+        else:
+            return token.get("emits_low_light", False) or token.get("emits_bright_light", False)
+
+    @staticmethod
+    def getLightRadius(token):
+        legacy = token.get("legacy_lighting_enabled", True)
+        if legacy:
+            lradius = token.get("light_radius", 0)
+            dradius = token.get("light_dimradius", 0)
+        else:
+            lradius = 0
+            dradius = 0
+            if token.get("emits_low_light", False):
+                dradius = token.get("low_light_distance", 0)
+            if token.get("emits_bright_light", False):
+                lradius = token.get("bright_light_distance", 0)
+        try:
+            lradius = float(lradius)
+        except ValueError:
+            lradius = 0
+        try:
+            dradius = float(dradius)
+        except ValueError:
+            dradius = 0
+        return (dradius, lradius)
+
     def getDict(self):
         # Roll20 light/sight angles are going downward, FVTT's are going upward... do some magic
         if self.sight_angle != 0 or self.light_angle != 0:
