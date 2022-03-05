@@ -260,10 +260,14 @@ class Token(Entity):
 
         def roundTenthStep(v):
             return int(v * 10) / 10
+        img = self.token_filename if self.token_filename != "" else "icons/svg/mystery-man.svg"
+        # Use proper icon for torches
+        if self._token and ((img == "/images/editor/torch.svg") or (img == "icons/svg/mystery-man.svg" and self._token.get("imgsrc", "") == "/images/editor/torch.svg")):
+            img = "icons/svg/fire.svg"
         return {"flags": {},
                 "name": self.token_name or "Unnamed token",
                 "displayName": self.display_name,
-                "img": self.token_filename if self.token_filename != "" else "icons/svg/mystery-man.svg",
+                "img": img,
                 "width": roundTenthStep(self.width / 70.0),
                 "height": roundTenthStep(self.height / 70.0),
                 "mirrorX": self.mirrorX,
