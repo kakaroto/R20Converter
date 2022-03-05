@@ -318,14 +318,14 @@ class Scene(Entity):
                             (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest)
                         else:
                             (_, tile_image) = self.copyZipFile(filename, dest)
-            elif graphic and layer == "walls" and graphic["light_otherplayers"]:
+            elif graphic and layer == "walls" and Token.emitsLight(graphic):
                 # NOTE: We ignore tokens in the dynamic layer that are not emitting light.
                 (dim, bright) = Token.computeLighting(lradius, dradius,
                                                       tile_width, tile_height,
                                                       page["scale_number"], page["scale_units"], orig_grid_size)
                 if dim > 0 or bright > 0:
                     try:
-                        angle = int(graphic["light_angle"])
+                        angle = int(Token.lightAngle(graphic))
                         if angle == 360:
                             angle = 0
                     except:

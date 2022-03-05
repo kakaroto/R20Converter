@@ -51,8 +51,10 @@ class Token(Entity):
         self.emits_bright_light = 0
         self.emits_light = False
         self.has_vision = False
+        self.light_alpha = 1
         self.light_angle = 0
         self.sight_angle = 0
+        self.light_color = ""
         self.mirrorX = False
         self.mirrorY = False
         self.tint = None
@@ -82,11 +84,12 @@ class Token(Entity):
             self.bar2_max = parseInt("bar2_max", self.bar2_max)
             all_see_bar1 = token.get("showplayers_bar1", all_see_bar1)
             all_see_bar2 = token.get("showplayers_bar2", all_see_bar2)
-            lradius = token.get("light_radius", 0)
-            ldimradius = token.get("light_dimradius", 0)
-            self.has_vision = self._token.get("light_hassight", False)
-            self.light_angle = parseInt("light_angle", self.light_angle)
-            self.sight_angle = parseInt("light_losangle", self.sight_angle)
+            (ldimradius, lradius) = self.getLightRadius(token)
+            self.has_vision = self.hasSight(token)
+            self.light_angle = self.lightAngle(token)
+            self.sight_angle = self.sightAngle(token)
+            self.light_color = self.lightColor(token)
+            self.light_alpha = self.lightOpacity(token)
             self.setupLighting(lradius, ldimradius)
             self.mirrorX = bool(token.get("fliph", self.mirrorX))
             self.mirrorY = bool(token.get("flipv", self.mirrorY))
@@ -106,21 +109,25 @@ class Token(Entity):
     def setupLighting(self, light_radius, light_dimradius, scale=5, scale_units="ft", grid_size=70):
         # We don't check for light_hassight because R20 has to set it for NPC tokens to False
         # otherwise they get performance issues
-        (dim, bright) = self.computeLighting(light_radius, light_dimradius, self.width, self.height)
-        if self._token.get("light_otherplayers", False):
+        (dim, bright) = self.computeLighting(light_radius, light_dimradius, self.width, self.height, scale, scale_units, grid_size)
+        if self.emitsLight(self._token):
             self.emits_light = True
             self.emits_dim_light = dim
             self.emits_bright_light = bright
-        multiplier = self._token.get("light_multiplier", 1)
-        try:
-            multiplier = float(multiplier)
-        except:
+        legacy = self._token.get("legacy_lighting_enabled", True)
+        if legacy:
+            multiplier = self._token.get("light_multiplier", 1)
+            try:
+                multiplier = float(multiplier)
+            except:
+                multiplier = 1
+        else:
             multiplier = 1
         self.dim_sight = dim * multiplier
         self.bright_sight = bright * multiplier
         # But if you have sight but no vision, then FVTT won't show you anything, even if
         # you're next to a bright source of light, so we set dim sight to 1 ft in that case
-        if self.dim_sight == 0 and self.bright_sight == 0 and self._token.get("light_hassight", True):
+        if self.dim_sight == 0 and self.bright_sight == 0 and self.hasSight(self._token):
             self.dim_sight = 1
 
 
@@ -161,12 +168,61 @@ class Token(Entity):
         return (0, 0)
 
     @staticmethod
+    def hasSight(token):
+        legacy = token.get("legacy_lighting_enabled", True)
+        if legacy:
+            return token.get("light_hassight", False)
+        else:
+            return token.get("has_low_light_vision", False) or token.get("has_bright_light_vision", False)
+
+    @staticmethod
+    def sightAngle(token):
+        legacy = token.get("legacy_lighting_enabled", True)
+        angle = 0
+        if legacy:
+            angle = token.get("light_losangle", angle)
+        else:
+            if token.get("has_limit_field_of_vision", False):
+                angle = token.get("limit_field_of_vision_total", angle)
+            else:
+                return 0
+        
+        try:
+            return int(angle)
+        except:
+            return 0
+
+    @staticmethod
     def emitsLight(token):
         legacy = token.get("legacy_lighting_enabled", True)
         if legacy:
             return token.get("light_otherplayers", False)
         else:
             return token.get("emits_low_light", False) or token.get("emits_bright_light", False)
+
+    @staticmethod
+    def lightAngle(token):
+        legacy = token.get("legacy_lighting_enabled", True)
+        angle = 0
+        if legacy:
+            angle = token.get("light_angle", 0)
+        else:
+            if token.get("has_directional_bright_light", False):
+                angle = token.get("directional_bright_light_total", 0)
+            else:
+                return 0
+        try:
+            return int(angle)
+        except:
+            return 0
+
+    @staticmethod
+    def lightColor(token):
+        return token.get("lightColor", "transparent")
+
+    @staticmethod
+    def lightOpacity(token):
+        return token.get("dim_light_opacity", 1)
 
     @staticmethod
     def getLightRadius(token):
@@ -225,7 +281,7 @@ class Token(Entity):
                 "brightSight": roundTenthStep(self.bright_sight),
                 "sightAngle": self.sight_angle,
                 "lightAngle": self.light_angle,
-                "lightAlpha": 1,
+                "lightAlpha": self.light_alpha,
                 "lightAnimation": {
                     "speed": 5,
                     "intensity": 5,
@@ -235,7 +291,8 @@ class Token(Entity):
                     "dim": roundTenthStep(self.emits_dim_light),
                     "bright": roundTenthStep(self.emits_bright_light),
                     "angle": self.light_angle,
-                    "alpha": 1,
+                    "color": self.light_color,
+                    "alpha": self.light_alpha,
                     "animation": {
                         "speed": 5,
                         "intensity": 5,
