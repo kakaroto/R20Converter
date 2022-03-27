@@ -320,6 +320,7 @@ class Scene(Entity):
                             (_, tile_image) = self.copyZipFile(filename, dest)
             elif graphic and layer == "walls" and Token.emitsLight(graphic):
                 # NOTE: We ignore tokens in the dynamic layer that are not emitting light.
+                (dradius, lradius) = Token.getLightRadius(graphic)
                 (dim, bright) = Token.computeLighting(lradius, dradius,
                                                       tile_width, tile_height,
                                                       page["scale_number"], page["scale_units"], orig_grid_size)
