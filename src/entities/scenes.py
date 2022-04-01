@@ -454,7 +454,6 @@ class Scene(Entity):
                         "light": 20,
                         "sight": 20,
                         "sound": 20,
-                        "door": 0,
                         "ds": 0,
                         "dir": 0
                     }
