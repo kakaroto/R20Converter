@@ -631,13 +631,17 @@ class Scene(Entity):
         path_type = PATH_TYPE.POLYGON
         for point in path:
             if point[0] == "M": # First Point
-                (w, h) = add_point(point[1], point[2], w, h)
+                if point[1] is not None and point[2] is not None:
+                    (w, h) = add_point(point[1], point[2], w, h)
             elif point[0] == "L": # A line
-                (w, h) = add_point(point[1], point[2], w, h)
+                if point[1] is not None and point[2] is not None:
+                    (w, h) = add_point(point[1], point[2], w, h)
             elif point[0] == "Q": # Freehand
-                (w, h) = add_point(point[1], point[2], w, h)
-                (w, h) = add_point(point[3], point[4], w, h)
-                path_type = PATH_TYPE.FREEHAND
+                if point[1] is not None and point[2] is not None and \
+                    point[3] is not None and point[4] is not None:
+                    (w, h) = add_point(point[1], point[2], w, h)
+                    (w, h) = add_point(point[3], point[4], w, h)
+                    path_type = PATH_TYPE.FREEHAND
             elif point[0] == "C": # Circle
                 path_type = PATH_TYPE.CIRCLE
             else:
