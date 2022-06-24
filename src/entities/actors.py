@@ -1960,6 +1960,8 @@ class Actor(Entity):
                 attack.save.ability = ItemAbility.fromString(match.group(2))
                 if attack.save.ability != ItemAbility.NONE:
                     attack.save.dc = int(match.group(1))
+                    attack.save.scaling = "flat"
+                    attack.type = ItemAttack.SAVE
             if attack_flag:
                 has_attack = True
                 attack.type = ItemAttack.MELEE_WEAPON if atktype == "Melee" else ItemAttack.RANGED_WEAPON
