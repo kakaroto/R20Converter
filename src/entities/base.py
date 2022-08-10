@@ -172,9 +172,17 @@ class Entity(object):
         return entity
 
     def findCompendiumItem(self, compendium, item_name):
-        return self._database.findCompendiumItem(compendium, item_name)
+        item = self._database.findCompendiumItem(compendium, item_name)
+        if item and "system" in item.entity:
+            item.entity["data"] = item.entity["system"]
+            del item.entity["system"]
+        return item
     def findCompendiumActor(self, actor_name):
-        return self._database.findCompendiumActor(actor_name)
+        actor = self._database.findCompendiumActor(actor_name)
+        if actor and "system" in actor.entity:
+            actor.entity["data"] = actor.entity["system"]
+            del actor.entity["system"]
+        return actor
 
     def getArgument(self, name, default=None):
         return self._database.getArgument(name, default)

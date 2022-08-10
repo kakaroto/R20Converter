@@ -505,9 +505,9 @@ class Actor(Entity):
             actor_data = templates.get(actor_type, {})
             compendium_actor = self.findCompendiumActor(character["name"])
             if compendium_actor:
-                actor_type = compendium_actor.entity['type']
-                actor_data = compendium_actor.entity['data']
-                owned_items = compendium_actor.entity['items']
+                actor_type = compendium_actor.entity["type"]
+                actor_data = compendium_actor.entity.get("data", compendium_actor.entity.get("system", None))
+                owned_items = compendium_actor.entity["items"]
 
         if self.getArgument("export_as_module", False):
             folder = None

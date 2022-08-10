@@ -174,6 +174,9 @@ class Item(Entity):
         item.entity["_id"] = item.getID()
         item.entity["permission"] = {"default": Item.PERMISSION_NONE}
         item.entity["folder"] = None
+        if "system" in item.entity:
+            item.entity["data"] = item.entity["system"]
+            del item.entity["system"]
         if custom_data and item.getArgument("no_compendium_overwrite", False) is False:
             item.entity["data"].update(custom_data)
 
