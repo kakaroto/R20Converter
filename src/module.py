@@ -46,6 +46,7 @@ class Module(object):
                 "module": self._name,
                 "entity": entity,
                 "type": entity,
+                "system": self._converter.game_system
             }
 
     def toDict(self):
@@ -56,6 +57,7 @@ class Module(object):
                 "version": version,
                 "minimumCoreVersion": "0.7.5",
                 "compatibleCoreVersion": "1.0.0",
+                "system": self._converter.game_system,
                 "packs": self._packs
             } 
 
