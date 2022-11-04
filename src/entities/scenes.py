@@ -32,7 +32,7 @@ class Scenes(DatabaseFile):
         return [Scene(self, page, index, self._campaign["playerpageid"]) for index, page in enumerate(self._pages)]
 
 class Scene(Entity):
-    GRID_TYPES = {"square": 1, "hex": 2, "hexr": 4}
+    GRID_TYPES = {"square": 1, "isometric": 1, "hex": 2, "hexr": 4}
     PAD_X = 5
     PAD_Y = 5
 
