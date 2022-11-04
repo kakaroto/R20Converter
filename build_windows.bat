@@ -31,11 +31,14 @@ xcopy /s client\dist "releases\R20Converter-%version%-linux\client\dist\"
 xcopy /s client\public "releases\R20Converter-%version%-linux\client\public\"
 xcopy /s client\src "releases\R20Converter-%version%-linux\client\src\"
 
-"C:\Users\kakaroto\AppData\Local\Programs\Python\Python38-32\python.exe" setup.py build
-
-move "build\exe.win32-3.8" "releases\R20Converter-%version%-win32"
+rem "C:\Users\kakaroto\AppData\Local\Programs\Python\Python38-32\python.exe" setup.py build
+rem timeout 1
+rem move "build\exe.win32-3.8" "releases\R20Converter-%version%-win32"
 
 "C:\Users\kakaroto\AppData\Local\Programs\Python\Python38\python.exe" setup.py build
 
+rem sometimes it throws access denien, so we need to wait a second before move the folder
+timeout 1
 move "build\exe.win-amd64-3.8" "releases\R20Converter-%version%-win64"
+
 pause
