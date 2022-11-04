@@ -376,7 +376,7 @@ class Scene(Entity):
                             "rotation": rotation,
                             "hidden": layer == "gmlayer" or layer == "walls",
                             "locked": layer == "map",
-                            "author": Entity.normalizeID(text["controlledby"]) or "GM"
+                            "author": Entity.normalizeID(text["controlledby"]) or ""
                 }
                 drawing = self.createTextDrawing(drawing, text)
                 drawings.append(drawing)
@@ -395,7 +395,7 @@ class Scene(Entity):
                             "rotation": rotation,
                             "hidden": layer == "gmlayer" or layer == "walls",
                             "locked": layer == "map",
-                            "author": Entity.normalizeID(path["controlledby"]) or "GM"
+                            "author": Entity.normalizeID(path["controlledby"]) or ""
                 }
                 drawing = self.createPathDrawing(drawing, path)
                 drawings.append(drawing)
@@ -492,7 +492,7 @@ class Scene(Entity):
                                     "rotation": rotation,
                                     "hidden": layer == "gmlayer" or layer == "walls",
                                     "locked": layer == "map",
-                                    "author": Entity.normalizeID(obj["controlledby"]) or "GM", # invalid user (or export-as-module) will be invalid author, which means all GM
+                                    "author": Entity.normalizeID(obj["controlledby"]) or "", # invalid user (or export-as-module) will be invalid author, which means all GM
                                     "type": "r",
                                     "fillType": 2,
                                     "fillColor": "#ffffff",
