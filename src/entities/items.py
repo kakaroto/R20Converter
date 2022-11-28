@@ -889,11 +889,12 @@ class ItemBackpack:
 # Class specific item variables
 class ItemClass:
     def __init__(self, name, level, subclass, hitdice=None):
-        self.level = level
+        self.level = int(level)
         self.subclass = subclass
         self.hitdice = hitdice
+        cl = name.strip().lower()
+        # Set class hitdice
         if self.hitdice is None:
-            cl = name.strip().lower()
             if cl in ["artificer", "bard", "cleric", "druid", "monk", "rogue", "warlock"]:
                 self.hitdice = "d8"
             elif cl in ["fighter", "paladin", "ranger"]:
@@ -902,6 +903,26 @@ class ItemClass:
                 self.hitdice = "d12"
             else: # name == "sorcerer" or name == "wizard" or default:
                 self.hitdice = "d6"
+        # Set spellcasting progression type
+        if cl in ["sorcerer", "bard", "cleric", "wizard", "druid"]:
+            self.spell_progression = "full"
+        elif cl in ["ranger", "paladin"]:
+            self.spell_progression = "half"
+        elif cl == "warlock":
+            self.spell_progression = "pact"
+        elif cl == "artificer":
+            self.spell_progression = "artificer"
+        else: # monk, fighter, barbarian, rogue
+            self.spell_progression = "none"
+        # Set spellcasting ability
+        if cl in ["sorcerer", "warlock", "bard", "paladin"]:
+            self.spell_ability = "cha"
+        elif cl in ["ranger", "cleric", "druid"]:
+            self.spell_ability = "wis"
+        elif cl in ["wizard", "artificer"]:
+            self.spell_ability = "int"
+        else: # monk, fighter, barbarian, rogue
+            self.spell_ability = ""
 
     def getDict(self):
         return {
@@ -916,7 +937,7 @@ class ItemClass:
                 "value": []
             },
             "spellcasting": {
-                "progression": "none",
-                "ability": ""
+                "progression": self.spell_progression,
+                "ability": self.spell_ability
             }
         }
