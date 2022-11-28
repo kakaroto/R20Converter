@@ -10,11 +10,18 @@ import uuid
 import copy
 
 class DatabaseFile(object):
-    def __init__(self, converter, filename):
+    def __init__(self, converter, filename, package=None, pack_name=None):
         self._converter = converter
         self._path = converter.path
         self._filename = filename
         self._campaign = converter.campaign
+        # Save package and pack name
+        self._package = package
+        self._pack_name = pack_name
+        # If exporting to module, then init package/pack name from converter
+        if package is None and self.getArgument("export_as_module", False):
+            self._package = converter.name
+            self._pack_name = re.sub(".db", "", filename)
         self.entities = []
   
     def logInfo(self, msg):
@@ -164,6 +171,15 @@ class Entity(object):
     def findID(self, id, where=None):
         return self._database.findID(id, where)
 
+    @property
+    def isCompendiumEntity(self):
+        return self._database._package is not None
+
+    def getFullID(self):
+        if not self.isCompendiumEntity:
+            return self.getID()
+        return "%s.%s.%s" % (self._database._package, self._database._pack_name, self.getID())
+
     def addToOwnedList(self, parent_list):
         entity = copy.deepcopy(self.entity)
         entity["_id"] = self.genID()
@@ -201,8 +217,6 @@ class Entity(object):
         name = name.split("#")[0].split("?")[0]
         after_href = match.group(4)
         text = match.group(5)
-        if self.getArgument("export_as_module", False):
-            return "@Item[" + name + "]"
         item = converter.items.getByName(name)
         if item is None:
             if compendium == "Spells":
@@ -215,7 +229,11 @@ class Entity(object):
                 folder = "Compendium"
                 folder_id = "r20converter-dnd5e-compendium"
             compendium_item = self.findCompendiumItem(compendium, name)
-            if compendium_item:
+            if self.getArgument("export_as_module", False):
+                if compendium_item:
+                    return "@Compendium[%s]{%s}" % (compendium_item.getFullID(), name)
+                return "@Item[%s]" % name
+            elif compendium_item:
                 converter.folders.ensureFolder(folder_id, folder, "Item")
                 item = converter.items.createItemFromCompendium(None, compendium_item)
                 item.entity["folder"] = Entity.normalizeID(folder_id)
@@ -234,11 +252,15 @@ class Entity(object):
         after_href = match.group(4)
         text = match.group(5)
         if journal in ["handout", "character", "item"]:
-            icon = {"handout": "fa-book-open", "character": "fa-user", "item": "fa-suitcase"}[journal]
-            entity = {"handout": "JournalEntry", "character": "Actor", "item": "Item"}[journal]
+            #icon = {"handout": "fa-book-open", "character": "fa-user", "item": "fa-suitcase"}[journal]
             #return '<a class="entity-link" data-entity=%s data-id=%s %s%s><i class="fas %s"></i>%s</a>' % (entity, self.normalizeID(id), before_href, after_href, icon, text)
             label = re.sub("[<>}{]", "_", text)
-            return '@%s[%s]{%s}' % (entity, self.normalizeID(id), label)
+            if self.isCompendiumEntity:
+                compendium = {"handout": "journal", "character": "actors", "item": "items"}[journal]
+                return '@Compendium[%s.%s.%s]{%s}' % (self._database._package, compendium, self.normalizeID(id), label)
+            else:
+                entity = {"handout": "JournalEntry", "character": "Actor", "item": "Item"}[journal]
+                return '@%s[%s]{%s}' % (entity, self.normalizeID(id), label)
         else:
             return match.group(0)
 

@@ -91,7 +91,7 @@ class R20Converter(object):
     def loadDnD5ePacks(self):
         self.packs = {}
         for file in ["items", "spells", "classfeatures", "classes", "monsters"]:
-            db  = DatabaseFile(self, "%s.db" % file)
+            db  = DatabaseFile(self, "%s.db" % file, "dnd5e", file)
             path = os.path.join(self.fvtt_path, "Data", "systems", "dnd5e", "packs", "%s.db" % file)
             try:
                 db.load(path)
@@ -103,7 +103,7 @@ class R20Converter(object):
         self.packs = {}
         self.logInfo("Loading System Compendium Packs...")
         for pack in self.system_manifest.get('packs', []):
-            db  = DatabaseFile(self, "%s.db" % pack['name'])
+            db  = DatabaseFile(self, "%s.db" % pack['name'], self.game_system, pack['name'])
             path = os.path.join(self.fvtt_path, "Data", "systems", self.game_system, pack['path'])
             try:
                 db.load(path)
