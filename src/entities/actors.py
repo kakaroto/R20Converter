@@ -2401,6 +2401,9 @@ class Actor(Entity):
         compendium_item = self.findCompendiumItem("Classes", name)
         item = self._converter.items.createItemClass(None, name, name, level, subclass, **kwargs)
         if compendium_item and compendium_item.entity["type"] != "loot":
+            del item.entity["data"]["saves"]
+            del item.entity["data"]["skills"]
+            del item.entity["data"]["spellcasting"]
             item = self._converter.items.createItemFromCompendium(None, compendium_item, item.entity["data"])
         else:
             item.entity["img"] = compendium_item.entity["img"] if compendium_item else self._avatar_filename
