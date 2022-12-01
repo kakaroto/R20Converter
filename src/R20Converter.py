@@ -155,14 +155,14 @@ class R20Converter(object):
         if self.getArgument("export_as_module", False):
             os.makedirs(os.path.join(self.path, "packs"))
 
+            # actors and journals can modify the items list, so create the correct class
+            # and overwrite it with an emptyDB later if needed
+            self.items = Items(self)
+
             if self.getArgument("disable_module_journal", False):
                 self.journal = EmptyDB(self, "journal")
             else:
                 self.journal = Journal(self)
-
-            # actors can modify the items list, so create the correct class
-            # and overwrite it with an emptyDB later
-            self.items = Items(self)
 
             if self.getArgument("disable_module_actors", False):
                 self.actors = EmptyDB(self, "actors")
