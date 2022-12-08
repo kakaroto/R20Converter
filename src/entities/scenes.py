@@ -59,8 +59,8 @@ class Scene(Entity):
         snapping_increment = safeCast(float, page["snapping_increment"], 0)
         orig_grid_size = 70 * (snapping_increment if snapping_increment else 1)
         # Page grid size is hardcoded to 70px in Roll20
-        width = 70 * int(safeCast(float, page["width"]), 1)
-        height = 70 * int(safeCast(float, page["height"]), 1)
+        width = 70 * int(safeCast(float, page["width"], 1))
+        height = 70 * int(safeCast(float, page["height"], 1))
 
         # FVTT doesn't allow grid sizes < 50, so we need to double (or triple) everything
         # if that's the case, and adjust our width/height, margins, and tile positions accordingly
