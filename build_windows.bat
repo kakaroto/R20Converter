@@ -37,8 +37,8 @@ rem move "build\exe.win32-3.8" "releases\R20Converter-%version%-win32"
 
 "C:\Users\kakaroto\AppData\Local\Programs\Python\Python38\python.exe" setup.py build
 
-rem sometimes it throws access denien, so we need to wait a second before move the folder
-timeout 1
+rem sometimes it throws access denien, so we need to wait a bit before move the folder
+timeout 5
 move "build\exe.win-amd64-3.8" "releases\R20Converter-%version%-win64"
 
 pause
