@@ -32,7 +32,8 @@ class Scenes(DatabaseFile):
         return [Scene(self, page, index, self._campaign["playerpageid"]) for index, page in enumerate(self._pages)]
 
 class Scene(Entity):
-    GRID_TYPES = {"square": 1, "isometric": 1, "hex": 2, "hexr": 4}
+    # "isometric" and "dimetric" grids are not supported
+    GRID_TYPES = {"square": 1, "hex": 2, "hexr": 4}
     PAD_X = 5
     PAD_Y = 5
 
@@ -74,7 +75,10 @@ class Scene(Entity):
         padding = self.getArgument("scene_padding", 0.25)
         margin_left = math.ceil(width * grid_multiplier / grid_size * padding) * grid_size
         margin_top = math.ceil(height * grid_multiplier / grid_size * padding) * grid_size
-        grid_type = self.GRID_TYPES[page["grid_type"]]
+        grid_type = self.GRID_TYPES.get(page["grid_type"], -1)
+        if grid_type == -1:
+            self.logInfo("Unsupported grid type %s, disabling grid" % page["grid_type"])
+            grid_type = 0
         if not page["showgrid"]:
             grid_type = 0
         map_layer = [g for g in page["graphics"] if g["layer"] == "map"]
