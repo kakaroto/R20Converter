@@ -762,8 +762,10 @@ class Actor(Entity):
             "calc": "flat",
             "formula": ""
         }
-        if self.isNPC():
-            res["formula"] = self.getAttribute("npc_actype", "")[0]
+        # dnd5e 2.1.x doesn't like using a non formula in the formula field
+        # causing the acto
+        #  if self.isNPC():
+        #    res["formula"] = self.getAttribute("npc_actype", "")[0]
         return res
 
     def createAttributeHP(self):
