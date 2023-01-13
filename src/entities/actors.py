@@ -531,7 +531,7 @@ class Actor(Entity):
                        }
 
     def getName(self):
-        return self._character["name"] or "Unknown Actor",
+        return self._character["name"] or "Unknown Actor"
 
     def findFolder(self, id, folder, folder_id=None):
         for item in folder:
