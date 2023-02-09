@@ -889,7 +889,10 @@ class ItemBackpack:
 # Class specific item variables
 class ItemClass:
     def __init__(self, name, level, subclass, hitdice=None):
-        self.level = int(level)
+        try:
+            self.level = int(level)
+        except:
+            self.level = 1
         self.subclass = subclass
         self.hitdice = hitdice
         cl = name.strip().lower()
