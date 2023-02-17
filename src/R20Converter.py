@@ -85,6 +85,8 @@ class R20Converter(object):
         try:
             with open(path, "r", encoding='utf-8') as f:
                 self.system_manifest = json.load(f)
+                # Make sure the game system is capitalized properly.
+                self.game_system = self.system_manifest.get("id", self.system_manifest.get("name", self.game_system))
         except:
             pass
 
