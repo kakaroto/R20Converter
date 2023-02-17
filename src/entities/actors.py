@@ -2128,7 +2128,7 @@ class Actor(Entity):
                 for prop in properties.split(","):
                     weapon.properties.addFromString(prop.strip())
                 if description == "":
-                    description = self.getAttributeInt("itemcontent", "", from_dict=item)
+                    description = self.getAttribute("itemcontent", "", from_dict=item)[0]
 
             self.createItemInventory(items, name, description, "weapon", attributes,
                                     activation, attack, weapon)
