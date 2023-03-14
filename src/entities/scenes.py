@@ -157,6 +157,9 @@ class Scene(Entity):
                 path = self.findItemByID(page, zid, "paths")
                 if path is None or path["layer"] != "walls":
                     continue
+                # Don't check wall color for one way walls
+                if path.get("barrierType", "wall") != "wall": 
+                    continue
                 wall_colors.setdefault(path["stroke"], 0)
                 wall_colors[path["stroke"]] += len(path["path"]) - 1
 
@@ -442,6 +445,9 @@ class Scene(Entity):
                             if min(angles) >= min_angle:
                                 continue
                     door_type = 1 if path["stroke"] == door_color else (2 if path["stroke"] in secret_door_colors else 0)
+                    if barrierType != "wall": 
+                        # one way walls are set a different color
+                        door_type = 0
                     wall_a = [left + previous_point[0],
                                 top + previous_point[1]]
                     wall_b = [left + point[0],
