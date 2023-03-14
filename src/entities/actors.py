@@ -734,11 +734,12 @@ class Actor(Entity):
         try:
             current = int(current)
         except ValueError:
-            pass
+            current = default
         try:
             max = int(max)
         except ValueError:
-            pass
+            max = current
+
         ret = {"value": current}
         if max != "":
             ret["min"] = 0
@@ -786,11 +787,11 @@ class Actor(Entity):
         try:
             value = int(value)
         except:
-            pass
+            value = 0
         try:
             max = int(max)
         except:
-            pass
+            max = 0
         return {
             "value": value,
             "min": 0,
@@ -992,9 +993,8 @@ class Actor(Entity):
                 try:
                     current = int(current.split("/")[0].replace(",", "").replace(".", ""))
                 except:
-                    pass
-            if current == "":
-                current = 0
+                    current = 0
+            current = 0
         level = self.getAttributeInt("level", 1)
         try:
             max = max_per_level[level]
@@ -1003,7 +1003,7 @@ class Actor(Entity):
             max = 0
             prev = 0
         try:
-            percent = 100 * (current - prev) / (max - prev)
+            percent = max(0, min(100, 100 * (current - prev) / (max - prev)))
         except:
             percent = 0
 
