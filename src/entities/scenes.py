@@ -463,9 +463,9 @@ class Scene(Entity):
                         ],
                         "move": 20 if page["lightrestrictmove"] or self.getArgument("restrict_movement", False) else 0,
                         "door": door_type,
-                        "light": 20,
-                        "sight": 20,
-                        "sound": 20,
+                        "light": 0 if barrierType == "transparent" else 20,
+                        "sight": 0 if barrierType == "transparent" else 20,
+                        "sound": 0 if barrierType == "transparent" else 20,
                         "ds": 0,
                         "dir": 0 if barrierType == "wall" else (2 if oneWayReversed else 1)
                     }
