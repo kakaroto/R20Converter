@@ -147,6 +147,8 @@ class Scene(Entity):
         ids_to_display.extend([i["id"] for i in self.filterItems("paths", "objects", ids_to_display)])
         ids_to_display.extend([i["id"] for i in self.filterItems("paths", "gmlayer", ids_to_display)])
         ids_to_display.extend([i["id"] for i in self.filterItems("paths", "walls", ids_to_display)])
+        ids_to_display.extend([i["id"] for i in self.filterItems("doors", None, ids_to_display)])
+        ids_to_display.extend([i["id"] for i in self.filterItems("windows", None, ids_to_display)])
 
         # Try to figure out what colors are the doors/secret doors
         door_color =  self.getArgument("door_color", None)
@@ -236,16 +238,21 @@ class Scene(Entity):
             graphic = self.findItemByID(page, zid, "graphics")
             text = self.findItemByID(page, zid, "texts")
             path = self.findItemByID(page, zid, "paths")
-            obj = graphic or text or path
+            door = self.findItemByID(page, zid, "doors")
+            window = self.findItemByID(page, zid, "windows")
+            obj = graphic or text or path or door or window
             if obj is None or (graphic is not None and graphic["imgsrc"] == ""):
                 continue
             tile_image = None
-            layer = obj["layer"]
-            left = safeCast(int, obj["left"], 0)
-            top = safeCast(int, obj["top"], 0)
-            tile_width = safeCast(int, obj["width"], 0)
-            tile_height = safeCast(int, obj["height"], 0)
-            rotation = safeCast(float, obj["rotation"], 0)
+            if door or window:
+                layer = "walls"
+            else:
+                layer = obj["layer"]
+                left = safeCast(int, obj["left"], 0)
+                top = safeCast(int, obj["top"], 0)
+                tile_width = safeCast(int, obj["width"], 0)
+                tile_height = safeCast(int, obj["height"], 0)
+                rotation = safeCast(float, obj["rotation"], 0)
             tiles = (map_tiles if layer == "map" else objects_tiles)
 
             if graphic and layer != "walls" and (bg is None or graphic != bg):
@@ -479,7 +486,41 @@ class Scene(Entity):
                         walls.append(wall)
                     previous_point = point
                     previous_point_idx = point_idx
-                
+            elif door or window:
+                total_walls += 1
+                door_type = 0 if window else (2 if door['isSecret'] else 1)
+                door_state = 0 if window else (2 if door['isLocked'] else (1 if door['isOpen'] else 0))
+                move_restriction = 20 if door else (0 if window['isOpen'] else 20)
+                sense_restriction = 0 if window else 20
+                x = obj['x']
+                y = obj['y'] * -1 # For some reason, x/y is top-left corner, and y is in the negatives
+                wall_a = [x - obj['path']['handle0']['x'],
+                          y - obj['path']['handle0']['y']]
+                wall_b = [x - obj['path']['handle1']['x'],
+                          y - obj['path']['handle1']['y']]
+                wall = {
+                    "_id": self.genID(),
+                    "flags": {},
+                    "c": [
+                            int(margin_left + wall_a[0] * grid_multiplier),
+                            int(margin_top + wall_a[1] * grid_multiplier),
+                            int(margin_left + wall_b[0] * grid_multiplier),
+                            int(margin_top + wall_b[1] * grid_multiplier),
+                    ],
+                    "move": move_restriction,
+                    "light": sense_restriction,
+                    "sight": sense_restriction,
+                    "sound": sense_restriction,
+                    "door": door_type,
+                    "ds": door_state,
+                    "dir": 0
+                }
+                wall_x = min(wall_a[0], wall_b[0])
+                wall_y = min(wall_a[1], wall_b[1])
+                wall_width = max(wall_a[0], wall_b[0]) - wall_x
+                wall_height = max(wall_a[1], wall_b[1]) - wall_y
+                if not self._needsCleanup(wall_x, wall_y, wall_width, wall_height, width, height):
+                    walls.append(wall)
 
             if tile_image:
                 # graphic's left/top position is for the rotation point (center of image)
