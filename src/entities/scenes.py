@@ -410,6 +410,8 @@ class Scene(Entity):
                 left = (left - (drawing_width / 2))
                 top = (top - (drawing_height / 2))
                 (polygon, path_type, _, _) = self.pathToPolygonList(path["path"], 0, 0)
+                barrierType = path.get("barrierType", "wall")
+                oneWayReversed = path.get("oneWayReversed", False)
                 if path_type == PATH_TYPE.CIRCLE:
                     self.logInfo("Circle in the dynamic layer! Not supported!")
                     continue
@@ -459,7 +461,7 @@ class Scene(Entity):
                         "sight": 20,
                         "sound": 20,
                         "ds": 0,
-                        "dir": 0
+                        "dir": 0 if barrierType == "wall" else (2 if oneWayReversed else 1)
                     }
                     if door_type != 0:
                         wall["ds"] = 0
