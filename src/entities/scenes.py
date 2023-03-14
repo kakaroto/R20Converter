@@ -656,6 +656,8 @@ class Scene(Entity):
                     path_type = PATH_TYPE.FREEHAND
             elif point[0] == "C": # Circle
                 path_type = PATH_TYPE.CIRCLE
+            elif point[0] == "Z": # End drawing (empty)
+                pass
             else:
                 self.logInfo("Unknown path type: %s" % str(point))
         if path_type == PATH_TYPE.POLYGON and len(path) == 5 and \
