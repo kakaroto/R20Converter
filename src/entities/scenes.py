@@ -652,11 +652,11 @@ class Scene(Entity):
                     }
 
     def filterItems(self, type, layer=None, exclude=None):
-        return [i for i in self._page[type] if (layer is None or i["layer"] == layer) and (exclude is None or i["id"] not in exclude)]
+        return [i for i in self._page.get(type, []) if (layer is None or i["layer"] == layer) and (exclude is None or i["id"] not in exclude)]
 
     @staticmethod
     def findItemByID(page, id, type):
-        for g in page[type]:
+        for g in page.get(type, []):
             if g["id"] == id:
                 return g
         return None
