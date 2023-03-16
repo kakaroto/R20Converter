@@ -495,9 +495,9 @@ class Scene(Entity):
                 x = obj['x']
                 y = obj['y'] * -1 # For some reason, x/y is top-left corner, and y is in the negatives
                 wall_a = [x - obj['path']['handle0']['x'],
-                          y - obj['path']['handle0']['y']]
+                          y + obj['path']['handle0']['y']] # y is negative when it goes up so negate it 
                 wall_b = [x - obj['path']['handle1']['x'],
-                          y - obj['path']['handle1']['y']]
+                          y + obj['path']['handle1']['y']] # y is negative when it goes up so negate it
                 wall = {
                     "_id": self.genID(),
                     "flags": {},
