@@ -580,11 +580,7 @@ class Actor(Entity):
         return self._repeating.get(key, {})
 
     def isNPC(self):
-        npc = self.getAttributeInt("npc", 0)
-        try:
-            return bool(npc)
-        except ValueError:
-            return False
+        return self.getAttributeBool("npc", False)
 
     def getNPCType(self):
         if self._shaped:

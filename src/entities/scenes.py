@@ -296,7 +296,8 @@ class Scene(Entity):
                             if attr["name"] == "hp":
                                 hp_id = attr["id"]
                             elif attr["name"] == "npc":
-                                npc = True if attr["current"] == "1" else False
+                                value = str(attr["current"]).lower()
+                                npc = not (value == "0" or value == "" or value == "false" or value == "no")
                         if bar1_link == hp_id or self.getArgument("force_hp_for_token_bar1", False):
                             token["bar1"]["attribute"] = "attributes.hp"
                         if bar2_link == hp_id or self.getArgument("force_hp_for_token_bar2", False):
