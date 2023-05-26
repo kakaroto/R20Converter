@@ -25,7 +25,9 @@ class World(object):
             "systemVersion": self._converter.game_system_version,
             "minimumCoreVersion": "0.0.0",
             "compatibleCoreVersion": "1.0.0",
-            "authors": ["R20Converter"],
+            "authors": [{
+                "name": "R20Converter",
+            }],
             "packs": [],
             "scripts":  ["templates/roll20-templates.js"] if self._copy_templates else [],
             "esmodules": [],
