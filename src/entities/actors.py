@@ -560,7 +560,7 @@ class Actor(Entity):
     def toInt(self, value, default):
         try:
             return int(value)
-        except ValueError:
+        except:
             return int(default)
 
     def getAttributeInt(self, key, default=0, from_dict=None):
