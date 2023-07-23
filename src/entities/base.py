@@ -433,13 +433,31 @@ class Entity(object):
             f.write(file.read())
         return (dest_filename, config_path)
 
-    def copyZipFile(self, filename, destination):
+    def copyZipFile(self, url, filename, destination):
+        zipfile = None
+        extension = None
+        if url:
+            splitext = os.path.splitext(url)
+            extension = splitext[1].split("?")[0]
         try:
             zipfile = self._database._converter.getZipFile(filename)
-            return self.copyFile(zipfile, destination)
         except Exception as e:
-            self.logWarning("Cannot find file '%s' in Zip: %s" % (filename, e))
+            if extension:
+                splitext = os.path.splitext(filename)
+                if extension != splitext[1]:
+                    filename = splitext[0] + extension
+                    try:
+                        zipfile = self._database._converter.getZipFile(filename)
+                    except:
+                        pass
+
+        if zipfile is None:
+            self.logWarning("Cannot find file '%s' in Zip" % filename)
             return (None, "")
+        if extension:
+            splitext = os.path.splitext(destination)
+            destination = splitext[0] + extension
+        return self.copyFile(zipfile, destination)
 
     def __str__(self):
         return json.dumps(self.entity)

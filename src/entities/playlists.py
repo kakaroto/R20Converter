@@ -50,7 +50,7 @@ class Playlist(Entity):
                     self.logInfo("Cannot download Jukebox Track from campaign.json file")
                     mp3_path = ""
                 else:
-                    (_, mp3_path) = self.copyZipFile(filename, dest)
+                    (_, mp3_path) = self.copyZipFile(None, filename, dest)
                 if mp3_path != "":
                     try:
                         volume = float(track["volume"]) / 100.0

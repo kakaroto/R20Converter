@@ -76,7 +76,7 @@ class Handout(Entity):
                     (_, avatar_filename) = self.downloadResource(handout["avatar"], filename)
                 else:
                     zip_filename = os.path.join(zip_path, "%03d - %s" % (zip_index, handout["name"]), "avatar.png")
-                    (_, avatar_filename) = self.copyZipFile(zip_filename, filename)
+                    (_, avatar_filename) = self.copyZipFile(handout["avatar"], zip_filename, filename)
         if handout["archived"] and not self.getArgument("disable_archived", False):
             parent = "archived-handouts-folder-id"
         if self.getArgument("export_as_module", False):

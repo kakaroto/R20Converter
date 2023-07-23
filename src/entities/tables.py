@@ -43,7 +43,7 @@ class RollableTables(DatabaseFile):
                             (_, img) = table.downloadResource(img, filename)
                         else:
                             zip_filename = os.path.join("tables", "%03d - %s" % (index, r20table["name"]), "%03d - %s.png" % (item_index, name))
-                            (_, img) = table.copyZipFile(zip_filename, filename)
+                            (_, img) = table.copyZipFile(img, zip_filename, filename)
                 table.addEntry(name, img, weight)
             tables.append(table)
         return tables
@@ -76,7 +76,7 @@ class Decks(DatabaseFile):
                             (_, img) = table.downloadResource(img, filename)
                         else:
                             zip_filename = os.path.join("decks", "%03d - %s" % (index, deck["name"]), "%03d - %s.png" % (card_index, name))
-                            (_, img) = table.copyZipFile(zip_filename, filename)
+                            (_, img) = table.copyZipFile(img, zip_filename, filename)
                 item = self._converter.cards.createItemInventory(card["id"], name, name, "loot", None)
                 collection = "{}.cards".format(self._converter.name) if self.getArgument("export_as_module", False) else "Item"
                 table.addEntry(name, img, weight, item, collection, drawn)

@@ -146,7 +146,7 @@ class Item(Entity):
                 if item.getArgument("json", False):
                     (_, avatar_filename) = item.downloadResource(handout["avatar"], filename)
                 else:
-                    (_, avatar_filename) = item.copyZipFile(filename, filename)
+                    (_, avatar_filename) = item.copyZipFile(handout["avatar"], filename, filename)
                 if avatar_filename == "":
                     avatar_filename = None
         if item.getArgument("export_as_module", False):

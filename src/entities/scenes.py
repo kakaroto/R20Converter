@@ -102,7 +102,7 @@ class Scene(Entity):
                     if self.getArgument("json", False):
                         (_, bg_image) = self.downloadResource(bg["imgsrc"], dest)
                     else:
-                        (_, bg_image) = self.copyZipFile(filename, dest)
+                        (_, bg_image) = self.copyZipFile(bg["imgsrc"], filename, dest)
                     if bg_image == "":
                         self.logInfo("Couldn't copy background image for page '%s'" % (name))
                         bg = None
@@ -121,7 +121,7 @@ class Scene(Entity):
             if self.getArgument("json", False):
                 (thumb_filename, thumb_image) = self.downloadResource(page["thumbnail"], dest)
             else:
-                (thumb_filename, thumb_image) = self.copyZipFile(filename, dest)
+                (thumb_filename, thumb_image) = self.copyZipFile(page["thumbnail"], filename, dest)
             try:
                 self.createThumbnail(thumb_filename)
             except Exception as e:
@@ -281,7 +281,7 @@ class Scene(Entity):
                         if self.getArgument("json", False):
                             (_, token_image) = self.downloadResource(graphic["imgsrc"], dest)
                         else:
-                            (_, token_image) = self.copyZipFile(filename, dest)
+                            (_, token_image) = self.copyZipFile(graphic["imgsrc"], filename, dest)
                     token.token_filename = token_image
 
                     # We drop the token object and make it into the dict
@@ -332,7 +332,7 @@ class Scene(Entity):
                         if self.getArgument("json", False):
                             (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest)
                         else:
-                            (_, tile_image) = self.copyZipFile(filename, dest)
+                            (_, tile_image) = self.copyZipFile(graphic["imgsrc"], filename, dest)
             elif graphic and layer == "walls" and Token.emitsLight(graphic):
                 # NOTE: We ignore tokens in the dynamic layer that are not emitting light.
                 (dradius, lradius) = Token.getLightRadius(graphic)
