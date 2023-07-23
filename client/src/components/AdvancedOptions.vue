@@ -151,6 +151,11 @@
           </b-card-header>
           <b-collapse id="advanced-settings" accordion="settings-accordion" role="tabpanel">
             <b-card-body>
+              <boolean-option
+                label="Deduplicate asset files"
+                description="Use unique file names for all assets. This will prevent duplicate files from being created, decreasing storage usage, at the expense of folder organization."
+                v-model="form.dedupAssets"
+              />
               <b-form-group
                 label="NPC Source"
                 label-cols
@@ -271,7 +276,8 @@ export default {
         folderAsItems: ["Magic Items"],
         exportActorItems: false,
         noDuplicateActorItems: false,
-        useOriginalImageUrls: false
+        useOriginalImageUrls: false,
+        dedupAssets: false
       },
       fogOptions: [
         { value: "", text: "Keep Roll20 settings" },
@@ -330,7 +336,8 @@ export default {
       folderAsItems: this.form.folderAsItems,
       dontExportActorItems: !this.form.exportActorItems, // Use inverse of option for the UI
       noDuplicateActorItems: this.form.noDuplicateActorItems,
-      useOriginalImageUrls: this.form.useOriginalImageUrls
+      useOriginalImageUrls: this.form.useOriginalImageUrls,
+      dedupAssets: this.form.dedupAssets
     });
   }
 };

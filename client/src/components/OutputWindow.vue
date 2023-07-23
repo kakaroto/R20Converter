@@ -83,6 +83,7 @@ export default {
         dont_export_actor_items: opt.dontExportActorItems,
         no_duplicate_actor_items: opt.noDuplicateActorItems,
         use_original_image_urls: opt.useOriginalImageUrls,
+        dedup_assets: opt.dedupAssets,
         interactive: false,
         debug_page: null,
         images_as_drawings: false,
