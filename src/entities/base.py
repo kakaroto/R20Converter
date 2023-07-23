@@ -404,7 +404,7 @@ class Entity(object):
         # of much lower resolution than they should be.
         # Also remove the '?number' at the end of URLs because they seem unnecessary and they
         # break FVTT which doesn't recognize the URL as having a valid extension.
-        url = re.sub(r"/(thumb|med|max)\.", r"/original.", url)
+        url = re.sub(r"/(thumb|med|max)\.([^/]*)$", r"/original.\2", url)
         return url
 
     def downloadResource(self, url, destination):
