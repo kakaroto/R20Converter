@@ -408,6 +408,11 @@ class Entity(object):
         return url
 
     def downloadResource(self, url, destination):
+        splitext = os.path.splitext(url)
+        extension = splitext[1].split("?")[0]
+        if extension:
+            splitext = os.path.splitext(destination)
+            destination = splitext[0] + extension
         (dest_filename, config_path) = self.getDestinationPaths(destination)
         originalUrl = url
         url = self.fixImageUrl(url)
