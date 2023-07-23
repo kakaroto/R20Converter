@@ -409,14 +409,25 @@ class Entity(object):
 
     def downloadResource(self, url, destination):
         (dest_filename, config_path) = self.getDestinationPaths(destination)
+        originalUrl = url
         url = self.fixImageUrl(url)
-        content = Entity.resource_cache.get(url, None)
+        content = Entity.resource_cache.get(originalUrl, None)
         if content is None:
             try:
                 r = requests.get(url)
+                if r.status_code != 200 and url != originalUrl:
+                    # Try again with max resolution
+                    url = re.sub(r"/original\.([^/]*)$", r"/max.\1", url)
+                    r = requests.get(url)
+                    if r.status_code != 200 and url != originalUrl:
+                        url = re.sub(r"/max\.([^/]*)$", r"/med.\1", url)
+                        r = requests.get(url)
+                        if r.status_code != 200 and url != originalUrl:
+                            url = re.sub(r"/med\.([^/]*)$", r"/thumb.\1", url)
+                            r = requests.get(url)
                 if r.status_code == 200:
                     content = r.content
-                    Entity.resource_cache[url] = content
+                    Entity.resource_cache[originalUrl] = content
             except:
                 pass
         if content is not None:
@@ -424,7 +435,7 @@ class Entity(object):
                 f.write(content)
             return (dest_filename, config_path)
         else:
-            self.logWarning("Failed to download URL : %s" % url)
+            self.logWarning("Failed to download URL : %s" % originalUrl)
             return (None, "")
 
     def copyFile(self, file, destination):
