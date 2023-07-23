@@ -281,6 +281,11 @@ class Entity(object):
     def strToID(id_str):
         new_str = hashlib.sha256(id_str.encode()).hexdigest()
         return base64.b64encode(new_str[-12:].encode()).decode()
+    
+    @staticmethod
+    def hashString(str):
+        return hashlib.sha256(str.encode()).hexdigest()
+
 
     @staticmethod
     def normalizeID(id):
@@ -342,43 +347,55 @@ class Entity(object):
             directory = "worlds"
         return os.path.join(directory, world_dir_name)
 
-    def getDestinationPaths(self, destination):
-        index = 1
+    def getDestinationPaths(self, destination, url=None, type=None, dedup=None):
         # Remove leading, trailing and duplicate spaces in the destination name
         destination = re.sub(" +", " ", destination).strip()
-        destination_safe = self.urlsafe(destination)
-        while True:
+        if dedup is None:
+            dedup = self.getArgument("dedup_assets", False)
+        if dedup is True and url is not None:
+            splitext = os.path.splitext(destination)
+            filename = self.hashString(url) + splitext[1]
+            dir = self.getArgument("assets_directory", "assets")
+            if type is not None:
+                dir = os.path.join(dir, type)
+            destination = os.path.join(dir, filename)
+            destination_safe = self.urlsafe(destination)
             dest_filename = os.path.join(self._database._path, destination_safe).replace(os.path.sep, "/")
-            # Check for conflicts
-            if os.path.exists(dest_filename):
-                splitext = os.path.splitext(destination)
-                new_destination = "%s_%d%s" % (splitext[0], index, splitext[1])
-                destination_safe = self.urlsafe(new_destination)
-                index += 1
-            else:
-                break
+        else:
+            index = 1
+            destination_safe = self.urlsafe(destination)
+            while True:
+                dest_filename = os.path.join(self._database._path, destination_safe).replace(os.path.sep, "/")
+                # Check for conflicts
+                if os.path.exists(dest_filename):
+                    splitext = os.path.splitext(destination)
+                    new_destination = "%s_%d%s" % (splitext[0], index, splitext[1])
+                    destination_safe = self.urlsafe(new_destination)
+                    index += 1
+                else:
+                    break
 
         # Check if the destination path we found is longer than the max path and replace it with an assets directory instead
         max_path = self.getArgument("max_path", 256)
         abspath = os.path.abspath(os.path.join(self._database._path, destination_safe))
         if len(abspath) >= max_path:
             base = os.path.basename(destination)
-            new_destination = os.path.join("assets", base)
+            new_destination = os.path.join(self.getArgument("assets_directory", "assets"), base)
             # Try with 'assets/${basename}" first, then try with incremental numbers if that's still too long.
             if new_destination != destination:
-                return self.getDestinationPaths(new_destination)
+                return self.getDestinationPaths(new_destination, url, type, dedup)
             else:
                 # We already tried 'assets/$basename' and it's still too long, let's try numbers now, but don't check for length anymore
                 index = 1
                 splitext = os.path.splitext(destination)
-                new_destination = os.path.join("assets", "%d%s" % (index, splitext[1]))
+                new_destination = os.path.join(self.getArgument("assets_directory", "assets"), "%d%s" % (index, splitext[1]))
                 destination_safe = self.urlsafe(new_destination)
                 while True:
                     dest_filename = os.path.join(self._database._path, destination_safe).replace(os.path.sep, "/")
                     # Check for conflicts
                     if os.path.exists(dest_filename):
                         index += 1
-                        new_destination = os.path.join("assets", "%d%s" % (index, splitext[1]))
+                        new_destination = os.path.join(self.getArgument("assets_directory", "assets"), "%d%s" % (index, splitext[1]))
                         destination_safe = self.urlsafe(new_destination)
                     else:
                         break
@@ -407,13 +424,18 @@ class Entity(object):
         url = re.sub(r"/(thumb|med|max)\.([^/]*)$", r"/original.\2", url)
         return url
 
-    def downloadResource(self, url, destination):
+    def downloadResource(self, url, destination, type=None, dedup=None):
         splitext = os.path.splitext(url)
         extension = splitext[1].split("?")[0]
         if extension:
             splitext = os.path.splitext(destination)
             destination = splitext[0] + extension
-        (dest_filename, config_path) = self.getDestinationPaths(destination)
+        (dest_filename, config_path) = self.getDestinationPaths(destination, url, type, dedup)
+        # getDestinationPaths should always return a unique new file, unless dedup is enabled
+        # So if the file already exists, assume dedup is enabled and return the file directly
+        # without downloading (or copy from cache)
+        if os.path.exists(dest_filename):
+            return (dest_filename, config_path)
         originalUrl = url
         url = self.fixImageUrl(url)
         content = Entity.resource_cache.get(originalUrl, None)
@@ -443,18 +465,21 @@ class Entity(object):
             self.logWarning("Failed to download URL : %s" % originalUrl)
             return (None, "")
 
-    def copyFile(self, file, destination):
-        (dest_filename, config_path) = self.getDestinationPaths(destination)
-        with open(dest_filename, "wb") as f:
-            f.write(file.read())
-        return (dest_filename, config_path)
-
-    def copyZipFile(self, url, filename, destination):
+    def copyZipFile(self, url, filename, destination, type=None, dedup=None):
         zipfile = None
         extension = None
         if url:
             splitext = os.path.splitext(url)
             extension = splitext[1].split("?")[0]
+        if extension:
+            splitext = os.path.splitext(destination)
+            destination = splitext[0] + extension
+        (dest_filename, config_path) = self.getDestinationPaths(destination, url, type, dedup)
+        # getDestinationPaths should always return a unique new file, unless dedup is enabled
+        # So if the file already exists, assume dedup is enabled and return the file directly
+        # without copying it from the zip a second time
+        if os.path.exists(dest_filename):
+            return (dest_filename, config_path)
         try:
             zipfile = self._database._converter.getZipFile(filename)
         except Exception as e:
@@ -470,10 +495,9 @@ class Entity(object):
         if zipfile is None:
             self.logWarning("Cannot find file '%s' in Zip" % filename)
             return (None, "")
-        if extension:
-            splitext = os.path.splitext(destination)
-            destination = splitext[0] + extension
-        return self.copyFile(zipfile, destination)
+        with open(dest_filename, "wb") as f:
+            f.write(zipfile.read())
+        return (dest_filename, config_path)
 
     def __str__(self):
         return json.dumps(self.entity)

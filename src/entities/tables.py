@@ -73,10 +73,10 @@ class Decks(DatabaseFile):
                     if not self.getArgument("use_original_image_urls", False):
                         filename = os.path.join("decks", "%03d - %s" % (index, deck["name"]), "%s.png" % name)
                         if self.getArgument("json", False):
-                            (_, img) = table.downloadResource(img, filename)
+                            (_, img) = table.downloadResource(img, filename, type="cards")
                         else:
                             zip_filename = os.path.join("decks", "%03d - %s" % (index, deck["name"]), "%03d - %s.png" % (card_index, name))
-                            (_, img) = table.copyZipFile(img, zip_filename, filename)
+                            (_, img) = table.copyZipFile(img, zip_filename, filename, type="cards")
                 item = self._converter.cards.createItemInventory(card["id"], name, name, "loot", None)
                 collection = "{}.cards".format(self._converter.name) if self.getArgument("export_as_module", False) else "Item"
                 table.addEntry(name, img, weight, item, collection, drawn)

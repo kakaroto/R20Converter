@@ -369,9 +369,9 @@ class Actor(Entity):
             else:
                 filename = os.path.join(base_path, "avatar.png")
                 if self.getArgument("json", False):
-                    (_, self._avatar_filename) = self.downloadResource(character["avatar"], filename)
+                    (_, self._avatar_filename) = self.downloadResource(character["avatar"], filename, type="actors")
                 else:
-                    (_, self._avatar_filename) = self.copyZipFile(character["avatar"], filename, filename)
+                    (_, self._avatar_filename) = self.copyZipFile(character["avatar"], filename, filename, type="actors")
                 if self._avatar_filename == "":
                     self._avatar_filename = None
         default_token = character["defaulttoken"] if character["defaulttoken"] != "" else None
@@ -384,9 +384,9 @@ class Actor(Entity):
             else:
                 filename = os.path.join(base_path, "token.png")
                 if self.getArgument("json", False):
-                    (_, token_filename) = self.downloadResource(default_token["imgsrc"], filename)
+                    (_, token_filename) = self.downloadResource(default_token["imgsrc"], filename, type="actors")
                 else:
-                    (_, token_filename) = self.copyZipFile(default_token["imgsrc"], filename, filename)
+                    (_, token_filename) = self.copyZipFile(default_token["imgsrc"], filename, filename, type="actors")
                 if self._avatar_filename is None:
                     self._avatar_filename = token_filename
                 if "sides" in default_token and len(default_token["sides"]) > 0:
@@ -419,9 +419,9 @@ class Actor(Entity):
                         else:
                             filename = os.path.join(base_path, "sides", "side_" + str(i) + ".png")
                         if self.getArgument("json", False):
-                            (_, token_filename) = self.downloadResource(default_token["sides"][i], filename)
+                            (_, token_filename) = self.downloadResource(default_token["sides"][i], filename, type="actors", dedup=False)
                         else:
-                            (_, token_filename) = self.copyZipFile(default_token["sides"][i], zip_filename, filename)
+                            (_, token_filename) = self.copyZipFile(default_token["sides"][i], zip_filename, filename, type="actors", dedup=False)
                         token_filename = os.path.dirname(token_filename) + "/*.*"
             if self._avatar_filename is None:
                 self._avatar_filename = token_filename

@@ -100,9 +100,9 @@ class Scene(Entity):
                     filename = os.path.join(zip_page_path, "graphics", bg["id"] + ".png")
                     dest = os.path.join("scenes", "backgrounds", safe_name + ".png")
                     if self.getArgument("json", False):
-                        (_, bg_image) = self.downloadResource(bg["imgsrc"], dest)
+                        (_, bg_image) = self.downloadResource(bg["imgsrc"], dest, type="tiles")
                     else:
-                        (_, bg_image) = self.copyZipFile(bg["imgsrc"], filename, dest)
+                        (_, bg_image) = self.copyZipFile(bg["imgsrc"], filename, dest, type="tiles")
                     if bg_image == "":
                         self.logInfo("Couldn't copy background image for page '%s'" % (name))
                         bg = None
@@ -119,9 +119,9 @@ class Scene(Entity):
             filename = os.path.join(zip_page_path, "thumbnail.png")
             dest = os.path.join("scenes", "thumbs", safe_name + ".png")
             if self.getArgument("json", False):
-                (thumb_filename, thumb_image) = self.downloadResource(page["thumbnail"], dest)
+                (thumb_filename, thumb_image) = self.downloadResource(page["thumbnail"], dest, type="tiles")
             else:
-                (thumb_filename, thumb_image) = self.copyZipFile(page["thumbnail"], filename, dest)
+                (thumb_filename, thumb_image) = self.copyZipFile(page["thumbnail"], filename, dest, type="tiles")
             try:
                 self.createThumbnail(thumb_filename)
             except Exception as e:
@@ -279,9 +279,9 @@ class Scene(Entity):
                         filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
                         dest = os.path.join("scenes", "tokens", safe_name, "token_" + str(len(tokens)) + ".png")
                         if self.getArgument("json", False):
-                            (_, token_image) = self.downloadResource(graphic["imgsrc"], dest)
+                            (_, token_image) = self.downloadResource(graphic["imgsrc"], dest, type="actors")
                         else:
-                            (_, token_image) = self.copyZipFile(graphic["imgsrc"], filename, dest)
+                            (_, token_image) = self.copyZipFile(graphic["imgsrc"], filename, dest, type="actors")
                     token.token_filename = token_image
 
                     # We drop the token object and make it into the dict
@@ -330,9 +330,9 @@ class Scene(Entity):
                             basename = "tile_" + str(len(tiles))
                         dest = os.path.join("scenes", "tiles", safe_name, basename + ".png")
                         if self.getArgument("json", False):
-                            (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest)
+                            (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest, type="tiles")
                         else:
-                            (_, tile_image) = self.copyZipFile(graphic["imgsrc"], filename, dest)
+                            (_, tile_image) = self.copyZipFile(graphic["imgsrc"], filename, dest, type="tiles")
             elif graphic and layer == "walls" and Token.emitsLight(graphic):
                 # NOTE: We ignore tokens in the dynamic layer that are not emitting light.
                 (dradius, lradius) = Token.getLightRadius(graphic)

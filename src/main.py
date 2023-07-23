@@ -81,6 +81,8 @@ parser.add_argument("--use-original-image-urls", action="store_true", help="Do n
 parser.add_argument("--max-path", default=256, type=int, help="Set the maximum allowed length for the asset's absolute file paths. Most File Systems will have a limit of 256 characters, but you can set it to lower (or higher) if you plan on moving the worlds directory to a different FVTT path. Files that don't fit will be written in an 'assets' directory instead of the usual hierarchy.")
 parser.add_argument("--overwrite", action="store_true", help="Overwrite the destination directory if it exists.")
 parser.add_argument("--game-system", default="dnd5e", help="Set the game system to use for actors and items's sheets (only dnd5e sheets will be converted)")
+parser.add_argument("--dedup-assets", action="store_true", help="Deduplicate same assets to minimize space usage. This will use store files in the assets directory and link to those files instead of copying it in a nice hierarchy. (Default: False)")
+parser.add_argument("--assets-directory", default="assets", help="The directory where the assets will be copied to. This is relative to the world directory. (Default: assets)")
 
 
 if __name__ == "__main__":
