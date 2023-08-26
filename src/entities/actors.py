@@ -218,7 +218,7 @@ class Token(Entity):
 
     @staticmethod
     def lightColor(token):
-        return token.get("lightColor", "transparent")
+        return Entity.color(token.get("lightColor", "transparent"), None, True)
 
     @staticmethod
     def lightOpacity(token):
