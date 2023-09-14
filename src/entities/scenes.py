@@ -166,26 +166,17 @@ class Scene(Entity):
                 wall_colors[path["stroke"]] += len(path["path"]) - 1
 
             if len(wall_colors) > 1:
+                wall_colors_sorted = sorted(wall_colors.items(), key=lambda item: (-item[1], item[0]))
                 self.logInfo("In the page, walls are available in these colors : ")
-                for index, color in enumerate(wall_colors):
-                    self.logInfo("%d: %s (%d lines)" % (index + 1, color, wall_colors[color]))
+                for index, (color, count) in enumerate(wall_colors_sorted):
+                    self.logInfo("%d: %s (%d lines)" % (index + 1, color, count))
                 self.logInfo("")
                 if self.getArgument("auto_doors", False):
-                    highest = None
-                    second_highest = None
-                    for color in wall_colors:
-                        if highest == None or wall_colors[color] > wall_colors[highest]:
-                            second_highest = highest
-                            highest = color
-                        elif second_highest == None or wall_colors[color] > wall_colors[second_highest]:
-                            second_highest = color
-                    door_color = second_highest
-                    secret_door_colors = list(wall_colors.keys())
-                    secret_door_colors.remove(highest)
-                    secret_door_colors.remove(second_highest)
-                    if len(secret_door_colors) > 0:
-                        self.logInfo("Secret doors automatically chosen as these colors : %s" % secret_door_colors)
+                    door_color = wall_colors_sorted[1][0]
                     self.logInfo("Door color automatically chosen as : %s" % door_color)
+                    if len(wall_colors_sorted) > 2:
+                        secret_door_colors = [color for color, count in wall_colors_sorted[2:]]
+                        self.logInfo("Secret doors automatically chosen as these colors : %s" % secret_door_colors)
                 elif self.getArgument("interactive", False):
                     choice = -1
                     while choice < 0 or choice > len(wall_colors):
@@ -195,7 +186,7 @@ class Scene(Entity):
                         except ValueError:
                             choice = -1
                     if choice > 0:
-                        door_color = wall_colors.keys()[choice-1]
+                        door_color = wall_colors_sorted[choice-1][0]
                     if len(wall_colors) > 2:
                         choice = -1
                         while choice < 0 and choice > len(wall_colors):
@@ -205,8 +196,8 @@ class Scene(Entity):
                             except ValueError:
                                 choice = -1
                         if choice > 0:
-                            secret_door_colors = [wall_colors.keys()[choice-1]]
-                        
+                            secret_door_colors = [wall_colors_sorted[choice-1][0]]
+
         if self.getArgument("add_walls_around_map", False):
             positions = [
                 ((0, 0), (width, 0)),
