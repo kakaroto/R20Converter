@@ -190,7 +190,7 @@ class Scene(Entity):
                     if len(wall_colors) > 2:
                         choice = -1
                         while choice < 0 and choice > len(wall_colors):
-                            choice = input("Select which color is a door (0 for none) : ")
+                            choice = input("Select which color is a secret door (0 for none) : ")
                             try:
                                 choice = int(choice)
                             except ValueError:
