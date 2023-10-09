@@ -144,7 +144,8 @@ class R20Converter(object):
         for actor_type in template["Actor"]["types"]:
             actor_template = template["Actor"][actor_type]
             actor_templates = actor_template.get("templates", [])
-            del actor_template["templates"]
+            if "templates" in actor_template:
+                del actor_template["templates"]
             for sub_template in actor_templates:
                 self.mergeDictionaries(actor_template, template["Actor"]["templates"].get(sub_template, {}))
             self.system_templates[actor_type] = actor_template
