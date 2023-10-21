@@ -89,9 +89,14 @@ class Scene(Entity):
         for m in map_layer:
             if self.getArgument("all_backgrounds_as_tiles", False):
                 break
-            if m["imgsrc"] != "" and m["width"] == width and m["height"] == height and \
-                safeCast(int, m["left"], 0) == 0 and safeCast(int, m["top"], 0) == 0 and \
-                    not m["flipv"] and not m["fliph"]:
+            m_left = safeCast(int, m["left"], 0)
+            m_top = safeCast(int, m["top"], 0)
+            m_width = safeCast(int, m["width"], 0)
+            m_height = safeCast(int, m["height"], 0)
+            x = (m_left - (m_width / 2))
+            y = (m_top - (m_height / 2))
+            if m["imgsrc"] != "" and m_width == width and m_height == height and \
+                x == 0 and y == 0 and not m["flipv"] and not m["fliph"]:
                 bg = m
                 if self.getArgument("use_original_image_urls", False):
                     bg_image = bg["imgsrc"]
