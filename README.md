@@ -1,3 +1,12 @@
+# Introduction
+
+R20Converter is a Windows/Linux/Mac application that does the entire conversion from a Roll20 campaign (exported with [R20Exporter](https://github.com/kakaroto/R20Exporter)) into a [Foundry VTT](http://foundryvtt.com) world.
+
+You can see it in action here : https://youtu.be/fngH2te2TJE
+
+This tool was made possible thanks to the generosity of my [Patreon subscribers](https://patreon.com/kakaroto), and has since been open sourced for the whole community.
+
+
 # R20Converter
 
 This application converts a Roll20 campaign into a Foundry VTT world or module.
@@ -61,3 +70,6 @@ If you use D&D Beyond, check out [Beyond20](https://beyond20.here-for-more.info)
 
 If you use [The Forge](https://forge-vtt.com) for hosting your Foundry VTT games, then you can import your world folder using the Import Wizard. 
 
+# License
+
+This software is released under the GPLv3 license. Please read the included `LICENSE` file for more information.
