@@ -367,7 +367,7 @@ class Actor(Entity):
             if self.getArgument("use_original_image_urls", False):
                 self._avatar_filename = character["avatar"]
             else:
-                filename = os.path.join(base_path, "avatar.png")
+                filename = self.getImageFilename(base_path, character["avatar"], "avatar")
                 if self.getArgument("json", False):
                     (_, self._avatar_filename) = self.downloadResource(character["avatar"], filename, type="actors")
                 else:
@@ -382,7 +382,7 @@ class Actor(Entity):
             if self.getArgument("use_original_image_urls", False):
                 token_filename = default_token["imgsrc"]
             else:
-                filename = os.path.join(base_path, "token.png")
+                filename = self.getImageFilename(base_path, default_token["imgsrc"], "token")
                 if self.getArgument("json", False):
                     (_, token_filename) = self.downloadResource(default_token["imgsrc"], filename, type="actors")
                 else:
@@ -412,12 +412,12 @@ class Actor(Entity):
                                 break
 
                     for i in range(len(default_token["sides"])):
-                        zip_filename = os.path.join(base_path, "side_" + str(i) + ".png")
+                        zip_filename = self.getImageFilename(base_path, default_token["sides"][i], "side_" + str(i))
                         if side_names:
                             side_img = default_token["sides"][i]
-                            filename = os.path.join(base_path, "sides", side_names[side_img] + ".png")
+                            filename = self.getImageFilename(os.path.join(base_path, "sides"), default_token["sides"][i], side_names[side_img])
                         else:
-                            filename = os.path.join(base_path, "sides", "side_" + str(i) + ".png")
+                            filename = self.getImageFilename(os.path.join(base_path, "sides"), default_token["sides"][i], "side_" + str(i))
                         if self.getArgument("json", False):
                             (_, token_filename) = self.downloadResource(default_token["sides"][i], filename, type="actors", dedup=False)
                         else:

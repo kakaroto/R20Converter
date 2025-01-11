@@ -8,6 +8,7 @@ import hashlib
 import requests
 import uuid
 import copy
+from urllib.parse import urlparse
 
 class DatabaseFile(object):
     def __init__(self, converter, filename, package=None, pack_name=None):
@@ -381,6 +382,8 @@ class Entity(object):
         if len(abspath) >= max_path:
             base = os.path.basename(destination)
             new_destination = os.path.join(self.getArgument("assets_directory", "assets"), base)
+            #print("destination", destination, "is too long (", len(abspath), " > ", max_path,"), trying with assets directory instead")
+            #print("Base ", base, " - new destination ", new_destination)
             # Try with 'assets/${basename}" first, then try with incremental numbers if that's still too long.
             if new_destination != destination:
                 return self.getDestinationPaths(new_destination, url, type, dedup)
@@ -465,6 +468,14 @@ class Entity(object):
             self.logWarning("Failed to download URL : %s" % originalUrl)
             return (None, "")
 
+    @staticmethod
+    def getImageFilename(base_path, url, base_filename, fallback=".png"):
+        filename = urlparse(url).path
+        ext = os.path.splitext(filename)[1]
+        if not ext:
+            ext = fallback
+        return os.path.join(base_path, base_filename + ext)
+    
     def copyZipFile(self, url, filename, destination, type=None, dedup=None):
         zipfile = None
         extension = None

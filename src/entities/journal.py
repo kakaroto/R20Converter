@@ -71,11 +71,11 @@ class Handout(Entity):
             if self.getArgument("use_original_image_urls", False):
                 avatar_filename = handout["avatar"]
             else:
-                filename = os.path.join(path, "%03d - %s" % (index, handout["name"]), "avatar.png")
+                filename = self.getImageFilename(os.path.join(path, "%03d - %s" % (index, handout["name"])), handout["avatar"], "avatar")
                 if self.getArgument("json", False):
                     (_, avatar_filename) = self.downloadResource(handout["avatar"], filename)
                 else:
-                    zip_filename = os.path.join(zip_path, "%03d - %s" % (zip_index, handout["name"]), "avatar.png")
+                    zip_filename = self.getImageFilename(os.path.join(zip_path, "%03d - %s" % (zip_index, handout["name"])), handout["avatar"], "avatar")
                     (_, avatar_filename) = self.copyZipFile(handout["avatar"], zip_filename, filename)
         if handout["archived"] and not self.getArgument("disable_archived", False):
             parent = "archived-handouts-folder-id"

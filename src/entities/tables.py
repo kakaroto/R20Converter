@@ -38,11 +38,11 @@ class RollableTables(DatabaseFile):
                     weight = 1
                 if img != "":
                     if not self.getArgument("use_original_image_urls", False):
-                        filename = os.path.join("tables", "%03d - %s" % (index, r20table["name"]), "%s.png" % name)
+                        filename = Entity.getImageFilename(os.path.join("tables", "%03d - %s" % (index, r20table["name"])), img, name)
                         if self.getArgument("json", False):
                             (_, img) = table.downloadResource(img, filename)
                         else:
-                            zip_filename = os.path.join("tables", "%03d - %s" % (index, r20table["name"]), "%03d - %s.png" % (item_index, name))
+                            zip_filename = Entity.getImageFilename(os.path.join("tables", "%03d - %s" % (index, r20table["name"])), img, "%03d - %s" % (item_index, name))
                             (_, img) = table.copyZipFile(img, zip_filename, filename)
                 table.addEntry(name, img, weight)
             tables.append(table)
@@ -71,11 +71,11 @@ class Decks(DatabaseFile):
                 drawn = card["id"] in deck["discardPile"]
                 if img != "":
                     if not self.getArgument("use_original_image_urls", False):
-                        filename = os.path.join("decks", "%03d - %s" % (index, deck["name"]), "%s.png" % name)
+                        filename = Entity.getImageFilename(os.path.join("decks", "%03d - %s" % (index, deck["name"])), img, name)
                         if self.getArgument("json", False):
                             (_, img) = table.downloadResource(img, filename, type="cards")
                         else:
-                            zip_filename = os.path.join("decks", "%03d - %s" % (index, deck["name"]), "%03d - %s.png" % (card_index, name))
+                            zip_filename = Entity.getImageFilename(os.path.join("decks", "%03d - %s" % (index, deck["name"])), img, "%03d - %s" % (card_index, name))
                             (_, img) = table.copyZipFile(img, zip_filename, filename, type="cards")
                 item = self._converter.cards.createItemInventory(card["id"], name, name, "loot", None)
                 collection = "{}.cards".format(self._converter.name) if self.getArgument("export_as_module", False) else "Item"

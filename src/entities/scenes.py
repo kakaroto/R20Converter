@@ -102,8 +102,8 @@ class Scene(Entity):
                     bg_image = bg["imgsrc"]
                     break
                 else:
-                    filename = os.path.join(zip_page_path, "graphics", bg["id"] + ".png")
-                    dest = os.path.join("scenes", "backgrounds", safe_name + ".png")
+                    filename = self.getImageFilename(os.path.join(zip_page_path, "graphics"), bg["imgsrc"], bg["id"])
+                    dest = self.getImageFilename(os.path.join("scenes", "backgrounds"), bg["imgsrc"], safe_name)
                     if self.getArgument("json", False):
                         (_, bg_image) = self.downloadResource(bg["imgsrc"], dest, type="tiles")
                     else:
@@ -121,8 +121,8 @@ class Scene(Entity):
         if self.getArgument("use_original_image_urls", False):
             thumb_image = page["thumbnail"]
         else:
-            filename = os.path.join(zip_page_path, "thumbnail.png")
-            dest = os.path.join("scenes", "thumbs", safe_name + ".png")
+            filename = self.getImageFilename(zip_page_path, page["thumbnail"], "thumbnail")
+            dest = self.getImageFilename(os.path.join("scenes", "thumbs"), page["thumbnail"], safe_name)
             if self.getArgument("json", False):
                 (thumb_filename, thumb_image) = self.downloadResource(page["thumbnail"], dest, type="tiles")
             else:
@@ -272,8 +272,8 @@ class Scene(Entity):
                     if self.getArgument("use_original_image_urls", False):
                         token_image = graphic["imgsrc"]
                     else:
-                        filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
-                        dest = os.path.join("scenes", "tokens", safe_name, "token_" + str(len(tokens)) + ".png")
+                        filename = self.getImageFilename(os.path.join(zip_page_path, "graphics"), graphic["imgsrc"], graphic["id"])
+                        dest = self.getImageFilename(os.path.join("scenes", "tokens", safe_name), graphic["imgsrc"], "token_" + str(len(tokens)))
                         if self.getArgument("json", False):
                             (_, token_image) = self.downloadResource(graphic["imgsrc"], dest, type="actors")
                         else:
@@ -319,12 +319,12 @@ class Scene(Entity):
                     if self.getArgument("use_original_image_urls", False):
                         tile_image = graphic["imgsrc"]
                     else:
-                        filename = os.path.join(zip_page_path, "graphics", graphic["id"] + ".png")
+                        filename = self.getImageFilename(os.path.join(zip_page_path, "graphics"), graphic["imgsrc"], graphic["id"])
                         if self.isDrawing(graphic):
                             basename = "drawing_" + str(len(drawings))
                         else:
                             basename = "tile_" + str(len(tiles))
-                        dest = os.path.join("scenes", "tiles", safe_name, basename + ".png")
+                        dest = self.getImageFilename(os.path.join("scenes", "tiles", safe_name), graphic["imgsrc"], basename)
                         if self.getArgument("json", False):
                             (_, tile_image) = self.downloadResource(graphic["imgsrc"], dest, type="tiles")
                         else:

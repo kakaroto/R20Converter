@@ -142,7 +142,7 @@ class Item(Entity):
             if item.getArgument("use_original_image_urls", False):
                 avatar_filename = handout["avatar"]
             else:
-                filename = os.path.join(path, "%03d - %s" % (index, handout["name"]), "avatar.png")
+                filename = item.getImageFilename(os.path.join(path, "%03d - %s" % (index, handout["name"])), handout["avatar"], "avatar")
                 if item.getArgument("json", False):
                     (_, avatar_filename) = item.downloadResource(handout["avatar"], filename)
                 else:
