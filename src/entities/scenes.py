@@ -428,11 +428,15 @@ class Scene(Entity):
                 tile_height = drawing_height * path["scaleY"]
                 x = (left - (tile_width / 2))
                 y = (top - (tile_height / 2))
+                points = drawing["points"]
+                if grid_multiplier != 1:
+                    points = [[int(x * grid_multiplier), int(y * grid_multiplier)] for (x, y) in points]
                 drawing.update({
                     "x": int(margin_left + x * grid_multiplier),
                     "y": int(margin_top + y * grid_multiplier),
                     "width": int(tile_width * grid_multiplier),
-                    "height": int(tile_height * grid_multiplier)
+                    "height": int(tile_height * grid_multiplier),
+                    "points": points
                 })
                 drawings.append(drawing)
             elif path and layer == "walls":
