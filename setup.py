@@ -8,8 +8,8 @@ sys.path.append("src")
 buildOptions = {
     "build_exe": {
         "packages": [],
-        "includes": ["bottle_websocket"],
-        "excludes": ["PySide2", "PyQt5"],
+        "includes": ["bottle_websocket", "numpy"],
+        "excludes": ["PySide2", "PyQt5", "matplotlib.tests", "numpy.random._examples"],
         "include_files": [
             ("Changelog.md", "Changelog.md"),
             ("README.md", "README.md"),
@@ -41,7 +41,7 @@ if sys.platform == "darwin":
     buildOptions["build_exe"]["excludes"].append("tkinter")
 
 executables = [
-    Executable('src/main.py', base=base, targetName = 'R20Converter', icon = "client/public/logo.ico")
+    Executable('src/main.py', base=base, target_name = 'R20Converter', icon = "client/public/logo.ico")
 ]
 
 setup(name='R20Converter',
