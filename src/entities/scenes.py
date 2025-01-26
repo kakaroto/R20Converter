@@ -169,7 +169,10 @@ class Scene(Entity):
                 if path.get("barrierType", "wall") != "wall": 
                     continue
                 wall_colors.setdefault(path["stroke"], 0)
-                wall_colors[path["stroke"]] += len(path["path"]) - 1
+                if path["path"] is not None:
+                    wall_colors[path["stroke"]] += len(path["path"]) - 1
+                else:
+                    wall_colors[path["stroke"]] += len(path["points"])
 
             if len(wall_colors) > 1:
                 wall_colors_sorted = sorted(wall_colors.items(), key=lambda item: (-item[1], item[0]))
