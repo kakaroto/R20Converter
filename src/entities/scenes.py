@@ -730,12 +730,12 @@ class Scene(Entity):
     def createTextDrawing(self, drawing, text):
         color = self.color(text["color"], "#ffffff", True)
         drawing.update({"type": "t",
-                        "fillType": 1,
+                        "fillType": 0,
                         "fillColor": color,
                         "fillAlpha": 1.0,
                         "strokeColor": "#000000",
                         "strokeAlpha": 1.0,
-                        "strokeWidth": 1,
+                        "strokeWidth": 0,
                         "texture": None,
                         "fontFamily": text["font_family"],
                         "fontSize": text["font_size"],
