@@ -250,6 +250,12 @@ class Scene(Entity):
                 layer = obj["layer"]
                 left = safeCast(int, obj["left"], 0)
                 top = safeCast(int, obj["top"], 0)
+                # Jumpgate uses x/y instead of left/top
+                x = safeCast(int, obj.get("x", 0), 0)
+                y = safeCast(int, obj.get("y", 0), 0)
+                if left == 0 and top == 0 and (x != 0 or y != 0):
+                    left = x
+                    top = y
                 tile_width = safeCast(int, obj["width"], 0)
                 tile_height = safeCast(int, obj["height"], 0)
                 rotation = safeCast(float, obj["rotation"], 0)
