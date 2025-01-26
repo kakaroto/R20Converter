@@ -422,7 +422,18 @@ class Scene(Entity):
                             "locked": layer == "map",
                             "author": Entity.normalizeID(path["controlledby"]) or ""
                 }
-                drawing = self.createPathDrawing(drawing, path)
+                (drawing, drawing_width, drawing_height) = self.createPathDrawing(drawing, path)
+                # Jumpgate uses x,y instead of top/left and a 0,0 width/height, so we need to get the size from the points
+                tile_width = drawing_width * path["scaleX"]
+                tile_height = drawing_height * path["scaleY"]
+                x = (left - (tile_width / 2))
+                y = (top - (tile_height / 2))
+                drawing.update({
+                    "x": int(margin_left + x * grid_multiplier),
+                    "y": int(margin_top + y * grid_multiplier),
+                    "width": int(tile_width * grid_multiplier),
+                    "height": int(tile_height * grid_multiplier)
+                })
                 drawings.append(drawing)
             elif path and layer == "walls":
                 drawing_width = tile_width * path["scaleX"]
@@ -430,7 +441,7 @@ class Scene(Entity):
                 # path's left/top position is for the center of the image
                 left = (left - (drawing_width / 2))
                 top = (top - (drawing_height / 2))
-                (polygon, path_type, _, _) = self.pathToPolygonList(path["path"], 0, 0)
+                (polygon, path_type, _, _) = self.pathToPolygonList(path, 0, 0)
                 barrierType = path.get("barrierType", "wall")
                 oneWayReversed = path.get("oneWayReversed", False)
                 if path_type == PATH_TYPE.CIRCLE:
@@ -729,33 +740,57 @@ class Scene(Entity):
             h = h if h > y else math.ceil(y)
             polygon.append((x, y))
             return (int(w), int(h))
-        path_type = PATH_TYPE.POLYGON
-        for point in path:
-            if point[0] == "M": # First Point
-                if point[1] is not None and point[2] is not None:
-                    (w, h) = add_point(point[1], point[2], w, h)
-            elif point[0] == "L": # A line
-                if point[1] is not None and point[2] is not None:
-                    (w, h) = add_point(point[1], point[2], w, h)
-            elif point[0] == "Q": # Freehand
-                if point[1] is not None and point[2] is not None and \
-                    point[3] is not None and point[4] is not None:
-                    (w, h) = add_point(point[1], point[2], w, h)
-                    (w, h) = add_point(point[3], point[4], w, h)
-                    path_type = PATH_TYPE.FREEHAND
-            elif point[0] == "C": # Circle
-                path_type = PATH_TYPE.CIRCLE
-            elif point[0] == "Z": # End drawing (empty)
-                pass
-            else:
-                self.logInfo("Unknown path type: %s" % str(point))
-        if path_type == PATH_TYPE.POLYGON and len(path) == 5 and \
-            path[0][1] == 0 and path[0][2] == 0 and \
-            path[1][1] == width and path[1][2] == 0 and \
-            path[2][1] == width and path[2][2] == height and \
-            path[3][1] == 0 and path[3][2] == height and \
-            path[4][1] == 0 and path[4][2] == 0:
-            path_type = PATH_TYPE.RECTANGLE
+        if path["path"] is None:
+            # Jumpgate uses path.points instead of path.path
+            points = path["points"]
+            SHAPE_TO_PATH_TYPE = {
+                "pol": PATH_TYPE.POLYGON,
+                "eli": PATH_TYPE.CIRCLE,
+                "rec": PATH_TYPE.RECTANGLE,
+                "free": PATH_TYPE.FREEHAND,
+            }
+            path_type = SHAPE_TO_PATH_TYPE.get(path["shape"], PATH_TYPE.POLYGON)
+            #for point in points:
+            #    (w, h) = add_point(point[0], point[1], w, h)
+            min_x = min([x for (x, _) in path["points"]])
+            max_x = max([x for (x, _) in path["points"]])
+            min_y = min([y for (_, y) in path["points"]])
+            max_y = max([y for (_, y) in path["points"]])
+            # Calculate width/height from the range of coordinates used by the points
+            w = max_x - min_x
+            h = max_y - min_y
+            for point in points:
+                # Add the points's minimum x/y to the polygon to make it relative to the top-left corner
+                polygon.append((point[0] - min_x, point[1] - min_y))
+        else:
+            points = path["path"]
+            path_type = PATH_TYPE.POLYGON
+            for point in points:
+                if point[0] == "M": # First Point
+                    if point[1] is not None and point[2] is not None:
+                        (w, h) = add_point(point[1], point[2], w, h)
+                elif point[0] == "L": # A line
+                    if point[1] is not None and point[2] is not None:
+                        (w, h) = add_point(point[1], point[2], w, h)
+                elif point[0] == "Q": # Freehand
+                    if point[1] is not None and point[2] is not None and \
+                        point[3] is not None and point[4] is not None:
+                        (w, h) = add_point(point[1], point[2], w, h)
+                        (w, h) = add_point(point[3], point[4], w, h)
+                        path_type = PATH_TYPE.FREEHAND
+                elif point[0] == "C": # Circle
+                    path_type = PATH_TYPE.CIRCLE
+                elif point[0] == "Z": # End drawing (empty)
+                    pass
+                else:
+                    self.logInfo("Unknown path type: %s" % str(point))
+            if path_type == PATH_TYPE.POLYGON and len(points) == 5 and \
+                points[0][1] == 0 and points[0][2] == 0 and \
+                points[1][1] == width and points[1][2] == 0 and \
+                points[2][1] == width and points[2][2] == height and \
+                points[3][1] == 0 and points[3][2] == height and \
+                points[4][1] == 0 and points[4][2] == 0:
+                path_type = PATH_TYPE.RECTANGLE
         return (polygon, path_type, w, h)
 
     # Get angle between points P1, P2, P3 with the angle at P2 being returned in degrees
@@ -804,7 +839,7 @@ class Scene(Entity):
         line_width = path["stroke_width"]
         scaleX = path["scaleX"]
         scaleY = path["scaleY"]
-        (points, path_type, _, _) = self.pathToPolygonList(path["path"], path["width"], path["height"])
+        (points, path_type, width, height) = self.pathToPolygonList(path, path["width"], path["height"])
         if path_type == PATH_TYPE.CIRCLE:
             drawing_type = "e"
             points = []
@@ -834,7 +869,7 @@ class Scene(Entity):
                         "bezierFactor": 0.5 if drawing_type == "f" else 0,
                         "points": points,
                     })
-        return drawing
+        return (drawing, width, height)
 
     def createThumbnail(self, filename):
         im = Image.open(filename)
