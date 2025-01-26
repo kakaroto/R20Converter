@@ -1,7 +1,8 @@
 from .base import DatabaseFile, Entity
 from .actors import Token
 
-from PIL import Image
+from PIL import Image, ImageFont
+from matplotlib import font_manager
 
 import os
 import math
@@ -374,6 +375,10 @@ class Scene(Entity):
             elif text and text["text"].strip() != "":
                 # NOTE: We ignore text items without any text.. there's a lot of those...
                 # graphic's left/top position is for the rotation point (center of image)
+
+                if tile_width == 0 or tile_height == 0:
+                    (tile_width, tile_height) = self.getTextSize(text["text"], text["font_family"], text["font_size"], rotation)
+
                 x = (left - (tile_width / 2))
                 y = (top - (tile_height / 2))
                 # Drawing author can't be null or empty string, so give an invalid id instead
@@ -669,6 +674,43 @@ class Scene(Entity):
         if self.getArgument("images_as_drawings", False):
             return True
         return False
+
+    def getRotatedBoxSize(self, w, h, r):
+        # Convert rotation angle from degrees to radians
+        r_rad = math.radians(r)
+        
+        # Calculate the new width and height
+        new_width = abs(w * math.cos(r_rad)) + abs(h * math.sin(r_rad))
+        new_height = abs(w * math.sin(r_rad)) + abs(h * math.cos(r_rad))
+    
+        return new_width, new_height
+    
+    def getTextSize(self, text, font_family, font_size, rotation):
+        #Find the path for a specific font:
+        font_family = font_family.strip().strip("'").strip('"')
+        try:
+            file = font_manager.findfont(font_family)
+        except:
+            file = None
+        if file is None:
+            # A safe default size, just in case it all fails
+            return (100, 50)
+        try:
+            font_size = int(font_size)
+        except:
+            font_size = 12
+
+        # Load the font
+        font = ImageFont.truetype(file, font_size)
+        
+        # Get the size of the text
+        size = font.getsize(text)
+        # Add some padding to the width of the text
+        size = (size[0] + font_size, size[1] + font_size)
+        if rotation != 0:
+            # If the text is rotated, we need to calculate the bounding box
+            size = self.getRotatedBoxSize(size[0], size[1], rotation)
+        return size
 
     def pathToPolygonList(self, path, width, height):
         polygon = []
