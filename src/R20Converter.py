@@ -155,6 +155,7 @@ class R20Converter(object):
     def convert(self):
         self.logInfo("*** Converting Campaign '%s' ***" % self.campaign["campaign_title"])
         os.makedirs(self.path)
+        Actors.setRelease(self.campaign.get("release", "legacy"))
         if self.getArgument("export_as_module", False):
             os.makedirs(os.path.join(self.path, "packs"))
 

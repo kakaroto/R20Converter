@@ -8,12 +8,20 @@ import copy
 import math
 
 DISPLAY_ATTRIBUTES = False
+release = "legacy"
+defaultLegacyEnabled = True
 
 class Actors(DatabaseFile):
     def __init__(self, converter):
         DatabaseFile.__init__(self, converter, "actors.db")
         self._characters = self._campaign["characters"]
         self.entities = self.genEntities()
+
+    @staticmethod 
+    def setRelease(_release):
+        global release, defaultLegacyEnabled
+        release = _release
+        defaultLegacyEnabled = _release != "jumpgate"
 
     def genEntities(self):
         return [Actor(self, character, index) for index, character in enumerate(self._characters)]
@@ -114,7 +122,7 @@ class Token(Entity):
             self.emits_light = True
             self.emits_dim_light = dim
             self.emits_bright_light = bright
-        legacy = self._token.get("legacy_lighting_enabled", True)
+        legacy = self._token.get("legacy_lighting_enabled", defaultLegacyEnabled)
         if legacy:
             multiplier = self._token.get("light_multiplier", 1)
             try:
@@ -169,7 +177,7 @@ class Token(Entity):
 
     @staticmethod
     def hasSight(token):
-        legacy = token.get("legacy_lighting_enabled", True)
+        legacy = token.get("legacy_lighting_enabled", defaultLegacyEnabled)
         if legacy:
             return token.get("light_hassight", False)
         else:
@@ -177,7 +185,7 @@ class Token(Entity):
 
     @staticmethod
     def sightAngle(token):
-        legacy = token.get("legacy_lighting_enabled", True)
+        legacy = token.get("legacy_lighting_enabled", defaultLegacyEnabled)
         angle = 0
         if legacy:
             angle = token.get("light_losangle", angle)
@@ -194,7 +202,7 @@ class Token(Entity):
 
     @staticmethod
     def emitsLight(token):
-        legacy = token.get("legacy_lighting_enabled", True)
+        legacy = token.get("legacy_lighting_enabled", defaultLegacyEnabled)
         if legacy:
             return token.get("light_otherplayers", False)
         else:
@@ -202,7 +210,7 @@ class Token(Entity):
 
     @staticmethod
     def lightAngle(token):
-        legacy = token.get("legacy_lighting_enabled", True)
+        legacy = token.get("legacy_lighting_enabled", defaultLegacyEnabled)
         angle = 0
         if legacy:
             angle = token.get("light_angle", 0)
@@ -226,7 +234,7 @@ class Token(Entity):
 
     @staticmethod
     def getLightRadius(token):
-        legacy = token.get("legacy_lighting_enabled", True)
+        legacy = token.get("legacy_lighting_enabled", defaultLegacyEnabled)
         if legacy:
             lradius = token.get("light_radius", 0)
             dradius = token.get("light_dimradius", 0)
