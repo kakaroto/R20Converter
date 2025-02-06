@@ -8,6 +8,9 @@ import os
 import math
 import time
 
+release = "legacy"
+defaultLegacyEnabled = True
+
 class PATH_TYPE:
     POLYGON = 0
     CIRCLE = 1
@@ -25,6 +28,12 @@ class Scenes(DatabaseFile):
         DatabaseFile.__init__(self, converter, "scenes.db")
         self._pages = self._campaign["pages"]
         self.entities = self.genEntities()
+
+    @staticmethod 
+    def setRelease(_release):
+        global release, defaultLegacyEnabled
+        release = _release
+        defaultLegacyEnabled = _release != "jumpgate"
 
     def genEntities(self):
         debug_page = self.getArgument("debug_page", None)
@@ -632,6 +641,15 @@ class Scene(Entity):
             folder = "archived-scenes-folder-id"
         if self.getArgument("export_as_module", False):
             folder = None
+            
+        if release == "jumpgate":
+            tokenVision = page.get("dynamic_lighting_enabled", True)
+            fogExploration = not self.getArgument("disable_fog", False) and (self.getArgument("enable_fog", False) or page["showdarkness"])
+            globalLight = page.get("daylight_mode_enabled", False)
+        else:
+            tokenVision = page.get("showlighting", True) and page.get("lightenforcelos", False)
+            fogExploration = not self.getArgument("disable_fog", False) and (self.getArgument("enable_fog", False) or page["adv_fow_enabled"])
+            globalLight = page.get("lightglobalillum", False)
         self.entity = {"_id": self._id,
                        "name": name or "Unnamed Scene",
                        "navName": name,
@@ -657,9 +675,9 @@ class Scene(Entity):
                        "gridAlpha": page["grid_opacity"],
                        "gridDistance": page["scale_number"] if float(page["scale_number"]) >= 1 else 1,
                        "gridUnits": page["scale_units"] if float(page["scale_number"]) >= 1 else ("(" + str(page["scale_number"]) + " " + page["scale_units"] + ")"),
-                       "tokenVision": page.get("showlighting", True) and page.get("lightenforcelos", False),
-                       "fogExploration": not self.getArgument("disable_fog", False) and (self.getArgument("enable_fog", False) or page["adv_fow_enabled"]),
-                       "globalLight": page.get("lightglobalillum", False),
+                       "tokenVision": tokenVision,
+                       "fogExploration": fogExploration,
+                       "globalLight": globalLight,
                        "globalLightThreshold": None,
                        "darkness": 0,
                        "tiles": tiles,
