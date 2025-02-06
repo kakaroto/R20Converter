@@ -335,7 +335,11 @@ class Scene(Entity):
                     if not self._needsCleanup(x, y, tile_width, tile_height, width, height):
                         tokens.append(token)
                 else:
-                    if self.getArgument("use_original_image_urls", False):
+                    if graphic["imgsrc"] == "/images/character.png":
+                        tile_image = "icons/svg/mystery-man.svg"
+                    elif graphic["imgsrc"] == "/images/dead.png":
+                        tile_image = "icons/svg/light.svg"
+                    elif self.getArgument("use_original_image_urls", False):
                         tile_image = graphic["imgsrc"]
                     else:
                         filename = self.getImageFilename(os.path.join(zip_page_path, "graphics"), graphic["imgsrc"], graphic["id"])
