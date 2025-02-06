@@ -14,6 +14,11 @@ class PATH_TYPE:
     RECTANGLE = 2
     FREEHAND = 3
 
+def safeCast(t, v, d):
+    try:
+        return t(v)
+    except:
+        return d
 
 class Scenes(DatabaseFile):
     def __init__(self, converter):
@@ -52,11 +57,6 @@ class Scene(Entity):
         if safe_name[1:2] == ":":
             safe_name = safe_name[0] + "_" + safe_name[2:]
         self.logInfo("Creating Scene : %s" % name)
-        def safeCast(t, v, d):
-            try:
-                return t(v)
-            except:
-                return d
         # Snapping increment gets set to 0 if grid is disabled
         snapping_increment = safeCast(float, page["snapping_increment"], 0)
         orig_grid_size = 70 * (snapping_increment if snapping_increment else 1)
@@ -440,12 +440,13 @@ class Scene(Entity):
                 })
                 drawings.append(drawing)
             elif path and layer == "walls":
+                # Since Jumpgate, a path's width/height needs to be calculated
+                (polygon, path_type, tile_width, tile_height) = self.pathToPolygonList(path, tile_width, tile_height)
                 drawing_width = tile_width * path["scaleX"]
                 drawing_height = tile_height * path["scaleY"]
                 # path's left/top position is for the center of the image
                 left = (left - (drawing_width / 2))
                 top = (top - (drawing_height / 2))
-                (polygon, path_type, _, _) = self.pathToPolygonList(path, 0, 0)
                 barrierType = path.get("barrierType", "wall")
                 oneWayReversed = path.get("oneWayReversed", False)
                 if path_type == PATH_TYPE.CIRCLE:
@@ -764,7 +765,7 @@ class Scene(Entity):
             w = max_x - min_x
             h = max_y - min_y
             for point in points:
-                # Add the points's minimum x/y to the polygon to make it relative to the top-left corner
+                # Remove the points's minimum x/y to the polygon to make it relative to the top-left corner
                 polygon.append((point[0] - min_x, point[1] - min_y))
         else:
             points = path["path"]
@@ -843,7 +844,9 @@ class Scene(Entity):
         line_width = path["stroke_width"]
         scaleX = path["scaleX"]
         scaleY = path["scaleY"]
-        (points, path_type, width, height) = self.pathToPolygonList(path, path["width"], path["height"])
+        tile_width = safeCast(int, path["width"], 0)
+        tile_height = safeCast(int, path["height"], 0)
+        (points, path_type, width, height) = self.pathToPolygonList(path, tile_width, tile_height)
         if path_type == PATH_TYPE.CIRCLE:
             drawing_type = "e"
             points = []
