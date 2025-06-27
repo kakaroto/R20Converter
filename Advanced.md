@@ -209,8 +209,6 @@ Convert Roll20 campaigns into Foundry VTT worlds or modules.
 
 ## Mac OS X
 - Install python using pyenv (official one doesn't work)
-- Kill yourself
-- Resurect
 - Uninstall python from pyenv and reinstall it by recompiling it with tcl-tk compilation flags : https://stackoverflow.com/questions/60469202/unable-to-install-tkinter-with-pyenv-pythons-on-macos
 - Wait! Add `--enable-framework` to the configure flags for python and recompile it again
 - No, wait! that still doesn't work, forget all that and just install the official python 3.8 which is the only one that works with wxPython: https://www.python.org/downloads/mac-osx/
@@ -218,7 +216,7 @@ Convert Roll20 campaigns into Foundry VTT worlds or modules.
 - Install the custom `eel` package in your pyenv with `pip install -U git+https://github.com/kakaroto/Eel.git@master`
 - Install the custom `cx_Freeze` package with `pip install -U git+https://github.com/marcelotduarte/cx_Freeze.git@main`
 - Realize you need to recompile gevent too, so... : `pip install -I --no-binary :all: gevent`
-- Install wxPython : `pip install -U wxPython`
+- Install wxPython and matplotlib : `pip install -U wxPython matplotlib`
 - Download the Electron app from https://github.com/electron/electron/releases
 - Use `cp -R` and not `cp -r` otherwise symlinks get dereferenced, and your 120MB Electron.app becomes 550MB
 - Curse at your computer and at those who use Macs

@@ -39,9 +39,9 @@ If using Linux, you will need `Python 3.6` or later to use R20Converter.
 
 You can run it with `python3 src/main.py` in a terminal. Use the --help option to see which options are available to you during conversion.
 
-Required dependencies are : `requests`, `pillow`, `python-slugify` and for the GUI `eel`
+Required dependencies are : `requests`, `pillow`, `python-slugify`, `matplotlib` and for the GUI `eel`
  
-`sudo pip3 install requests pillow python-slugify eel`
+`sudo pip3 install requests pillow python-slugify eel matplotlib`
 
 If you are running raspbian on a Raspberry Pi, you may also need to run the command `sudo apt-get install libopenjp2-7` to install one of the dependencies.
 In order to run the Graphics User Interface, you will also need to have python-tk installed. That one can be installed from your distribution's package manager using `sudo apt install python3-tk` or `sudo dnf install python3-tkinter`.
