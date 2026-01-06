@@ -1,7 +1,7 @@
 from .base import DatabaseFile, Entity
 from .actors import Token
 
-from PIL import Image, ImageFont
+from PIL import Image, ImageFont, ImageDraw
 from matplotlib import font_manager
 
 import os
@@ -749,11 +749,30 @@ class Scene(Entity):
 
         # Load the font
         font = ImageFont.truetype(file, font_size)
-        
+        size = (0, 0)
+
         # Get the size of the text
-        size = font.getsize(text)
-        # Add some padding to the width of the text
-        size = (size[0] + font_size, size[1] + font_size)
+        # in Newer pillow getsize is deprecated
+        try:
+            # Pillow >= 10
+            size = font.getsize(text)
+            # Add some padding to the width of the text
+            size = (size[0] + font_size, size[1] + font_size)
+        except AttributeError:
+            # Pillow >= 10
+            # Create a dummy image to measure text accurately
+            img = Image.new("RGBA", (1, 1))
+            draw = ImageDraw.Draw(img)
+            
+            bbox = draw.textbbox((0, 0), text, font=font)
+            width = bbox[2] - bbox[0]
+            height = bbox[3] - bbox[1]
+            
+            # Add padding (matching your original logic)
+            width += font_size
+            height += font_size
+            size = (width, height)
+        
         if rotation != 0:
             # If the text is rotated, we need to calculate the bounding box
             size = self.getRotatedBoxSize(size[0], size[1], rotation)
